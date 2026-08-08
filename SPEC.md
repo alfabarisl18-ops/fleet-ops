@@ -58,6 +58,13 @@ These are decisions that are expensive to reverse. Everything else follows.
    what and when, not just a column.
 8. **Available cash is derived, never stored.** Total cash minus operating
    requirement, emergency reserve, committed and reserved amounts.
+9. **Business dates are always Sierra Leone dates.** The team is spread across
+   Freetown, the United States and China. `service_date`, `applies_to_date` and
+   every other business date is the date in **Africa/Freetown**, computed on the
+   server — never the date on the viewer's device. "Recorded today", daily payment
+   dates, reminder dates and alert due dates all mean today in Freetown. Event
+   timestamps (`entered_at`, `received_at`) are `timestamptz` in UTC and may be
+   displayed in the viewer's local time; business dates may not.
 
 ---
 

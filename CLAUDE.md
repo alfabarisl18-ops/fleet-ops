@@ -64,6 +64,12 @@ the working app. Never push to it, never modify it. It stays as reference.
   `src/components/`.
 - Data access goes through `src/data/` — screens never call Supabase directly.
 - Dates stored as `date` for business dates, `timestamptz` for event times.
+- **Business dates are computed in `Africa/Freetown`, on the server, always.**
+  The team is split across Freetown, the US and China. A collector's phone, the
+  Owner's laptop in the US and the Fleet Manager's machine in China can be on
+  three different calendar days at the same moment. `service_date` and
+  `applies_to_date` mean the date in Freetown regardless of who is looking.
+  Never derive a business date from `new Date()` on the client.
 - Every user-facing status string comes from a single constants file so wording
   stays consistent.
 

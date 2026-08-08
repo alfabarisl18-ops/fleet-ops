@@ -1,0 +1,11 @@
+# Development happens on Windows; Cloudflare Pages builds on Linux. Normalise to
+# LF in the repository so a CRLF never reaches a shell script, a SQL migration,
+# or a filename comparison on the build machine.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary

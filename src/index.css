@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+
+/* Tailwind v4 is configured in CSS, not in a tailwind.config.js.
+   Design tokens belong here when the first screens are built in Phase 2. */
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-text-size-adjust: 100%;
+}

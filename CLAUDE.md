@@ -30,8 +30,10 @@ npm run test
 
 - **Never commit to `main`.** Work on a branch. Show me the diff before merging.
 - **Never deploy** without asking.
-- **Never run destructive SQL** against the production database. Migrations only,
-  and show me the migration first.
+- **Never run any SQL against the hosted Supabase project without asking me
+  first.** Not just destructive SQL — migrations, additive changes, seed data,
+  everything. Show me the SQL and wait for a yes before it touches the hosted
+  database.
 - **Money is `integer` minor units** (SLE × 100) everywhere — database, API,
   application code. Never `float`, never `numeric`, never a JavaScript number
   holding decimal leones. Format only at the render layer.

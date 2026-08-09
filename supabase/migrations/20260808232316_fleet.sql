@@ -331,7 +331,9 @@ grant insert, update         on public.drivers                    to authenticat
 -- are visible to Owner/Admin and Fleet Manager only." A policy cannot express
 -- that, because a policy filters rows, not columns — so the two image-key
 -- columns are simply not granted to the `authenticated` role at all, and are
--- read through a security-definer accessor added in Phase 3 for desktop roles.
+-- read through public.driver_identity_images(), a security-definer accessor
+-- for desktop roles added in migration 13
+-- (20260808233153_driver_identity_access.sql).
 --
 -- Consequence for the data layer: queries against drivers must list columns
 -- explicitly. `select('*')` will fail. That is deliberate.

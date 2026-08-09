@@ -175,9 +175,45 @@ Only `FULL_DAY` produces `DRIVER_DEBT`.
 
 ### Trips
 
-**`trips`** — `vehicle_id`, `driver_id`, `helper_name`, `origin`, `destination`,
-`cargo`, `departed_on`, `returned_on`, `status`, `notes`. Revenue and costs attach
-as ledger entries with `source_type = 'trip'`.
+**Resolved (was open question 1): box trucks are paid per trip, not per day.**
+A trip is its own record, not a `daily_payment_records` row — a box truck has no
+`expected_daily_amount_minor` to compare against, and `day_outcome` is a Sprinter
+concept that doesn't apply.
+
+**`trips`** — `id`, `client_record_id`, `vehicle_id`, `driver_id`, `helper_name`,
+`pickup_location`, `destination_location`, `departed_on`, `returned_on`,
+`duration_days` (calculated from the two dates, not entered by hand),
+`load_quantity` (number of boxes/units), `load_weight`, `load_weight_unit`
+(`LB | KG`, switchable per entry so the collector isn't stuck with one system),
+`status`, `notes`.
+
+Money is **not** stored on the trip row — it lives in `ledger_entries`, same as
+every other financial fact, linked back with `source_type = 'trip'`,
+`source_id = trip.id`. A trip produces:
+
+- One **income** entry — trip revenue, category `TRIP_REVENUE`.
+- One or more **expense** entries — checkpoint/road costs, driver pay, helper
+  pay, fuel if tracked per trip, each in its proper existing category
+  (`ROAD_CHECKPOINT`, `DRIVER_OR_HELPER_PAYMENT`, `FUEL`).
+
+"What was made that day" — the net for the trip — is never stored as a number.
+It's revenue minus the linked expenses, computed at display time. Storing a net
+would let it drift from its own components; deriving it can't.
+
+**Trip entry screen**, mobile (Collections & Finance, under Sprinter & Box-Truck
+Payment → box truck selected):
+
+1. Vehicle and driver (driver defaults from the vehicle's current assignment).
+2. Pickup location, destination location.
+3. Departure date, return date — duration calculates itself.
+4. Load: quantity, weight, unit toggle (lb/kg).
+5. Revenue received for the trip.
+6. Costs for the trip: checkpoint/road, driver pay, helper pay — each optional,
+   each becomes its own ledger expense entry tied to this trip.
+7. Note.
+
+The vehicle profile and Accounting's Truck Income card both show trips with
+their net, using the same computation, so the two never disagree.
 
 ### Maintenance
 
@@ -589,15 +625,13 @@ runs.
 
 To be answered before the phases that depend on them:
 
-1. Box trucks — paid per trip or per day? What is captured per trip: revenue,
-   fuel, checkpoint costs, driver and helper pay?
-2. Rent-to-own vehicles — is the installment separate from the daily payment, or
+1. Rent-to-own vehicles — is the installment separate from the daily payment, or
    does the daily payment count toward the purchase?
-3. Which currencies are actually paid in for imported vehicles?
-4. Yearly targets — calendar year? Set per vehicle by the Owner?
-5. How bad is connectivity where the collectors work — occasional drops, or hours
+2. Which currencies are actually paid in for imported vehicles?
+3. Yearly targets — calendar year? Set per vehicle by the Owner?
+4. How bad is connectivity where the collectors work — occasional drops, or hours
    offline daily?
-6. Should breakdown simply be a cause under Half Day, with the separate Breakdown
+5. Should breakdown simply be a cause under Half Day, with the separate Breakdown
    option reserved for a vehicle that never worked at all?
-7. Can a driver's accumulated debt be forgiven, and does that need Owner approval
+6. Can a driver's accumulated debt be forgiven, and does that need Owner approval
    and a recorded reason?

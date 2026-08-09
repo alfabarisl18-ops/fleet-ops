@@ -59,3 +59,47 @@ through [0006](decisions/0006-status-changes-are-events.md).
 
 **Not done, by scope.** No screens, no `src/data/` layer, no Supabase client, no
 auth. Phase 2 next.
+
+---
+
+## [2026-08-09] fix | `trips` aligned with the resolved Trips spec
+
+`SPEC.md`'s Trips section was rewritten resolving open question 1 (box trucks
+are paid per trip, not per day) after Phase 1 shipped, so `public.trips` had
+drifted from it. New migration
+[20260809091500_trips_match_resolved_spec.sql](../supabase/migrations/20260809091500_trips_match_resolved_spec.sql),
+applied to the hosted project. The table was empty — Trips is a Phase 5 build
+item — so this was a plain `ALTER`, no data migration.
+
+- `origin` / `destination` renamed to `pickup_location` / `destination_location`.
+- `cargo` dropped, folded into `notes` — the mobile entry screen still ends on
+  a free-text note, so a load description has somewhere to go rather than
+  disappearing.
+- `duration_days` added: `GENERATED ALWAYS` from `departed_on`/`returned_on`,
+  same pattern as `bundled_payments.covers_to_date`. Inclusive of both days; no
+  `CASE` needed since date arithmetic on a null input already returns null.
+- `load_quantity`, `load_weight`, `load_weight_unit` added. New enum
+  `public.weight_unit` (`LB | KG`).
+- No money column exists on `trips`, and that's enforced by a migration-time
+  check, not just stated in a comment — same guarantee the Phase 1 guards
+  migration gives every other table, applied here because this is the one
+  table where a financial fact is deliberately kept off the row it describes.
+
+**Also fixed:** `trips_select_desktop` / `trips_insert_desktop` restricted
+trips to desktop roles, written before the Trips rewrite put trip entry on the
+mobile Collections & Finance screen. Replaced with
+`trips_select_desktop_or_collections` / `trips_insert_desktop_or_collections` —
+Collections & Finance can now create and read trips, matching the pattern
+every other mobile-insert table already uses (create, never edit). Desktop
+keeps `update`. Maintenance & Repairs still has no access — SPEC never gives
+that role trips or money.
+
+**Verified against the live database:** inclusive-day duration (`1` for a
+same-day trip, `3` across three calendar days), `duration_days` null while
+`returned_on` is unset, the generated column rejected on direct insert, the
+paired `load_weight`/`load_weight_unit` constraint, both old column names
+gone, the enum rejecting a non-member value, and the full read/insert/update
+matrix across all four roles. `src/types/database.ts` regenerated;
+`src/types/db.ts`'s `GENERATED_COLUMNS.trips` updated so `Insertable<'trips'>`
+rejects `duration_days` at compile time, with a test. `npm run test`,
+`typecheck`, `lint` and `build` all pass (14 tests).

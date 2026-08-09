@@ -1,8 +1,8 @@
 # Database schema
 
-31 tables, 36 enum types, 146 indexes, 90 row-level-security policies,
-87 check constraints, 41 triggers, 18 helper functions, across 13 migrations.
-Counted from the live schema on 2026-08-08.
+31 tables, 37 enum types, 146 indexes, 90 row-level-security policies,
+90 check constraints, 41 triggers, 18 helper functions, across 14 migrations.
+Counted from the live schema on 2026-08-09.
 
 Everything here is created by the migrations in `supabase/migrations/`. Nothing
 was applied by hand.
@@ -11,8 +11,8 @@ was applied by hand.
 
 ## How to read this
 
-Four things are true of every table in `public`, and the final migration
-(`20260808121100_guards.sql`) fails the build if any of them stops being true:
+Four things are true of every table in `public`, and the guards migration
+(`20260808232711_guards.sql`) fails the build if any of them stops being true:
 
 1. Row level security is enabled.
 2. At least one policy exists.
@@ -55,7 +55,7 @@ Four things are true of every table in `public`, and the final migration
 | savings_targets | 11 | 3 | 3 | 0 | 6 | 1 |
 | sessions | 5 | 2 | 1 | 0 | 1 | 1 |
 | transit_records | 20 | 4 | 3 | 0 | 2 | 1 |
-| trips | 14 | 5 | 3 | 2 | 1 | 3 |
+| trips | 17 | 5 | 3 | 2 | 4 | 3 |
 | users | 9 | 6 | 3 | 0 | 3 | 2 |
 | vehicle_status_events | 8 | 3 | 2 | 3 | 0 | 2 |
 | vehicles | 21 | 8 | 3 | 0 | 6 | 2 |

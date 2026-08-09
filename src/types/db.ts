@@ -35,6 +35,7 @@ export type Enums<T extends keyof PublicSchema['Enums']> = PublicSchema['Enums']
 export const GENERATED_COLUMNS = {
   daily_payment_records: ['shortfall_amount_minor', 'shortfall_treatment'],
   bundled_payments: ['covers_to_date'],
+  trips: ['duration_days'],
 } as const satisfies Partial<Record<keyof PublicSchema['Tables'], readonly string[]>>
 
 /**

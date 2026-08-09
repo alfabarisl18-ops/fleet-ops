@@ -1784,49 +1784,58 @@ export type Database = {
       }
       trips: {
         Row: {
-          cargo: string | null
           client_record_id: string
           created_at: string
           departed_on: string | null
-          destination: string | null
+          destination_location: string | null
           driver_id: string | null
+          duration_days: number | null
           entered_by: string
           helper_name: string | null
           id: string
+          load_quantity: number | null
+          load_weight: number | null
+          load_weight_unit: Database["public"]["Enums"]["weight_unit"] | null
           notes: string | null
-          origin: string | null
+          pickup_location: string | null
           returned_on: string | null
           status: Database["public"]["Enums"]["trip_status"]
           vehicle_id: string
         }
         Insert: {
-          cargo?: string | null
           client_record_id?: string
           created_at?: string
           departed_on?: string | null
-          destination?: string | null
+          destination_location?: string | null
           driver_id?: string | null
+          duration_days?: number | null
           entered_by: string
           helper_name?: string | null
           id?: string
+          load_quantity?: number | null
+          load_weight?: number | null
+          load_weight_unit?: Database["public"]["Enums"]["weight_unit"] | null
           notes?: string | null
-          origin?: string | null
+          pickup_location?: string | null
           returned_on?: string | null
           status?: Database["public"]["Enums"]["trip_status"]
           vehicle_id: string
         }
         Update: {
-          cargo?: string | null
           client_record_id?: string
           created_at?: string
           departed_on?: string | null
-          destination?: string | null
+          destination_location?: string | null
           driver_id?: string | null
+          duration_days?: number | null
           entered_by?: string
           helper_name?: string | null
           id?: string
+          load_quantity?: number | null
+          load_weight?: number | null
+          load_weight_unit?: Database["public"]["Enums"]["weight_unit"] | null
           notes?: string | null
-          origin?: string | null
+          pickup_location?: string | null
           returned_on?: string | null
           status?: Database["public"]["Enums"]["trip_status"]
           vehicle_id?: string
@@ -2240,6 +2249,7 @@ export type Database = {
         | "GARBAGE_TRUCK"
         | "TRICYCLE"
         | "OTHER"
+      weight_unit: "LB" | "KG"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2577,6 +2587,7 @@ export const Constants = {
         "TRICYCLE",
         "OTHER",
       ],
+      weight_unit: ["LB", "KG"],
     },
   },
 } as const

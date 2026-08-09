@@ -163,6 +163,7 @@ describe('Insertable', () => {
     expect(GENERATED_COLUMNS.daily_payment_records).toContain('shortfall_treatment')
     expect(GENERATED_COLUMNS.daily_payment_records).toContain('shortfall_amount_minor')
     expect(GENERATED_COLUMNS.bundled_payments).toContain('covers_to_date')
+    expect(GENERATED_COLUMNS.trips).toContain('duration_days')
     expect(SERVER_STAMPED_COLUMNS.ledger_entries).toContain('entered_at')
     expect(SERVER_STAMPED_COLUMNS.vehicle_status_events).toContain('from_status')
   })
@@ -183,6 +184,19 @@ describe('Insertable', () => {
     const shortfall: number | null = row.shortfall_amount_minor
 
     expect([_a, _b, treatment, shortfall]).toBeDefined()
+  })
+
+  it('excludes trips.duration_days from the insert type', () => {
+    type Trip = Insertable<'trips'>
+
+    // @ts-expect-error duration_days is GENERATED ALWAYS from departed_on/returned_on
+    const _a: Trip = { duration_days: 3 } as Trip
+
+    // But it is readable on the row, because the database computes it.
+    const row = {} as Tables<'trips'>
+    const duration: number | null = row.duration_days
+
+    expect([_a, duration]).toBeDefined()
   })
 
   it('requires client_record_id, so the offline queue cannot forget it', () => {

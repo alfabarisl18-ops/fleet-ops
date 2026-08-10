@@ -5,6 +5,7 @@
 //
 // snake_case here mirrors the database exactly. The mapping to camelCase
 // happens in src/data/, which is the only place allowed to import this file.
+
 export type Json =
   | string
   | number
@@ -1678,6 +1679,7 @@ export type Database = {
           expires_at: string
           id: string
           issued_at: string
+          last_seen_at: string
           revoked_at: string | null
           user_id: string
         }
@@ -1685,6 +1687,7 @@ export type Database = {
           expires_at: string
           id?: string
           issued_at?: string
+          last_seen_at?: string
           revoked_at?: string | null
           user_id: string
         }
@@ -1692,6 +1695,7 @@ export type Database = {
           expires_at?: string
           id?: string
           issued_at?: string
+          last_seen_at?: string
           revoked_at?: string | null
           user_id?: string
         }
@@ -2048,12 +2052,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_pin: {
+        Args: { p_new_pin: string; p_user_id: string }
+        Returns: boolean
+      }
       driver_identity_images: {
         Args: { p_driver_id: string }
         Returns: {
           id_image_key: string
           licence_image_key: string
         }[]
+      }
+      mobile_role_roster: {
+        Args: { p_role: Database["public"]["Enums"]["user_role"] }
+        Returns: {
+          display_name: string
+          id: string
+        }[]
+      }
+      touch_session: { Args: { p_session_id: string }; Returns: boolean }
+      verify_pin: {
+        Args: { p_pin: string; p_user_id: string }
+        Returns: Database["public"]["CompositeTypes"]["pin_check_result"]
+        SetofOptions: {
+          from: "*"
+          to: "pin_check_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      verify_role_pin: {
+        Args: {
+          p_pin: string
+          p_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: Database["public"]["CompositeTypes"]["role_pin_check_result"]
+        SetofOptions: {
+          from: "*"
+          to: "role_pin_check_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
@@ -2252,7 +2291,19 @@ export type Database = {
       weight_unit: "LB" | "KG"
     }
     CompositeTypes: {
-      [_ in never]: never
+      pin_check_result: {
+        ok: boolean | null
+        auth_user_id: string | null
+        locked_until: string | null
+        reason: string | null
+      }
+      role_pin_check_result: {
+        ok: boolean | null
+        user_id: string | null
+        auth_user_id: string | null
+        locked_until: string | null
+        reason: string | null
+      }
     }
   }
 }

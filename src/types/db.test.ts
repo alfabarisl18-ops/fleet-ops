@@ -59,12 +59,27 @@ describe('migrations', () => {
     }
   })
 
-  it('never grant anything to anon', () => {
+  it('never grants anything to anon except the one documented exception', () => {
+    // public.mobile_role_roster is the sole deliberate exception — a PIN
+    // alone can't say whose PIN it is, so the sign-in picker needs a
+    // signed-out-callable name list. It's a function, not a table grant, and
+    // it structurally cannot return a desktop role. See
+    // docs/decisions/0007-pin-sign-in-becomes-a-real-session.md and the
+    // permission-matrix note in docs/schema.md. Any *other* anon grant is
+    // still a bug this test should catch.
+    const ALLOWED_ANON_GRANTS = [
+      'grant execute on function public.mobile_role_roster(public.user_role) to anon, authenticated;',
+    ]
+
     for (const file of migrationFiles()) {
       const sql = readMigration(file)
-      const grants = [...sql.matchAll(/^\s*grant [^;]*;/gim)].map((m) => m[0])
+      const grants = [...sql.matchAll(/^\s*grant [^;]*;/gim)].map((m) => m[0].trim())
       for (const grant of grants) {
-        expect(/\banon\b/.test(grant), `${file}: grants to anon — ${grant.trim()}`).toBe(false)
+        if (!/\banon\b/.test(grant)) continue
+        expect(
+          ALLOWED_ANON_GRANTS.includes(grant),
+          `${file}: unexpected grant to anon — ${grant}`,
+        ).toBe(true)
       }
     }
   })
@@ -106,6 +121,79 @@ describe('migrations', () => {
         'app.freetown_today()',
       )
     }
+  })
+})
+
+describe('auth', () => {
+  // Regression test for a real bug: app.is_owner()/is_desktop()/etc. return
+  // NULL, not false, for any caller app.current_app_role() can't resolve —
+  // which is not just "not signed in" but, since the PIN migration, an idle
+  // mobile session too. `NOT NULL` is NULL, and PL/pgSQL's
+  // `IF <null> THEN ... END IF;` silently skips the branch — so a naive
+  // `if not app.is_owner() then raise exception ... end if;` guard clause
+  // does not raise for an unresolved caller; it falls through as though the
+  // check had passed. Found by testing public.admin_reset_pin, and the same
+  // shape already existed in public.driver_identity_images since Phase 1 —
+  // confirmed live against the hosted project to leak a real driver's ID and
+  // licence document keys to an unrecognized caller, before
+  // 20260810010924_fix_null_unsafe_role_negation.sql closed it. See
+  // docs/decisions/0007-pin-sign-in-becomes-a-real-session.md.
+  it('never negates a role-check function without coalescing it to false first', () => {
+    // Checks each function's *current* body, not every line ever written.
+    // `CREATE OR REPLACE FUNCTION` means a later migration's definition is
+    // what the database actually runs — migration discipline never edits an
+    // applied file in place, so the original, now-superseded
+    // driver_identity_images() in 20260808233153 still reads "if not
+    // app.is_desktop() then" verbatim in the history, on purpose. Only the
+    // last definition of each function is what needs to be correct.
+    const latestBodyByFunction = new Map<string, string>()
+    const fnRe = /create or replace function ([\w.]+\([^)]*\))[\s\S]*?\n\$\$;/gi
+
+    for (const file of migrationFiles()) {
+      const sql = readMigration(file)
+      for (const match of sql.matchAll(fnRe)) {
+        const signature = match[1]
+        if (!signature) continue
+        latestBodyByFunction.set(signature.toLowerCase(), match[0])
+      }
+    }
+
+    expect(latestBodyByFunction.size).toBeGreaterThan(0)
+
+    // Matches both the buggy form (`if not app.is_desktop()`) and the fixed
+    // form (`if not coalesce(app.is_desktop(), false)`) — anything between
+    // "not" and the function call — so the test still finds something to
+    // check once every occurrence is fixed, rather than the assertion below
+    // going vacuous.
+    const guardRe = /\bif\s+not\s+.*?app\.(is_owner|is_desktop|is_collections|is_maintenance|is_signed_in|has_role)\(/
+
+    let checked = 0
+    for (const [name, body] of latestBodyByFunction) {
+      for (const line of body.split('\n')) {
+        if (!guardRe.test(line)) continue
+        checked += 1
+        expect(
+          line.includes('coalesce('),
+          `${name}: negates a nullable role check without coalescing to false — ${line.trim()}`,
+        ).toBe(true)
+      }
+    }
+    expect(checked).toBeGreaterThan(0)
+  })
+
+  it('restricts verify_pin to service_role only — the plaintext PIN never reaches a broader grant', () => {
+    const sql = migrationFiles().map(readMigration).join('\n')
+    expect(sql).toContain(
+      'revoke all on function public.verify_pin(uuid, text) from public, anon, authenticated;',
+    )
+    expect(sql).toContain('grant execute on function public.verify_pin(uuid, text) to service_role;')
+  })
+
+  it('keeps mobile_role_roster structurally incapable of returning a desktop role', () => {
+    const sql = migrationFiles().map(readMigration).join('\n')
+    const fn = /create or replace function public\.mobile_role_roster[\s\S]*?\$\$;/.exec(sql)?.[0]
+    expect(fn, 'mobile_role_roster function body not found').toBeTruthy()
+    expect(fn).toContain("p_role in ('COLLECTIONS_FINANCE', 'MAINTENANCE_REPAIRS')")
   })
 })
 

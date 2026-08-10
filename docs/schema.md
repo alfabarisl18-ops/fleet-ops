@@ -1,8 +1,11 @@
 # Database schema
 
-31 tables, 37 enum types, 146 indexes, 90 row-level-security policies,
-90 check constraints, 41 triggers, 18 helper functions, across 14 migrations.
-Counted from the live schema on 2026-08-09.
+31 tables in `public` (plus 2 in `app_private`: PIN credentials and the
+role-scoped PIN throttle — neither reachable over the API, see "Where the
+private things live" below), 37 enum types, 2 composite return types,
+146 indexes, 90 row-level-security policies, 90 check constraints,
+41 triggers, 18 `app` helper functions, 6 `public` functions, across
+17 migrations. Counted from the live schema on 2026-08-10.
 
 Everything here is created by the migrations in `supabase/migrations/`. Nothing
 was applied by hand.
@@ -86,8 +89,9 @@ and returned zero rows because every row was filtered away.
 | Reserve business cash | yes | **denied** | **denied** | **denied** | denied |
 | Create a user account | yes | **denied** | **denied** | **denied** | denied |
 | Record a payment as another user | **denied** | **denied** | **denied** | **denied** | denied |
+| Read the mobile-role roster (unused by sign-in; see note) | yes | yes | yes | yes | **yes** |
 
-Two entries deserve a note.
+Three entries deserve a note.
 
 **Fleet Manager cannot create user accounts.** SPEC section 1 gives Owner/Admin
 "manages people, roles, PINs, permissions" and says Fleet Manager "cannot create
@@ -98,6 +102,21 @@ answers it: read only. Loosening this later is one policy.
 **Nobody may attribute a record to another user.** Every insert policy requires
 `entered_by = app.current_user_id()`, so a compromised client cannot forge who
 entered a payment.
+
+**The roster is the one deliberate exception to "not signed in means not a
+single row."** `public.mobile_role_roster(role)` is callable by `anon` —
+built in Phase 2 for a name-picker sign-in step that was tested working, then
+replaced: told directly that the two mobile roles don't need that much
+ceremony, sign-in became role + PIN only, no name selection (see
+[decision 0007](decisions/0007-pin-sign-in-becomes-a-real-session.md)). The
+function itself, and its `anon` grant, are untouched — nothing currently calls
+either, but both stay correct and available for a future screen that already
+knows which account it's looking at. It was never a table grant and does not
+touch the guarantee the guards migration actually enforces: `anon` still holds
+zero privilege on every table in this database. The function returns exactly
+two columns — `id` and `display_name` — for `status = 'ACTIVE'` users of
+exactly the two mobile roles; it structurally cannot return an Owner/Admin or
+Fleet Manager row, a phone number, an email, or anything else.
 
 ---
 
@@ -221,8 +240,10 @@ duplicate for review, never a silent overwrite.
 | | |
 |---|---|
 | `app` | RLS helper functions and trigger functions. Not an exposed schema. |
-| `app_private.user_pin_credentials` | Bcrypt PIN hashes. No grants to any client role, RLS enabled with no policies, not an exposed schema. Empty until Phase 2. |
+| `app_private.user_pin_credentials` | Bcrypt PIN hashes, one row per mobile-role account. No grants to any client role, RLS enabled with no policies, not an exposed schema. |
+| `app_private.role_pin_throttle` | One row per mobile role — the shared 5-attempt/15-minute lockout counter `public.verify_role_pin` uses since it has no account to blame a wrong guess on until one matches. Same lockdown as `user_pin_credentials`. |
 | `public.driver_identity_images(uuid)` | The only route to a driver's ID and licence image keys. Raises for both mobile roles. |
+| `public.verify_pin(uuid, text)` / `public.verify_role_pin(user_role, text)` | PIN comparison, `service_role` only. The plaintext PIN reaches one of these and goes no further. `verify_role_pin` is what `pin-sign-in` actually calls; `verify_pin` is the per-account version it replaced, kept because it's still correct and may serve a future screen that already knows the account. |
 
 `supabase/config.toml` exposes `public` only. Adding `app` or `app_private` to
 that list would put the PIN hashes on the public API.

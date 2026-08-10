@@ -103,3 +103,111 @@ matrix across all four roles. `src/types/database.ts` regenerated;
 `src/types/db.ts`'s `GENERATED_COLUMNS.trips` updated so `Insertable<'trips'>`
 rejects `duration_days` at compile time, with a test. `npm run test`,
 `typecheck`, `lint` and `build` all pass (14 tests).
+
+---
+
+## [2026-08-10] feature | Phase 2 — authentication for all four roles
+
+Branch `phase-2-auth`. Desktop email/password ("standard flow," unmodified
+Supabase Auth) and mobile PIN sign-in, both minted into real Supabase
+sessions and tested against real RLS policies with real tokens — not
+simulated JWT claims. Full design in
+[decision 0007](decisions/0007-pin-sign-in-becomes-a-real-session.md).
+
+**The mechanism.** A PIN check happens in `public.verify_role_pin`
+(`service_role` only, bcrypt via `pgcrypto`), then the Edge Function
+`pin-sign-in` mints a real session via `admin.generateLink` +
+`admin.verifyOtp` — confirmed via primary sources (the shipped
+`@supabase/auth-js` types, official docs, and direct testing against the
+hosted project) rather than assumed, because a first-pass design putting the
+PIN-check function in `app_private` would have been unreachable: tested
+directly, `Accept-Profile: app` returns `PGRST106` for every caller
+regardless of role, before any grant is even checked. `app_private.user_pin_credentials`
+stays exactly as unreachable as Phase 1 left it; `public.verify_role_pin` is
+the one narrow, audited door in — same shape as `driver_identity_images()`.
+
+**Two real security bugs found by testing, both fixed same-day:**
+
+- `app.is_owner()`/`is_desktop()`/etc. return `NULL`, not `false`, for any
+  caller `app.current_app_role()` can't resolve. `NOT NULL` is `NULL`, and
+  PL/pgSQL's `IF <null> THEN` silently skips the branch — so
+  `IF NOT app.is_owner() THEN raise; END IF;` does not raise for an
+  unresolved caller; it falls through as authorized. Found while testing the
+  new `admin_reset_pin`, but the same shape already existed in
+  `driver_identity_images()` since Phase 1 — confirmed live to leak a real
+  driver's ID and licence document keys to any caller holding an
+  unrecognized (not necessarily malicious, just unlinked) Supabase JWT.
+  Closed in `20260810010924_fix_null_unsafe_role_negation.sql`, by
+  `coalesce(is_X(), false)` before every such negation, plus a regression
+  test that checks each function's *current* `CREATE OR REPLACE` body, not
+  every historical line.
+- `admin.generateLink`'s `magiclink` type auto-creates a new `auth.users` row
+  when the given email matches nobody, instead of erroring. Found when a
+  mismatched synthetic email (a bootstrap-script mistake, not the shipped
+  code) silently minted a session for a brand-new, unlinked identity.
+  `pin-sign-in` now verifies `otpData.session.user.id === result.auth_user_id`
+  before it will hand back a session, and refuses rather than ship one for
+  the wrong account.
+
+**A platform surprise, found by testing, not assumed:** this project's
+`SUPABASE_SERVICE_ROLE_KEY` — the default env var every Edge Function
+receives — holds the newer `sb_secret_...` key format, not a legacy JWT.
+`supabase-js`'s `.from()` sends that key on both `apikey` and
+`Authorization: Bearer`; PostgREST accepts the former and rejects the latter
+as an unparseable JWT, for table requests specifically (`.rpc()` and the Auth
+admin API tolerate it fine). `adminTableRequest`
+(`supabase/functions/_shared/mobile-auth.ts`) works around it with a raw
+`fetch` sending the key on `apikey` only, used wherever an Edge Function
+reads or writes a table directly.
+
+**A mid-build redesign, not silently absorbed:** the first working design
+showed a name picker before the PIN (`public.mobile_role_roster`, the first
+`anon` grant in this database) — built, deployed, and verified end to end.
+Told directly that these two roles are low-stakes by design and the picker
+was more ceremony than the risk called for, sign-in became role + PIN only.
+That requires PINs to be unique — enforced in `admin_reset_pin` — and trades
+the original per-account throttle for a coarser per-role one
+(`app_private.role_pin_throttle`): a wrong guess can no longer be blamed on
+one account before a match is found, so 5 wrong guesses locks *the whole
+role's* PIN entry for 15 minutes, not just one person's. `mobile_role_roster`
+and the original per-account `verify_pin` are untouched and still correct —
+unused by any current screen, available for a future one that already knows
+the account.
+
+**Idle expiry** is enforced by the same role-resolution choke point every
+RLS policy already calls (`app.current_user_id()`/`current_app_role()`), not
+by Supabase's own session lifecycle, which has no idle concept. Mobile roles
+additionally require a live `public.sessions` row (30 minutes since
+`last_seen_at`, 12-hour hard cap); desktop roles are untouched. Verified
+against a real, previously-valid session: backdating `last_seen_at` cut off
+both reads and writes immediately, and `public.touch_session` restored
+access exactly the same way a client heartbeat would.
+
+**Verified end to end, not just at the SQL layer:** curl against the
+deployed Edge Functions for both mobile roles (roster, wrong PIN, correct
+PIN, 5-attempt lockout confirmed per-role not global, `driver_identity_images`
+and a maintenance-order write both correctly denied, `admin-provision-mobile-account`'s
+reject path with a real non-owner token) and a full click-through in a real
+browser for both mobile roles end to end — roster/PIN entry, session
+establishment, the `SignedIn` confirmation screen, sign-out, and session
+persistence across a fresh tab. Desktop roles verified via simulated JWT
+claims (the same legitimate method Phase 1 used) since real password-based
+login needs infrastructure judged disproportionate to build for this phase —
+first Owner bootstrap stays a documented manual Dashboard step.
+
+**Also found and fixed while testing the real screens:** `App.tsx`'s initial
+session-check effect unconditionally reset navigation to the chooser screen
+on resolution, which a React 19 StrictMode double-invoke could fire *after*
+the user had already tapped something, silently bouncing them backward.
+Fixed with the same cancelled-flag guard already used in the roster-fetch
+effect.
+
+**Screens.** `RoleChooser`, `DesktopSignIn`, `MobilePinSignIn` (role, then
+PIN — no name step), `SignedIn`. Nothing else, per scope. `src/data/auth.ts`
+is the only file that touches Supabase directly for sign-in.
+
+**Not done, by scope.** No Settings/PIN-management UI (the mechanism —
+`admin_reset_pin` — exists and is tested; no screen calls it yet). No
+password-reset flow for desktop roles.
+
+`npm run typecheck`, `lint`, `test` (17 tests) and `build` all pass.

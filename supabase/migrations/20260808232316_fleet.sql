@@ -74,8 +74,10 @@ create index vehicles_driver_idx  on public.vehicles (current_driver_id);
 -- ---------------------------------------------------------------------------
 -- drivers
 -- ---------------------------------------------------------------------------
--- Drivers do not sign in. They are subjects, not users. A driver is never
--- deleted — status moves to FORMER.
+-- Drivers do not sign in. They are subjects, not users. Owner/Admin can
+-- delete a driver at any time (see 20260811020000_delete_driver.sql); a
+-- driver with real payment/trip/maintenance history cannot be deleted this
+-- way and status moves to FORMER instead. See decision 0008.
 
 create table public.drivers (
   id                  uuid primary key default gen_random_uuid(),

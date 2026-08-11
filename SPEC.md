@@ -103,8 +103,11 @@ Status wording in the UI is **Active**, never "Safe" or "Running".
 `licence_expiry`, `licence_image_key`, `started_on`, `left_on`, `leave_reason`,
 `status` (`ACTIVE | SUSPENDED | FORMER`), `notes`.
 
-Drivers do not sign in. They are subjects, not users. A driver is never deleted —
-set to `FORMER`.
+Drivers do not sign in. They are subjects, not users. Owner/Admin can delete a
+driver at any time, with a confirmation step — this also deletes their vehicle-
+assignment history and driver-purchase agreement, if any. A driver with real
+payment, trip, or maintenance history cannot be deleted this way; set to
+`FORMER` instead. See `docs/decisions/0008-driver-delete-cascades-only-its-own-two-tables.md`.
 
 **`driver_assignments`** — `driver_id`, `vehicle_id`, `route_id`, `started_on`,
 `ended_on`.

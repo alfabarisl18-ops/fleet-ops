@@ -400,3 +400,49 @@ that.
 **Still open, and can only be closed by the user:** the real Owner/Admin
 password is still in this chat's transcript from before it was declined.
 Rotating it in the Supabase Dashboard is the one step only the user can do.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — delete a driver (Owner/Admin only)
+
+Same branch. SPEC and `fleet.sql` both said "a driver is never deleted —
+status moves to FORMER." The user asked for real deletion, Owner/Admin
+only, with a confirmation step, for a driver added by mistake who never
+went into service. Full reasoning, including why only 2 of the 11 tables
+that reference `drivers.id` cascade, is in
+[decision 0008](decisions/0008-driver-delete-cascades-only-its-own-two-tables.md)
+— short version: `driver_assignments` and `driver_purchase_agreements`
+(the two Phase 3 itself writes to) now `ON DELETE CASCADE`; the other 9
+(all belonging to phases that don't exist yet, always empty today) stay
+`ON DELETE RESTRICT` unchanged, so deleting a driver with real payment/trip
+history will correctly start failing again automatically once a later
+phase populates one of those tables.
+
+New: `public.delete_driver(p_driver_id)` (`SECURITY DEFINER`, self-enforced
+Owner/Admin-only, same pattern as `admin_reset_pin`) and
+`public.driver_delete_preview(p_driver_id)` (read-only counts, powers the
+confirmation dialog's wording — never a bare "are you sure"). `src/data/drivers.ts`:
+`deleteDriver`, `fetchDriverDeletePreview`. `DriverProfileScreen.tsx`: a
+"Delete driver" action visible only to Owner/Admin (`DesktopWorkspace` now
+threads the signed-in role down to it).
+
+**Verified against the hosted project** (transaction + rollback, same
+pattern used throughout this phase): created a throwaway driver with a real
+assignment and agreement, confirmed the preview reports both counts
+correctly, deleted it, confirmed the driver row, the assignment, and the
+agreement are all gone, and separately confirmed
+`vehicles.current_driver_id` clears via its own pre-existing `SET NULL` FK.
+Confirmed a simulated Fleet Manager session is rejected by `delete_driver`
+and gets zero rows back from `driver_delete_preview`. `npm run typecheck`
+and `lint` pass.
+
+`npm run test` (33 tests) and `build` pass. Live in the Browser pane as the
+Fleet Manager QA account: confirmed the delete action does not appear
+anywhere on a driver profile (Owner/Admin only, as designed). The
+Owner/Admin side of the click-through wasn't separately reproduced live —
+same reason as the previous entry, no credentials for that account — but
+`delete_driver` was exercised for real (not rolled back) via a simulated
+Owner/Admin session to remove the "Ibrahim Sesay" test driver flagged in
+the previous entry, and the driver list was confirmed live to reflect it:
+active-driver count dropped from 4 to 3, the row is gone. That flagged
+byproduct is now closed.

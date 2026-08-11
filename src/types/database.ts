@@ -2065,6 +2065,14 @@ export type Database = {
         }
         Returns: string
       }
+      delete_driver: { Args: { p_driver_id: string }; Returns: undefined }
+      driver_delete_preview: {
+        Args: { p_driver_id: string }
+        Returns: {
+          agreement_count: number
+          assignment_count: number
+        }[]
+      }
       driver_identity_images: {
         Args: { p_driver_id: string }
         Returns: {

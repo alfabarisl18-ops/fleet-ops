@@ -26,6 +26,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0005](decisions/0005-append-only-with-an-allow-list.md) | What "append-only" freezes and what it lets move |
 | [0006](decisions/0006-status-changes-are-events.md) | Status columns are projections of an event table |
 | [0007](decisions/0007-pin-sign-in-becomes-a-real-session.md) | Mobile PIN sign-in mints a real Supabase session; role+PIN, not a name picker |
+| [0008](decisions/0008-driver-delete-cascades-only-its-own-two-tables.md) | Driver delete cascades assignments/agreements; the other 9 references stay RESTRICT until their phases exist |
 
 ## Build order
 

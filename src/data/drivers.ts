@@ -166,6 +166,45 @@ export async function fetchOutstandingBalanceForDriver(driverId: string): Promis
   return (data ?? []).reduce((sum, row) => sum + row.remaining_amount_minor, 0)
 }
 
+export interface DriverDeletePreview {
+  assignmentCount: number
+  agreementCount: number
+}
+
+/**
+ * Counts of driver_assignments/driver_purchase_agreements rows a delete
+ * would cascade, for the confirmation dialog — so it names what else
+ * disappears rather than a bare "are you sure." Returns null for anyone
+ * who isn't Owner/Admin (public.driver_delete_preview returns no rows for
+ * them), matching deleteDriver's own restriction.
+ */
+export async function fetchDriverDeletePreview(driverId: string): Promise<DriverDeletePreview | null> {
+  const { data, error } = await supabase.rpc('driver_delete_preview', { p_driver_id: driverId })
+  if (error) throw error
+  const row = data?.[0]
+  if (!row) return null
+  return { assignmentCount: row.assignment_count, agreementCount: row.agreement_count }
+}
+
+export const DRIVER_DELETE_FAILED = 'DRIVER_DELETE_FAILED' as const
+
+export type DeleteDriverResult = { ok: true } | { ok: false; error: typeof DRIVER_DELETE_FAILED }
+
+/**
+ * Deletes a driver — cascades driver_assignments and
+ * driver_purchase_agreements (see public.delete_driver / decision 0008).
+ * Any rejection (not Owner/Admin, or a real reference from a later phase
+ * that doesn't exist yet) collapses to the same generic result, matching
+ * createAgreement's AGREEMENT_ALREADY_EXISTS shape — the caller is
+ * expected to have already used fetchDriverDeletePreview to decide
+ * whether to even show this action, this is the backstop.
+ */
+export async function deleteDriver(driverId: string): Promise<DeleteDriverResult> {
+  const { error } = await supabase.rpc('delete_driver', { p_driver_id: driverId })
+  if (error) return { ok: false, error: DRIVER_DELETE_FAILED }
+  return { ok: true }
+}
+
 export interface CreateDriverInput {
   fullName: string
   knownAs?: string

@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react'
 import { DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
-import type { AssignmentHistoryItem, DriverDetail } from '@/data/drivers'
-import { assignDriverToVehicle, fetchAssignmentHistory, fetchDriver, fetchOutstandingBalanceForDriver } from '@/data/drivers'
+import type { AppRole } from '@/data/auth'
+import type { AssignmentHistoryItem, DriverDeletePreview, DriverDetail } from '@/data/drivers'
+import {
+  assignDriverToVehicle,
+  deleteDriver,
+  fetchAssignmentHistory,
+  fetchDriver,
+  fetchDriverDeletePreview,
+  fetchOutstandingBalanceForDriver,
+} from '@/data/drivers'
 import type { DriverPurchaseAgreement } from '@/data/driverPurchaseAgreements'
 import { fetchAgreementsForDriver } from '@/data/driverPurchaseAgreements'
 import type { RouteOption, VehicleListItem } from '@/data/vehicles'
@@ -10,11 +18,12 @@ import { fetchRoutes, fetchVehicles } from '@/data/vehicles'
 
 interface DriverProfileScreenProps {
   driverId: string
+  currentUserRole: AppRole
   onBack: () => void
   onOpenVehicle: (vehicleId: string) => void
 }
 
-export function DriverProfileScreen({ driverId, onBack, onOpenVehicle }: DriverProfileScreenProps) {
+export function DriverProfileScreen({ driverId, currentUserRole, onBack, onOpenVehicle }: DriverProfileScreenProps) {
   const [driver, setDriver] = useState<DriverDetail | null>(null)
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([])
   const [owedMinor, setOwedMinor] = useState<number | null>(null)
@@ -168,6 +177,109 @@ export function DriverProfileScreen({ driverId, onBack, onOpenVehicle }: DriverP
       <Section title="Notes">
         <p className="text-sm text-slate-700">{driver.notes ?? '—'}</p>
       </Section>
+
+      {currentUserRole === 'OWNER_ADMIN' && (
+        <div className="mt-8 border-t border-slate-200 pt-4">
+          <DeleteDriverSection driverId={driver.id} driverName={driver.fullName} onDeleted={onBack} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Owner/Admin only (also enforced server-side by public.delete_driver —
+ * this is UI convenience, not the real boundary). Deleting cascades
+ * driver_assignments and driver_purchase_agreements — see decision 0008 —
+ * so the confirm step names exactly what else disappears rather than a
+ * bare "are you sure."
+ */
+function DeleteDriverSection({
+  driverId,
+  driverName,
+  onDeleted,
+}: {
+  driverId: string
+  driverName: string
+  onDeleted: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const [preview, setPreview] = useState<DriverDeletePreview | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function startConfirm() {
+    setError(null)
+    try {
+      const p = await fetchDriverDeletePreview(driverId)
+      setPreview(p)
+      setConfirming(true)
+    } catch {
+      setError('Could not check this driver. Try again.')
+    }
+  }
+
+  async function confirmDelete() {
+    setSubmitting(true)
+    setError(null)
+    const result = await deleteDriver(driverId)
+    setSubmitting(false)
+    if (!result.ok) {
+      setError('Could not delete this driver. Try again.')
+      return
+    }
+    onDeleted()
+  }
+
+  if (!confirming) {
+    return (
+      <button type="button" onClick={startConfirm} className="text-sm font-medium text-red-600">
+        Delete driver
+      </button>
+    )
+  }
+
+  const cascadeParts: string[] = []
+  if (preview && preview.assignmentCount > 0) {
+    cascadeParts.push(`${preview.assignmentCount} vehicle assignment${preview.assignmentCount === 1 ? '' : 's'}`)
+  }
+  if (preview && preview.agreementCount > 0) {
+    cascadeParts.push(`${preview.agreementCount} driver-purchase agreement${preview.agreementCount === 1 ? '' : 's'}`)
+  }
+  const cascadeDetail = cascadeParts.length > 0 ? ` This will also permanently delete ${cascadeParts.join(' and ')}.` : ''
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+      <p className="text-sm text-red-800">
+        Delete {driverName}?{cascadeDetail} This can't be undone.
+      </p>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={confirmDelete}
+          disabled={submitting}
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {submitting ? 'Deleting…' : 'Delete'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(false)
+            setError(null)
+          }}
+          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }

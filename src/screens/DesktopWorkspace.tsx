@@ -100,6 +100,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
         {view.name === 'driver-profile' && (
           <DriverProfileScreen
             driverId={view.driverId}
+            currentUserRole={user.role}
             onBack={() => setView({ name: 'driver-list' })}
             onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
           />

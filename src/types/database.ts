@@ -2072,6 +2072,7 @@ export type Database = {
           licence_image_key: string
         }[]
       }
+      freetown_today: { Args: never; Returns: string }
       mobile_role_roster: {
         Args: { p_role: Database["public"]["Enums"]["user_role"] }
         Returns: {

@@ -123,6 +123,49 @@ export async function fetchAssignmentHistory(driverId: string): Promise<Assignme
   }))
 }
 
+export interface DriverMoneySummary {
+  totalOwedMinor: number
+  overdueCount: number
+}
+
+/**
+ * Real queries against outstanding_balances (Phase 1 schema), legitimately
+ * all-zero until Phase 5 starts writing shortfalls to it — nothing here is
+ * faked to look populated. "Overdue" compares promised_date against today;
+ * today comes from public.freetown_today() (server-side, Africa/Freetown),
+ * never new Date() on the client, per CLAUDE.md.
+ */
+export async function fetchDriverMoneySummary(): Promise<DriverMoneySummary> {
+  const { data: today, error: todayError } = await supabase.rpc('freetown_today')
+  if (todayError) throw todayError
+
+  const { data, error } = await supabase
+    .from('outstanding_balances')
+    .select('driver_id, remaining_amount_minor, promised_date')
+    .in('status', ['OPEN', 'PARTIAL'])
+
+  if (error) throw error
+
+  const totalOwedMinor = (data ?? []).reduce((sum, row) => sum + row.remaining_amount_minor, 0)
+  const overdueDrivers = new Set(
+    (data ?? []).filter((row) => row.promised_date !== null && row.promised_date < today).map((row) => row.driver_id),
+  )
+
+  return { totalOwedMinor, overdueCount: overdueDrivers.size }
+}
+
+/** A single driver's current amount owed — sum of open/partial balances. */
+export async function fetchOutstandingBalanceForDriver(driverId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('outstanding_balances')
+    .select('remaining_amount_minor')
+    .eq('driver_id', driverId)
+    .in('status', ['OPEN', 'PARTIAL'])
+
+  if (error) throw error
+  return (data ?? []).reduce((sum, row) => sum + row.remaining_amount_minor, 0)
+}
+
 export interface CreateDriverInput {
   fullName: string
   knownAs?: string

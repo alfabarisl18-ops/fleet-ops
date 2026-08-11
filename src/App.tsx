@@ -3,8 +3,17 @@ import { fetchCurrentUser } from '@/data/auth'
 import type { MobileRole, SignedInUser } from '@/data/auth'
 import { RoleChooser } from '@/screens/RoleChooser'
 import { DesktopSignIn } from '@/screens/DesktopSignIn'
+import { DesktopWorkspace } from '@/screens/DesktopWorkspace'
 import { MobilePinSignIn } from '@/screens/MobilePinSignIn'
 import { SignedIn } from '@/screens/SignedIn'
+
+/** Owner/Admin and Fleet Manager get the Vehicles/Drivers workspace (Phase
+ *  3); Collections & Finance and Maintenance & Repairs still land on the
+ *  unchanged SignedIn confirmation screen — their mobile workspaces are
+ *  later phases. Matches app.is_desktop() server-side. */
+function isDesktopRole(role: SignedInUser['role']): boolean {
+  return role === 'OWNER_ADMIN' || role === 'FLEET_MANAGER'
+}
 
 type View = { name: 'loading' } | { name: 'chooser' } | { name: 'desktop' } | { name: 'mobile'; role: MobileRole }
 
@@ -53,7 +62,11 @@ export function App() {
   if (user) {
     return (
       <main className="min-h-full">
-        <SignedIn user={user} onSignedOut={() => setUser(null)} />
+        {isDesktopRole(user.role) ? (
+          <DesktopWorkspace user={user} onSignedOut={() => setUser(null)} />
+        ) : (
+          <SignedIn user={user} onSignedOut={() => setUser(null)} />
+        )}
       </main>
     )
   }

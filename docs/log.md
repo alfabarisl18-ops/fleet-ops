@@ -277,3 +277,72 @@ clear message before submit; `createAgreement` also maps the database's own
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
 Screens are next.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — screens, and the first real desktop workspace
+
+Same branch. This entry covers `App.tsx`'s new desktop routing and the eight
+screens from the Phase 3 plan. Phase 2 left desktop roles at a dead-end
+confirmation screen; this is the first real multi-screen navigation.
+
+**Architecture.** `src/screens/DesktopWorkspace.tsx` — a hand-rolled
+discriminated-union `DesktopView` state, the same pattern `App.tsx` already
+uses for the sign-in flow, per the plan's "no router yet" decision.
+`App.tsx` routes `OWNER_ADMIN`/`FLEET_MANAGER` here on sign-in;
+`COLLECTIONS_FINANCE`/`MAINTENANCE_REPAIRS` still land on the unchanged
+Phase 2 `SignedIn` screen. `src/components/WorkspaceHeader.tsx` is the one
+shared piece — identity, Home link, sign out — across every desktop screen.
+
+**Screens.** `DesktopHome`, `VehicleList`, `AddVehicleForm`,
+`VehicleProfileScreen`, `DriverList`, `AddDriverForm`, `DriverProfileScreen`,
+`SetUpDriverPurchaseAgreementForm` — exactly the eight in the plan, in that
+order. Assigning a driver to a vehicle is reachable from both sides (SPEC
+section 4: "assigned to a vehicle at either point") as an inline panel on
+each profile screen, not a separate ninth screen. `AddDriverForm` is
+reusable from the Drivers workspace and from a vehicle profile's "+ Add a
+new driver" action — created driver is assigned to that vehicle immediately
+in the same flow.
+
+**New: `public.freetown_today()`.** The driver-list "overdue balances" card
+needs to compare `outstanding_balances.promised_date` against today, and
+CLAUDE.md is explicit that a business date is never `new Date()` on the
+client. `app.freetown_today()` already existed but the `app` schema is
+unreachable over PostgREST for any caller, including `service_role` —
+confirmed empirically in Phase 2. Added a thin, read-only,
+`SECURITY INVOKER` wrapper in `public`, same revoke/grant pattern as every
+other exposed `app`-schema function this phase.
+
+**Verified live**, signed in as the real Owner/Admin account (Al) against
+the hosted project, not the seed script: added a vehicle (SPR-06, with a
+purchase price — first real screen to render `formatMinorUnits`, confirmed
+`SLE 45,000`); assigned an already-assigned seeded driver (Abu Bakarr
+Jalloh, previously on SPR-02) to it and confirmed both sides of the
+Phase-3-data-layer bug fix live — his assignment history shows SPR-02
+ending and SPR-06 starting on the same day, and SPR-02's profile correctly
+now shows "No driver currently assigned"; set up a driver-purchase
+agreement on SPR-06 and confirmed it displays correctly (amount, payment,
+frequency, and "Ownership transfer: Not started" — never asked on the
+form); confirmed the vehicle-profile pre-check works as the primary
+duplicate-agreement guard — the "Set up…" action is replaced by the
+agreement itself once one exists, per the plan's exact spec.
+
+**Not independently click-tested, and why:** the form-level duplicate-
+agreement fallback (`createAgreement`'s `23505` catch) calls the identical,
+already-verified `fetchOpenAgreementForVehicle` used by the pre-check —
+treated as covered by that verification plus code review, not re-clicked
+through. `DriverList`/`AddDriverForm` were not live-tested: verifying
+role-gating required signing out of the real Owner/Admin session, and
+signing back in needs a password this session was never given (a live
+session from an earlier sign-in was being reused, not fresh credentials).
+Both screens share `AddVehicleForm`'s exact pattern (controlled inputs,
+optional-field spreading, error handling) proven live, pass the full check
+suite, and were not touched after that pattern was established — flagged as
+a real, if low-risk, verification gap rather than silently assumed fine.
+Role-gating itself (`OWNER_ADMIN`/`FLEET_MANAGER` → workspace, the two
+mobile roles → unchanged `SignedIn`) was confirmed by direct code
+inspection — a one-line condition reusing a screen Phase 2 already proved
+correct live for both mobile roles — rather than reproducing that PIN
+sign-in test here.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

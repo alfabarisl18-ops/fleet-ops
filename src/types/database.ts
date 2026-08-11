@@ -1,11 +1,3 @@
-// Generated from the Fleet Operations SL database schema. Do not edit by hand.
-//
-// Regenerate after any migration with:
-//   npm run db:types
-//
-// snake_case here mirrors the database exactly. The mapping to camelCase
-// happens in src/data/, which is the only place allowed to import this file.
-
 export type Json =
   | string
   | number
@@ -2118,6 +2110,18 @@ export type Database = {
           p_shortfall_cause?: Database["public"]["Enums"]["shortfall_cause"]
           p_shortfall_note?: string
           p_vehicle_id: string
+        }
+        Returns: string
+      }
+      record_maintenance_part: {
+        Args: {
+          p_client_record_id: string
+          p_filter_action: Database["public"]["Enums"]["filter_action"]
+          p_order_id: string
+          p_part_name: string
+          p_part_source: Database["public"]["Enums"]["part_source"]
+          p_quantity: number
+          p_unit_cost_minor: number
         }
         Returns: string
       }

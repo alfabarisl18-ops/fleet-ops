@@ -29,6 +29,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0008](decisions/0008-driver-delete-cascades-only-its-own-two-tables.md) | Driver delete cascades assignments/agreements; the other 9 references stay RESTRICT until their phases exist |
 | [0009](decisions/0009-corrections-cover-vehicles-and-drivers-approve-and-apply-collapse.md) | Corrections are the intended edit path for vehicles/drivers (not a direct-edit form); approve+apply collapse to one action; the correction column allow-list |
 | [0010](decisions/0010-daily-payments-sprinter-only-bundle-and-overpayment-design.md) | Daily payments: Sprinter-only, the bundle split, the overpayment cascade, and two real append-only/RLS bugs fixed at the root |
+| [0011](decisions/0011-maintenance-oil-change-literal-and-shared-screens.md) | Maintenance: `OIL_CHANGE` is a literal sentinel string, one pair of screens serves both roles, and the mobile-role SQL verification limitation |
 
 ## Build order
 
@@ -45,7 +46,10 @@ start until the current one runs.
 5. **Daily payments** — the five outcomes, shortfall, overpayment, bundles,
    balances. ← *done, Sprinter-only*. Box-truck trip payments and debt
    write-off/forgiveness are deferred — see decision 0010.
-6. Maintenance — orders, statuses, parts, status events
+6. **Maintenance** — orders, statuses, parts, status events, both a desktop
+   workspace and Maintenance & Repairs' mobile workspace. ← *done*. Recorded
+   Cost is a running total, not the full analytics breakdown — see
+   decision 0011.
 7. Alerts — with working deep links
 8. Accounting — clickable cards and analytics
 9. Offline sync — queue, idempotency, pending indicators

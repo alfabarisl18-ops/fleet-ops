@@ -211,3 +211,69 @@ is the only file that touches Supabase directly for sign-in.
 password-reset flow for desktop roles.
 
 `npm run typecheck`, `lint`, `test` (17 tests) and `build` all pass.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — data layer (vehicles, drivers, driver-purchase agreements)
+
+Branch `phase-3-vehicles-drivers`. This entry covers the data layer only —
+`src/lib/money.ts`, `src/data/vehicles.ts`, `src/data/drivers.ts`,
+`src/data/driverPurchaseAgreements.ts`, and one new database function. No
+screens yet.
+
+**`src/lib/money.ts`.** String-based minor-units parsing and formatting
+(`parseMinorUnits`/`formatMinorUnits`) — deliberately not `parseFloat(x) *
+100`, to stay clear of float-precision artefacts. 16 tests in
+`money.test.ts`, including the classic `0.1 + 0.2` trap made concrete.
+
+**New database function: `assign_driver_to_vehicle(client_record_id,
+driver_id, vehicle_id, route_id)`.** Inserts a `driver_assignments` row and
+updates `vehicles.current_driver_id` in one transaction — two writes that
+must land together, not two separate client-side calls that could partially
+fail. SECURITY INVOKER (the default): authorization is exactly the existing
+RLS on both tables from Phase 1, not reimplemented here.
+
+Found and fixed twice while verifying it against real seed data, before it
+was ever used from a screen:
+
+1. Every seeded driver already has an open assignment
+   (`driver_assignments_one_open_per_driver`), so a naive insert-only version
+   failed on the very first real reassignment attempt. Fixed by having the
+   function end the driver's prior open assignment (and the target vehicle's,
+   if someone else held it) before inserting the new one — "assign this
+   driver to this vehicle" means making that true now, not rejecting the
+   call because it was true of something else a moment ago.
+2. That fix still left `vehicles.current_driver_id` wrong on the vehicle the
+   driver had *left* — it only ever wrote the new vehicle's column. A driver
+   moved from SPR-04 to SPR-05 left SPR-04 still pointing at them. Fixed by
+   clearing the prior vehicle's `current_driver_id` in the same transaction
+   when it differs from the target.
+
+Verified via SQL against the hosted project (Owner/Admin role, rolled back):
+reassignment moves `current_driver_id` correctly on both vehicles, the old
+`driver_assignments` row is closed, re-assigning a driver to the vehicle
+they're already on is a safe no-op, and Collections & Finance is denied by
+RLS exactly as expected.
+
+**Generator gap found while wiring this up:** `supabase gen types` has no
+visibility into a Postgres function parameter's nullability — every RPC arg
+comes out non-nullable even when the SQL side accepts NULL
+(`assign_driver_to_vehicle`'s `p_route_id`, for a vehicle with no route).
+Documented and corrected once in `src/types/db.ts`
+(`NULLABLE_RPC_ARGS`/`RpcArgs<T>`/`rpcArgs()`) rather than casting at each
+call site — the file's existing charter is exactly "things the generator
+gets wrong go here."
+
+**`src/data/vehicles.ts`, `drivers.ts`, `driverPurchaseAgreements.ts`.**
+camelCase in and out, snake_case never leaves these files. Route and
+current-driver names are fetched as small separate queries rather than a
+PostgREST embed. `drivers` queries list columns explicitly — the table has a
+column-restricted SELECT grant from Phase 1 (`id_image_key`/
+`licence_image_key` excluded) and `select('*')` fails outright.
+`fetchOpenAgreementForVehicle` mirrors `dpa_one_open_per_vehicle` client-side
+so the driver-purchase-agreement setup screen (not yet built) can show a
+clear message before submit; `createAgreement` also maps the database's own
+`23505` as a backstop against a submission race.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+Screens are next.

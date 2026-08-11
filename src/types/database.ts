@@ -2056,6 +2056,15 @@ export type Database = {
         Args: { p_new_pin: string; p_user_id: string }
         Returns: boolean
       }
+      assign_driver_to_vehicle: {
+        Args: {
+          p_client_record_id: string
+          p_driver_id: string
+          p_route_id: string
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
       driver_identity_images: {
         Args: { p_driver_id: string }
         Returns: {

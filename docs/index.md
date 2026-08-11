@@ -24,6 +24,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0004](decisions/0004-driver-identity-images-via-rpc.md) | Driver identity images are read through a function, not a column grant |
 | [0005](decisions/0005-append-only-with-an-allow-list.md) | What "append-only" freezes and what it lets move |
 | [0006](decisions/0006-status-changes-are-events.md) | Status columns are projections of an event table |
+| [0007](decisions/0007-pin-sign-in-becomes-a-real-session.md) | Mobile PIN sign-in mints a real Supabase session; role+PIN, not a name picker |
 
 ## Build order
 
@@ -31,8 +32,8 @@ From SPEC section 9. Each phase ends with something usable; the next does not
 start until the current one runs.
 
 1. **Foundation** — repo, stack, database schema, migrations, seed data. ← *done*
-2. Auth and permissions — email/password for desktop, PIN for mobile
-3. Vehicles and Drivers
+2. Auth and permissions — email/password for desktop, PIN for mobile. ← *done*
+3. Vehicles and Drivers ← *in progress: data layer done, screens next*
 4. Records spine — ledger, activity records, corrections, audit log
 5. Daily payments — the five outcomes, shortfall, overpayment, bundles, balances
 6. Maintenance — orders, statuses, parts, status events

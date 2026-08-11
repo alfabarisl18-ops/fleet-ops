@@ -86,6 +86,44 @@ export type Insertable<T extends keyof PublicSchema['Tables']> = Omit<
     ? { client_record_id: string }
     : object)
 
+// --- RPC argument nullability ------------------------------------------
+
+/**
+ * A second generator gap: it has no way to see whether a Postgres function
+ * parameter accepts NULL, only its base type, so every RPC arg comes out
+ * non-nullable even when the SQL side is happy to receive one (e.g.
+ * assign_driver_to_vehicle's p_route_id, for a vehicle with no assigned
+ * route). List the genuinely-nullable ones here; RpcArgs<T> corrects them.
+ */
+export const NULLABLE_RPC_ARGS = {
+  assign_driver_to_vehicle: ['p_route_id'],
+} as const satisfies Partial<Record<keyof PublicSchema['Functions'], readonly string[]>>
+
+type NullableArgKeysFor<T> = T extends keyof typeof NULLABLE_RPC_ARGS
+  ? (typeof NULLABLE_RPC_ARGS)[T][number]
+  : never
+
+export type RpcArgs<T extends keyof PublicSchema['Functions']> = Omit<
+  PublicSchema['Functions'][T]['Args'],
+  NullableArgKeysFor<T>
+> & {
+  [K in NullableArgKeysFor<T> & keyof PublicSchema['Functions'][T]['Args']]:
+    | PublicSchema['Functions'][T]['Args'][K]
+    | null
+}
+
+/**
+ * `supabase.rpc(name, args)` takes its args type straight from the generated
+ * (always-non-nullable) Args, not from the corrected RpcArgs above — so the
+ * cast back has to happen somewhere. Doing it here, once, documented, beats
+ * an `as Database[...]` scattered into every data/*.ts call site.
+ */
+export function rpcArgs<T extends keyof PublicSchema['Functions']>(
+  args: RpcArgs<T>,
+): PublicSchema['Functions'][T]['Args'] {
+  return args as PublicSchema['Functions'][T]['Args']
+}
+
 // --- Money -----------------------------------------------------------------
 
 /**

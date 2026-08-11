@@ -35,7 +35,8 @@ start until the current one runs.
 
 1. **Foundation** — repo, stack, database schema, migrations, seed data. ← *done*
 2. Auth and permissions — email/password for desktop, PIN for mobile. ← *done*
-3. Vehicles and Drivers ← *in progress: data layer and screens built and verified live*
+3. **Vehicles and Drivers** — fleet list, vehicle profiles, driver list and
+   profiles, driver-purchase agreements, delete-driver. ← *done*
 4. Records spine — ledger, activity records, corrections, audit log
 5. Daily payments — the five outcomes, shortfall, overpayment, bundles, balances
 6. Maintenance — orders, statuses, parts, status events

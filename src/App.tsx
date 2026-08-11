@@ -5,8 +5,8 @@ import { RoleChooser } from '@/screens/RoleChooser'
 import { CollectionsWorkspace } from '@/screens/CollectionsWorkspace'
 import { DesktopSignIn } from '@/screens/DesktopSignIn'
 import { DesktopWorkspace } from '@/screens/DesktopWorkspace'
+import { MaintenanceWorkspace } from '@/screens/MaintenanceWorkspace'
 import { MobilePinSignIn } from '@/screens/MobilePinSignIn'
-import { SignedIn } from '@/screens/SignedIn'
 
 /** Owner/Admin and Fleet Manager get the Vehicles/Drivers workspace (Phase
  *  3). Matches app.is_desktop() server-side. */
@@ -66,9 +66,7 @@ export function App() {
         ) : user.role === 'COLLECTIONS_FINANCE' ? (
           <CollectionsWorkspace user={user} onSignedOut={() => setUser(null)} />
         ) : (
-          // Maintenance & Repairs still lands on the unchanged SignedIn
-          // confirmation screen — its mobile workspace is Phase 6.
-          <SignedIn user={user} onSignedOut={() => setUser(null)} />
+          <MaintenanceWorkspace user={user} onSignedOut={() => setUser(null)} />
         )}
       </main>
     )

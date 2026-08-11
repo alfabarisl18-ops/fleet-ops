@@ -628,3 +628,71 @@ available for live testing happened to have no current driver, itself a
 useful real-world edge case).
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+## [2026-08-13] maintenance | Phase 6 — Maintenance (orders, statuses, parts, both workspaces)
+
+Phase 1 built the full maintenance schema — `maintenance_orders`,
+`maintenance_status_events` (drives `status`/`is_grounded`/`closed_at` via
+a `SECURITY DEFINER` trigger, the `vehicle_status_events` pattern),
+`maintenance_parts`, `maintenance_notes` — with RLS and grants already in
+place. Nothing had ever written to them until this phase.
+
+**New migration:** one function, `public.record_maintenance_part`
+(`SECURITY DEFINER` from the start — see decision 0011), and the
+Records-spine `AFTER INSERT` triggers on all three writeable maintenance
+tables (`MAINTENANCE_ORDER_OPENED`, `MAINTENANCE_STATUS_CHANGED`,
+`MAINTENANCE_PART_ADDED`), additive to `maintenance_status_events`' own
+projection trigger, not a replacement for it.
+
+**Shared screens:** `AddMaintenanceOrderForm` and
+`MaintenanceOrderDetailScreen` built once, used by both `DesktopWorkspace`
+and the new mobile `MaintenanceWorkspace` — see decision 0011 for why one
+pair of screens covers both roles, and the `OIL_CHANGE` literal-string
+finding.
+
+**Mobile: `MaintenanceWorkspace`**, replacing the dead-end `SignedIn`
+screen for `MAINTENANCE_REPAIRS` (now deleted — nothing else used it).
+Three entry points: New maintenance record, Open records (list → the
+shared detail screen), and Vehicle status (a standalone quick action
+reusing `changeVehicleStatus` directly, unchanged from Phase 3).
+
+**Desktop: `MaintenanceList`**, a new Home entry point. Dashboard cards
+(Total Records, Vehicles Grounded, Recorded Cost, Old Parts Not Returned
+— the simple totals, not Phase 8's analytics breakdown), the order list,
+`+ New maintenance record`, click-through to the shared detail screen.
+The `old_parts_returned` toggle is gated to desktop roles in the UI (the
+real boundary is `mo_update_desktop`).
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback) — `PROBLEM_REPORTED` without a `problem_descriptor` rejected;
+both oil-change constraints correctly reject/require once tested with the
+literal `OIL_CHANGE` string (a first pass with `'Oil Change'` was a test-
+data mistake, not a schema gap — see decision 0011); a status-event
+insert correctly drives `status`/`is_grounded`/`closed_at` through two
+transitions; `record_maintenance_part` creates and links the matching
+`PARTS` ledger row; RLS denies Collections & Finance from touching any of
+the four maintenance tables; `old_parts_returned` and
+`record_maintenance_part` both reject a non-desktop/non-maintenance
+caller. Live in the Browser pane: signed in as the Maintenance & Repairs
+QA account (PIN, I. Turay) — opened a real Problem Reported order on
+SPR-01, added a part with cost (confirmed the `SECURITY DEFINER` ledger
+link-back live for that exact role), changed status to Still Grounded
+(confirmed the vehicle's own status is a separate, deliberate action —
+maintenance grounding doesn't cascade into `vehicles.status`), and used
+the Vehicle status quick action. Signed in as the Fleet Manager QA
+account: confirmed the dashboard cards compute correctly, opened a
+Regular Service order and checked Oil Change live (confirmed the checkbox
+correctly hides the free-text fields and saves the literal string),
+toggled `old_parts_returned` and confirmed it persisted across a reload
+and updated the dashboard count, and confirmed all three new record types
+render correctly in the Records feed with working filters.
+
+One UX fix made during live testing, not anticipated in the plan: the
+shared detail screen's vehicle name rendered as a button that did nothing
+on mobile (no vehicle profile screen there) — `onOpenVehicle` is now
+optional, and the fleet ID renders as plain text when it's omitted.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass. No
+maintenance-specific automated tests were added — this phase's
+correctness rests on the SQL-level and live verification above, matching
+how prior phases' database-enforced business rules were verified.

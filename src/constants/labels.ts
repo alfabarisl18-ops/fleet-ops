@@ -4,6 +4,15 @@ import type { CorrectionStatus } from '@/data/corrections'
 import type { BalanceStatus, DayOutcome, LedgerCategory, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
 import type { DriverStatus } from '@/data/drivers'
 import type { OwnershipTransferStatus, PaymentFrequency } from '@/data/driverPurchaseAgreements'
+import type {
+  FilterAction,
+  MaintenanceHandledBy,
+  MaintenanceRecordType,
+  MaintenanceStatus,
+  PartSource,
+  ProblemDescriptor,
+  Roadworthiness,
+} from '@/data/maintenance'
 import type { VehicleStatus, VehicleType } from '@/data/vehicles'
 
 // Every user-facing status string comes from here, so wording stays
@@ -74,6 +83,9 @@ export const RECORD_TYPE_LABELS: Record<RecordType, string> = {
   BUNDLED_PAYMENT_RECORDED: 'Bundled payment recorded',
   OTHER_PAYMENT_RECORDED: 'Other payment recorded',
   SHORTFALL_OVERRIDDEN_TO_DEBT: 'Shortfall converted to driver debt',
+  MAINTENANCE_ORDER_OPENED: 'Maintenance record opened',
+  MAINTENANCE_STATUS_CHANGED: 'Maintenance status changed',
+  MAINTENANCE_PART_ADDED: 'Part added',
 }
 
 export function recordTypeLabel(recordType: RecordType): string {
@@ -153,3 +165,62 @@ export const INCOME_LEDGER_CATEGORIES: LedgerCategory[] = [
   'DRIVER_PURCHASE_INSTALLMENT',
   'OTHER_INCOME',
 ]
+
+// SPEC section 4: record types in this exact order — Problem Reported,
+// Regular Service, Repair.
+export const MAINTENANCE_RECORD_TYPE_LABELS: Record<MaintenanceRecordType, string> = {
+  PROBLEM_REPORTED: 'Problem Reported',
+  REGULAR_SERVICE: 'Regular Service',
+  REPAIR: 'Repair',
+}
+
+export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceStatus, string> = {
+  PROBLEM_REPORTED: 'Problem reported',
+  INSPECTION_PENDING: 'Inspection pending',
+  REPAIR_AUTHORIZED: 'Repair authorized',
+  REPAIR_IN_PROGRESS: 'Repair in progress',
+  STILL_GROUNDED: 'Still grounded',
+  RETURNED_TO_SERVICE: 'Returned to service',
+  ADDITIONAL_PROBLEM_FOUND: 'Additional problem found',
+  COMPLETED_AND_VERIFIED: 'Completed and verified',
+}
+
+export const MAINTENANCE_HANDLED_BY_LABELS: Record<MaintenanceHandledBy, string> = {
+  FAMILY_WORKSHOP: 'Family workshop',
+  APPROVED_MECHANIC: 'Approved mechanic',
+  PARK_MECHANIC: 'Park mechanic',
+  OTHER: 'Other',
+}
+
+export const PART_SOURCE_LABELS: Record<PartSource, string> = {
+  NONE: 'No part used',
+  NEW: 'New',
+  USED: 'Used',
+  EXISTING_REPAIRED: 'Existing, repaired',
+}
+
+export const FILTER_ACTION_LABELS: Record<FilterAction, string> = {
+  NEW_FILTER: 'New filter installed',
+  REUSED: 'Filter reused',
+  NOT_CHANGED: 'Filter not changed',
+}
+
+export const ROADWORTHINESS_LABELS: Record<Roadworthiness, string> = {
+  ROADWORTHY: 'Roadworthy',
+  LIMITED_USE: 'Limited use',
+  NOT_ROADWORTHY: 'Not roadworthy',
+  UNKNOWN: 'Unknown',
+}
+
+export const PROBLEM_DESCRIPTOR_LABELS: Record<ProblemDescriptor, string> = {
+  NOT_WORKING: 'Not working',
+  WORN: 'Worn',
+  DAMAGED: 'Damaged',
+  MAKING_NOISE: 'Making noise',
+  LEAKING: 'Leaking',
+  WEAK_PERFORMANCE: 'Weak performance',
+  NEEDS_INSPECTION: 'Needs inspection',
+  NEEDS_REPLACEMENT: 'Needs replacement',
+  INTERMITTENT_PROBLEM: 'Intermittent problem',
+  OTHER: 'Other',
+}

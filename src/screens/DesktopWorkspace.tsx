@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { WorkspaceHeader } from '@/components/WorkspaceHeader'
 import type { SignedInUser } from '@/data/auth'
 import { AddDriverForm } from '@/screens/AddDriverForm'
+import { AddMaintenanceOrderForm } from '@/screens/AddMaintenanceOrderForm'
 import { AddVehicleForm } from '@/screens/AddVehicleForm'
 import { DesktopHome } from '@/screens/DesktopHome'
 import { DriverList } from '@/screens/DriverList'
 import { DriverProfileScreen } from '@/screens/DriverProfileScreen'
+import { MaintenanceList } from '@/screens/MaintenanceList'
+import { MaintenanceOrderDetailScreen } from '@/screens/MaintenanceOrderDetailScreen'
 import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
 import { RecordsList } from '@/screens/RecordsList'
 import { SetUpDriverPurchaseAgreementForm } from '@/screens/SetUpDriverPurchaseAgreementForm'
@@ -23,6 +26,9 @@ type DesktopView =
   | { name: 'set-up-driver-purchase-agreement'; vehicleId: string }
   | { name: 'records-list' }
   | { name: 'record-detail'; recordId: string }
+  | { name: 'maintenance-list' }
+  | { name: 'add-maintenance-order' }
+  | { name: 'maintenance-order-detail'; orderId: string }
 
 interface DesktopWorkspaceProps {
   user: SignedInUser
@@ -51,6 +57,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onOpenVehicles={() => setView({ name: 'vehicle-list' })}
             onOpenDrivers={() => setView({ name: 'driver-list' })}
             onOpenRecords={() => setView({ name: 'records-list' })}
+            onOpenMaintenance={() => setView({ name: 'maintenance-list' })}
           />
         )}
 
@@ -130,6 +137,31 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onBack={() => setView({ name: 'records-list' })}
             onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
             onOpenDriver={(driverId) => setView({ name: 'driver-profile', driverId })}
+          />
+        )}
+
+        {view.name === 'maintenance-list' && (
+          <MaintenanceList
+            onOpenOrder={(orderId) => setView({ name: 'maintenance-order-detail', orderId })}
+            onAddOrder={() => setView({ name: 'add-maintenance-order' })}
+          />
+        )}
+
+        {view.name === 'add-maintenance-order' && (
+          <AddMaintenanceOrderForm
+            currentUserId={user.id}
+            onCreated={(orderId) => setView({ name: 'maintenance-order-detail', orderId })}
+            onCancel={() => setView({ name: 'maintenance-list' })}
+          />
+        )}
+
+        {view.name === 'maintenance-order-detail' && (
+          <MaintenanceOrderDetailScreen
+            orderId={view.orderId}
+            currentUserId={user.id}
+            currentUserRole={user.role}
+            onBack={() => setView({ name: 'maintenance-list' })}
+            onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
           />
         )}
       </div>

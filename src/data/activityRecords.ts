@@ -31,6 +31,9 @@ export type RecordType =
   | 'BUNDLED_PAYMENT_RECORDED'
   | 'OTHER_PAYMENT_RECORDED'
   | 'SHORTFALL_OVERRIDDEN_TO_DEBT'
+  | 'MAINTENANCE_ORDER_OPENED'
+  | 'MAINTENANCE_STATUS_CHANGED'
+  | 'MAINTENANCE_PART_ADDED'
 
 export interface ActivityRecord {
   id: string

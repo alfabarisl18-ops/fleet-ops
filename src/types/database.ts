@@ -2056,6 +2056,23 @@ export type Database = {
         Args: { p_new_pin: string; p_user_id: string }
         Returns: boolean
       }
+      assign_driver_to_vehicle: {
+        Args: {
+          p_client_record_id: string
+          p_driver_id: string
+          p_route_id: string
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
+      delete_driver: { Args: { p_driver_id: string }; Returns: undefined }
+      driver_delete_preview: {
+        Args: { p_driver_id: string }
+        Returns: {
+          agreement_count: number
+          assignment_count: number
+        }[]
+      }
       driver_identity_images: {
         Args: { p_driver_id: string }
         Returns: {
@@ -2063,6 +2080,7 @@ export type Database = {
           licence_image_key: string
         }[]
       }
+      freetown_today: { Args: never; Returns: string }
       mobile_role_roster: {
         Args: { p_role: Database["public"]["Enums"]["user_role"] }
         Returns: {

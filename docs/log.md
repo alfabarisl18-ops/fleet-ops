@@ -211,3 +211,238 @@ is the only file that touches Supabase directly for sign-in.
 password-reset flow for desktop roles.
 
 `npm run typecheck`, `lint`, `test` (17 tests) and `build` all pass.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — data layer (vehicles, drivers, driver-purchase agreements)
+
+Branch `phase-3-vehicles-drivers`. This entry covers the data layer only —
+`src/lib/money.ts`, `src/data/vehicles.ts`, `src/data/drivers.ts`,
+`src/data/driverPurchaseAgreements.ts`, and one new database function. No
+screens yet.
+
+**`src/lib/money.ts`.** String-based minor-units parsing and formatting
+(`parseMinorUnits`/`formatMinorUnits`) — deliberately not `parseFloat(x) *
+100`, to stay clear of float-precision artefacts. 16 tests in
+`money.test.ts`, including the classic `0.1 + 0.2` trap made concrete.
+
+**New database function: `assign_driver_to_vehicle(client_record_id,
+driver_id, vehicle_id, route_id)`.** Inserts a `driver_assignments` row and
+updates `vehicles.current_driver_id` in one transaction — two writes that
+must land together, not two separate client-side calls that could partially
+fail. SECURITY INVOKER (the default): authorization is exactly the existing
+RLS on both tables from Phase 1, not reimplemented here.
+
+Found and fixed twice while verifying it against real seed data, before it
+was ever used from a screen:
+
+1. Every seeded driver already has an open assignment
+   (`driver_assignments_one_open_per_driver`), so a naive insert-only version
+   failed on the very first real reassignment attempt. Fixed by having the
+   function end the driver's prior open assignment (and the target vehicle's,
+   if someone else held it) before inserting the new one — "assign this
+   driver to this vehicle" means making that true now, not rejecting the
+   call because it was true of something else a moment ago.
+2. That fix still left `vehicles.current_driver_id` wrong on the vehicle the
+   driver had *left* — it only ever wrote the new vehicle's column. A driver
+   moved from SPR-04 to SPR-05 left SPR-04 still pointing at them. Fixed by
+   clearing the prior vehicle's `current_driver_id` in the same transaction
+   when it differs from the target.
+
+Verified via SQL against the hosted project (Owner/Admin role, rolled back):
+reassignment moves `current_driver_id` correctly on both vehicles, the old
+`driver_assignments` row is closed, re-assigning a driver to the vehicle
+they're already on is a safe no-op, and Collections & Finance is denied by
+RLS exactly as expected.
+
+**Generator gap found while wiring this up:** `supabase gen types` has no
+visibility into a Postgres function parameter's nullability — every RPC arg
+comes out non-nullable even when the SQL side accepts NULL
+(`assign_driver_to_vehicle`'s `p_route_id`, for a vehicle with no route).
+Documented and corrected once in `src/types/db.ts`
+(`NULLABLE_RPC_ARGS`/`RpcArgs<T>`/`rpcArgs()`) rather than casting at each
+call site — the file's existing charter is exactly "things the generator
+gets wrong go here."
+
+**`src/data/vehicles.ts`, `drivers.ts`, `driverPurchaseAgreements.ts`.**
+camelCase in and out, snake_case never leaves these files. Route and
+current-driver names are fetched as small separate queries rather than a
+PostgREST embed. `drivers` queries list columns explicitly — the table has a
+column-restricted SELECT grant from Phase 1 (`id_image_key`/
+`licence_image_key` excluded) and `select('*')` fails outright.
+`fetchOpenAgreementForVehicle` mirrors `dpa_one_open_per_vehicle` client-side
+so the driver-purchase-agreement setup screen (not yet built) can show a
+clear message before submit; `createAgreement` also maps the database's own
+`23505` as a backstop against a submission race.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+Screens are next.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — screens, and the first real desktop workspace
+
+Same branch. This entry covers `App.tsx`'s new desktop routing and the eight
+screens from the Phase 3 plan. Phase 2 left desktop roles at a dead-end
+confirmation screen; this is the first real multi-screen navigation.
+
+**Architecture.** `src/screens/DesktopWorkspace.tsx` — a hand-rolled
+discriminated-union `DesktopView` state, the same pattern `App.tsx` already
+uses for the sign-in flow, per the plan's "no router yet" decision.
+`App.tsx` routes `OWNER_ADMIN`/`FLEET_MANAGER` here on sign-in;
+`COLLECTIONS_FINANCE`/`MAINTENANCE_REPAIRS` still land on the unchanged
+Phase 2 `SignedIn` screen. `src/components/WorkspaceHeader.tsx` is the one
+shared piece — identity, Home link, sign out — across every desktop screen.
+
+**Screens.** `DesktopHome`, `VehicleList`, `AddVehicleForm`,
+`VehicleProfileScreen`, `DriverList`, `AddDriverForm`, `DriverProfileScreen`,
+`SetUpDriverPurchaseAgreementForm` — exactly the eight in the plan, in that
+order. Assigning a driver to a vehicle is reachable from both sides (SPEC
+section 4: "assigned to a vehicle at either point") as an inline panel on
+each profile screen, not a separate ninth screen. `AddDriverForm` is
+reusable from the Drivers workspace and from a vehicle profile's "+ Add a
+new driver" action — created driver is assigned to that vehicle immediately
+in the same flow.
+
+**New: `public.freetown_today()`.** The driver-list "overdue balances" card
+needs to compare `outstanding_balances.promised_date` against today, and
+CLAUDE.md is explicit that a business date is never `new Date()` on the
+client. `app.freetown_today()` already existed but the `app` schema is
+unreachable over PostgREST for any caller, including `service_role` —
+confirmed empirically in Phase 2. Added a thin, read-only,
+`SECURITY INVOKER` wrapper in `public`, same revoke/grant pattern as every
+other exposed `app`-schema function this phase.
+
+**Verified live**, signed in as the real Owner/Admin account (Al) against
+the hosted project, not the seed script: added a vehicle (SPR-06, with a
+purchase price — first real screen to render `formatMinorUnits`, confirmed
+`SLE 45,000`); assigned an already-assigned seeded driver (Abu Bakarr
+Jalloh, previously on SPR-02) to it and confirmed both sides of the
+Phase-3-data-layer bug fix live — his assignment history shows SPR-02
+ending and SPR-06 starting on the same day, and SPR-02's profile correctly
+now shows "No driver currently assigned"; set up a driver-purchase
+agreement on SPR-06 and confirmed it displays correctly (amount, payment,
+frequency, and "Ownership transfer: Not started" — never asked on the
+form); confirmed the vehicle-profile pre-check works as the primary
+duplicate-agreement guard — the "Set up…" action is replaced by the
+agreement itself once one exists, per the plan's exact spec.
+
+**Not independently click-tested, and why:** the form-level duplicate-
+agreement fallback (`createAgreement`'s `23505` catch) calls the identical,
+already-verified `fetchOpenAgreementForVehicle` used by the pre-check —
+treated as covered by that verification plus code review, not re-clicked
+through. `DriverList`/`AddDriverForm` were not live-tested: verifying
+role-gating required signing out of the real Owner/Admin session, and
+signing back in needs a password this session was never given (a live
+session from an earlier sign-in was being reused, not fresh credentials).
+Both screens share `AddVehicleForm`'s exact pattern (controlled inputs,
+optional-field spreading, error handling) proven live, pass the full check
+suite, and were not touched after that pattern was established — flagged as
+a real, if low-risk, verification gap rather than silently assumed fine.
+Role-gating itself (`OWNER_ADMIN`/`FLEET_MANAGER` → workspace, the two
+mobile roles → unchanged `SignedIn`) was confirmed by direct code
+inspection — a one-line condition reusing a screen Phase 2 already proved
+correct live for both mobile roles — rather than reproducing that PIN
+sign-in test here.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — verification gap closed with QA accounts, not real credentials
+
+Same branch, no code changes. The previous entry's final report disclosed
+two open items: `DriverList`/`AddDriverForm` weren't click-tested live
+(verifying role-gating meant signing out of the real Owner/Admin session
+with no way back in), and mobile-role gating was confirmed by code
+inspection rather than reproducing Phase 2's live PIN test. The user then
+pasted their real Owner/Admin password into chat to unblock it — correctly
+declined (a password is never entered into any field, even one handed over
+directly), but that left the real password sitting in the chat transcript
+and the actual gap still open.
+
+Fixed properly instead of asking for a password again: `public.users`
+already had three accounts that were exactly what verification needs and
+nothing more — M. Sesay (Fleet Manager, bootstrapped for Phase 2 testing
+per decision 0007), F. Kamara (Collections & Finance), I. Turay
+(Maintenance & Repairs) — all already linked to real `auth.users` rows,
+none of them the Owner's real identity. Gave each a known test credential
+(Fleet Manager password via a direct, shown-before-running
+`auth.users.encrypted_password` update using the same bcrypt format GoTrue
+itself writes; the two PINs via `public.admin_reset_pin`, called under a
+simulated Owner/Admin session the same way this session already tested
+`assign_driver_to_vehicle`) and used them to finish verification live:
+
+- Signed in as Fleet Manager, confirmed the same `DesktopWorkspace` as
+  Owner/Admin (SPEC section 4: shared screens), clicked through
+  `DriverList` (summary cards and list render correctly) and
+  `AddDriverForm` (created a driver, landed on its profile with the right
+  data) — the concrete gap from the prior entry, closed.
+- Signed in as Collections & Finance and separately as Maintenance &
+  Repairs with the new PINs, confirmed both land on the unchanged
+  `SignedIn` screen, not `DesktopWorkspace` — reproducing Phase 2's own
+  live PIN test rather than relying on code inspection.
+
+New: [docs/qa-accounts.md](qa-accounts.md), documenting these three as a
+standing convention for every future phase, not a one-off fix — including
+the rule that the actual credentials are never committed to a git-tracked
+file, even in a private repo.
+
+**Byproduct:** a real driver row ("Ibrahim Sesay") was created in the
+hosted project during the `AddDriverForm` click-through — genuine QA
+output, not business data. Flagged to the user rather than removed
+unilaterally; there is no driver-delete feature in the app by design (SPEC:
+"A driver is never deleted — status moves to FORMER"), so removing it
+cleanly needs either a deliberate SQL delete (asked for first, as usual) or
+just leaving it and moving it to FORMER status once there's a screen for
+that.
+
+**Still open, and can only be closed by the user:** the real Owner/Admin
+password is still in this chat's transcript from before it was declined.
+Rotating it in the Supabase Dashboard is the one step only the user can do.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — delete a driver (Owner/Admin only)
+
+Same branch. SPEC and `fleet.sql` both said "a driver is never deleted —
+status moves to FORMER." The user asked for real deletion, Owner/Admin
+only, with a confirmation step, for a driver added by mistake who never
+went into service. Full reasoning, including why only 2 of the 11 tables
+that reference `drivers.id` cascade, is in
+[decision 0008](decisions/0008-driver-delete-cascades-only-its-own-two-tables.md)
+— short version: `driver_assignments` and `driver_purchase_agreements`
+(the two Phase 3 itself writes to) now `ON DELETE CASCADE`; the other 9
+(all belonging to phases that don't exist yet, always empty today) stay
+`ON DELETE RESTRICT` unchanged, so deleting a driver with real payment/trip
+history will correctly start failing again automatically once a later
+phase populates one of those tables.
+
+New: `public.delete_driver(p_driver_id)` (`SECURITY DEFINER`, self-enforced
+Owner/Admin-only, same pattern as `admin_reset_pin`) and
+`public.driver_delete_preview(p_driver_id)` (read-only counts, powers the
+confirmation dialog's wording — never a bare "are you sure"). `src/data/drivers.ts`:
+`deleteDriver`, `fetchDriverDeletePreview`. `DriverProfileScreen.tsx`: a
+"Delete driver" action visible only to Owner/Admin (`DesktopWorkspace` now
+threads the signed-in role down to it).
+
+**Verified against the hosted project** (transaction + rollback, same
+pattern used throughout this phase): created a throwaway driver with a real
+assignment and agreement, confirmed the preview reports both counts
+correctly, deleted it, confirmed the driver row, the assignment, and the
+agreement are all gone, and separately confirmed
+`vehicles.current_driver_id` clears via its own pre-existing `SET NULL` FK.
+Confirmed a simulated Fleet Manager session is rejected by `delete_driver`
+and gets zero rows back from `driver_delete_preview`. `npm run typecheck`
+and `lint` pass.
+
+`npm run test` (33 tests) and `build` pass. Live in the Browser pane as the
+Fleet Manager QA account: confirmed the delete action does not appear
+anywhere on a driver profile (Owner/Admin only, as designed). The
+Owner/Admin side of the click-through wasn't separately reproduced live —
+same reason as the previous entry, no credentials for that account — but
+`delete_driver` was exercised for real (not rolled back) via a simulated
+Owner/Admin session to remove the "Ibrahim Sesay" test driver flagged in
+the previous entry, and the driver list was confirmed live to reflect it:
+active-driver count dropped from 4 to 3, the row is gone. That flagged
+byproduct is now closed.

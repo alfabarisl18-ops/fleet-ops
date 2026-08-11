@@ -27,6 +27,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0006](decisions/0006-status-changes-are-events.md) | Status columns are projections of an event table |
 | [0007](decisions/0007-pin-sign-in-becomes-a-real-session.md) | Mobile PIN sign-in mints a real Supabase session; role+PIN, not a name picker |
 | [0008](decisions/0008-driver-delete-cascades-only-its-own-two-tables.md) | Driver delete cascades assignments/agreements; the other 9 references stay RESTRICT until their phases exist |
+| [0009](decisions/0009-corrections-cover-vehicles-and-drivers-approve-and-apply-collapse.md) | Corrections are the intended edit path for vehicles/drivers (not a direct-edit form); approve+apply collapse to one action; the correction column allow-list |
 
 ## Build order
 
@@ -35,8 +36,11 @@ start until the current one runs.
 
 1. **Foundation** — repo, stack, database schema, migrations, seed data. ← *done*
 2. Auth and permissions — email/password for desktop, PIN for mobile. ← *done*
-3. Vehicles and Drivers ← *in progress: data layer and screens built and verified live*
-4. Records spine — ledger, activity records, corrections, audit log
+3. **Vehicles and Drivers** — fleet list, vehicle profiles, driver list and
+   profiles, driver-purchase agreements, delete-driver. ← *done*
+4. **Records spine** — activity records, corrections (vehicles/drivers),
+   audit log, the clickable read-only detail view. ← *done*. `ledger_entries`
+   has no UI yet — nothing writes to it until Phase 5/6.
 5. Daily payments — the five outcomes, shortfall, overpayment, bundles, balances
 6. Maintenance — orders, statuses, parts, status events
 7. Alerts — with working deep links

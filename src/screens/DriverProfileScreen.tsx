@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { CorrectionPanel } from '@/components/CorrectionPanel'
 import { DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
+import type { Correction } from '@/data/corrections'
+import { fetchPendingCorrection, requestCorrection } from '@/data/corrections'
 import type { AssignmentHistoryItem, DriverDeletePreview, DriverDetail } from '@/data/drivers'
 import {
   assignDriverToVehicle,
@@ -18,16 +21,18 @@ import { fetchRoutes, fetchVehicles } from '@/data/vehicles'
 
 interface DriverProfileScreenProps {
   driverId: string
+  currentUserId: string
   currentUserRole: AppRole
   onBack: () => void
   onOpenVehicle: (vehicleId: string) => void
 }
 
-export function DriverProfileScreen({ driverId, currentUserRole, onBack, onOpenVehicle }: DriverProfileScreenProps) {
+export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, onBack, onOpenVehicle }: DriverProfileScreenProps) {
   const [driver, setDriver] = useState<DriverDetail | null>(null)
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([])
   const [owedMinor, setOwedMinor] = useState<number | null>(null)
   const [agreement, setAgreement] = useState<DriverPurchaseAgreement | null>(null)
+  const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -38,13 +43,15 @@ export function DriverProfileScreen({ driverId, currentUserRole, onBack, onOpenV
       fetchAssignmentHistory(driverId),
       fetchOutstandingBalanceForDriver(driverId),
       fetchAgreementsForDriver(driverId),
+      fetchPendingCorrection('DRIVER', driverId),
     ])
-      .then(([d, h, owed, agreements]) => {
+      .then(([d, h, owed, agreements, correction]) => {
         if (cancelled) return
         setDriver(d)
         setHistory(h)
         setOwedMinor(owed)
         setAgreement(agreements[0] ?? null)
+        setPendingCorrection(correction)
         setError(null)
       })
       .catch(() => {
@@ -108,6 +115,14 @@ export function DriverProfileScreen({ driverId, currentUserRole, onBack, onOpenV
         <Field label="Address" value={driver.address} />
         <Field label="Next of kin" value={driver.nextOfKinName} />
         <Field label="Next of kin phone" value={driver.nextOfKinPhone} />
+        <CorrectionPanel
+          currentUserRole={currentUserRole}
+          pending={pendingCorrection}
+          onChanged={() => setReloadKey((k) => k + 1)}
+          renderRequestForm={(onDone) => (
+            <RequestDriverCorrectionForm driver={driver} currentUserId={currentUserId} onRequested={onDone} />
+          )}
+        />
       </Section>
 
       <Section title="Documents">
@@ -428,5 +443,229 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
         </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Pre-filled with current values. Fields match apply_correction's driver
+ * allow-list exactly (decision 0009); status/left_on/leave_reason are
+ * deliberately not here — moving a driver to FORMER is a distinct
+ * employment-status action, not a field correction. See that decision.
+ */
+function RequestDriverCorrectionForm({
+  driver,
+  currentUserId,
+  onRequested,
+}: {
+  driver: DriverDetail
+  currentUserId: string
+  onRequested: () => void
+}) {
+  const [fullName, setFullName] = useState(driver.fullName)
+  const [knownAs, setKnownAs] = useState(driver.knownAs ?? '')
+  const [phone, setPhone] = useState(driver.phone ?? '')
+  const [phoneAlt, setPhoneAlt] = useState(driver.phoneAlt ?? '')
+  const [address, setAddress] = useState(driver.address ?? '')
+  const [nextOfKinName, setNextOfKinName] = useState(driver.nextOfKinName ?? '')
+  const [nextOfKinPhone, setNextOfKinPhone] = useState(driver.nextOfKinPhone ?? '')
+  const [idDocumentType, setIdDocumentType] = useState(driver.idDocumentType ?? '')
+  const [idDocumentNumber, setIdDocumentNumber] = useState(driver.idDocumentNumber ?? '')
+  const [licenceNumber, setLicenceNumber] = useState(driver.licenceNumber ?? '')
+  const [licenceExpiry, setLicenceExpiry] = useState(driver.licenceExpiry ?? '')
+  const [startedOn, setStartedOn] = useState(driver.startedOn ?? '')
+  const [notes, setNotes] = useState(driver.notes ?? '')
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (fullName.trim() === '') {
+      setError('Full name is required.')
+      return
+    }
+    if (reason.trim().length < 3) {
+      setError('Say why this correction is needed (at least a few words).')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await requestCorrection({
+        targetTable: 'DRIVER',
+        targetId: driver.id,
+        reason: reason.trim(),
+        requestedBy: currentUserId,
+        afterJson: {
+          full_name: fullName.trim(),
+          known_as: knownAs.trim() === '' ? null : knownAs.trim(),
+          phone: phone.trim() === '' ? null : phone.trim(),
+          phone_alt: phoneAlt.trim() === '' ? null : phoneAlt.trim(),
+          address: address.trim() === '' ? null : address.trim(),
+          next_of_kin_name: nextOfKinName.trim() === '' ? null : nextOfKinName.trim(),
+          next_of_kin_phone: nextOfKinPhone.trim() === '' ? null : nextOfKinPhone.trim(),
+          id_document_type: idDocumentType.trim() === '' ? null : idDocumentType.trim(),
+          id_document_number: idDocumentNumber.trim() === '' ? null : idDocumentNumber.trim(),
+          licence_number: licenceNumber.trim() === '' ? null : licenceNumber.trim(),
+          licence_expiry: licenceExpiry === '' ? null : licenceExpiry,
+          started_on: startedOn === '' ? null : startedOn,
+          notes: notes.trim() === '' ? null : notes.trim(),
+        },
+      })
+      onRequested()
+    } catch {
+      setError('Something went wrong. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Full name</span>
+        <input
+          type="text"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Name commonly used</span>
+        <input
+          type="text"
+          value={knownAs}
+          onChange={(e) => setKnownAs(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Phone</span>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Alternate phone</span>
+        <input
+          type="tel"
+          value={phoneAlt}
+          onChange={(e) => setPhoneAlt(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Address</span>
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Next of kin name</span>
+        <input
+          type="text"
+          value={nextOfKinName}
+          onChange={(e) => setNextOfKinName(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Next of kin phone</span>
+        <input
+          type="tel"
+          value={nextOfKinPhone}
+          onChange={(e) => setNextOfKinPhone(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">ID document type</span>
+        <input
+          type="text"
+          value={idDocumentType}
+          onChange={(e) => setIdDocumentType(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">ID document number</span>
+        <input
+          type="text"
+          value={idDocumentNumber}
+          onChange={(e) => setIdDocumentNumber(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Licence number</span>
+        <input
+          type="text"
+          value={licenceNumber}
+          onChange={(e) => setLicenceNumber(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Licence expiry</span>
+        <input
+          type="date"
+          value={licenceExpiry}
+          onChange={(e) => setLicenceExpiry(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Date started</span>
+        <input
+          type="date"
+          value={startedOn}
+          onChange={(e) => setStartedOn(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Notes</span>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Reason for this correction</span>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={2}
+          required
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {submitting ? 'Submitting…' : 'Request correction'}
+      </button>
+    </form>
   )
 }

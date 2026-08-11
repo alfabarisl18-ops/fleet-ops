@@ -1,4 +1,6 @@
 import type { AppRole } from '@/data/auth'
+import type { RecordType } from '@/data/activityRecords'
+import type { CorrectionStatus } from '@/data/corrections'
 import type { DriverStatus } from '@/data/drivers'
 import type { OwnershipTransferStatus, PaymentFrequency } from '@/data/driverPurchaseAgreements'
 import type { VehicleStatus, VehicleType } from '@/data/vehicles'
@@ -51,4 +53,31 @@ export const OWNERSHIP_TRANSFER_STATUS_LABELS: Record<OwnershipTransferStatus, s
   IN_PROGRESS: 'In progress',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
+}
+
+// activity_records.record_type is plain text (Phase 1's own design — see
+// src/data/activityRecords.ts), not a database enum, so this can't be an
+// exhaustive Record<> the way the others are. Falls back to the raw value
+// for anything not yet in RecordType, rather than a blank label.
+export const RECORD_TYPE_LABELS: Record<RecordType, string> = {
+  VEHICLE_ADDED: 'Vehicle added',
+  DRIVER_ADDED: 'Driver added',
+  VEHICLE_STATUS_CHANGED: 'Vehicle status changed',
+  DRIVER_ASSIGNED: 'Driver assigned',
+  DRIVER_PURCHASE_AGREEMENT_CREATED: 'Driver-purchase agreement created',
+  DRIVER_DELETED: 'Driver deleted',
+  CORRECTION_REQUESTED: 'Correction requested',
+  CORRECTION_APPLIED: 'Correction applied',
+  CORRECTION_REJECTED: 'Correction rejected',
+}
+
+export function recordTypeLabel(recordType: RecordType): string {
+  return RECORD_TYPE_LABELS[recordType] ?? recordType
+}
+
+export const CORRECTION_STATUS_LABELS: Record<CorrectionStatus, string> = {
+  REQUESTED: 'Requested',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  APPLIED: 'Applied',
 }

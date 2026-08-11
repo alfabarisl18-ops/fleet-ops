@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
+import { CorrectionPanel } from '@/components/CorrectionPanel'
 import { OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_STATUS_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
-import { formatMinorUnits } from '@/lib/money'
+import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
+import type { AppRole } from '@/data/auth'
+import type { Correction } from '@/data/corrections'
+import { fetchPendingCorrection, requestCorrection } from '@/data/corrections'
 import type { DriverListItem } from '@/data/drivers'
 import { assignDriverToVehicle, fetchDrivers } from '@/data/drivers'
 import type { DriverPurchaseAgreement } from '@/data/driverPurchaseAgreements'
@@ -11,6 +15,7 @@ import { changeVehicleStatus, fetchRoutes, fetchVehicle } from '@/data/vehicles'
 interface VehicleProfileScreenProps {
   vehicleId: string
   currentUserId: string
+  currentUserRole: AppRole
   onBack: () => void
   onOpenDriver: (driverId: string) => void
   onAddDriverToAssign: (vehicleId: string) => void
@@ -22,6 +27,7 @@ const STATUS_ORDER: VehicleStatus[] = ['ACTIVE', 'GROUNDED', 'IN_MAINTENANCE']
 export function VehicleProfileScreen({
   vehicleId,
   currentUserId,
+  currentUserRole,
   onBack,
   onOpenDriver,
   onAddDriverToAssign,
@@ -29,16 +35,18 @@ export function VehicleProfileScreen({
 }: VehicleProfileScreenProps) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null)
   const [agreement, setAgreement] = useState<(DriverPurchaseAgreement & { driverName: string }) | null>(null)
+  const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([fetchVehicle(vehicleId), fetchOpenAgreementForVehicle(vehicleId)])
-      .then(([v, a]) => {
+    Promise.all([fetchVehicle(vehicleId), fetchOpenAgreementForVehicle(vehicleId), fetchPendingCorrection('VEHICLE', vehicleId)])
+      .then(([v, a, c]) => {
         if (cancelled) return
         setVehicle(v)
         setAgreement(a)
+        setPendingCorrection(c)
         setError(null)
       })
       .catch(() => {
@@ -96,10 +104,20 @@ export function VehicleProfileScreen({
       )}
 
       <Section title="Identity">
+        <Field label="Fleet ID" value={vehicle.fleetId} />
+        <Field label="Plate" value={vehicle.plate} />
         <Field label="Color" value={vehicle.color} />
         <Field label="Distinguishing marks" value={vehicle.distinguishingMarks} />
         {vehicle.type === 'OTHER' && <Field label="Description" value={vehicle.customDescription} />}
         <Field label="Route" value={vehicle.routeName} />
+        <CorrectionPanel
+          currentUserRole={currentUserRole}
+          pending={pendingCorrection}
+          onChanged={() => setReloadKey((k) => k + 1)}
+          renderRequestForm={(onDone) => (
+            <RequestVehicleCorrectionForm vehicle={vehicle} currentUserId={currentUserId} onRequested={onDone} />
+          )}
+        />
       </Section>
 
       <Section title="Status">
@@ -427,5 +445,207 @@ function AssignDriverPanel({
         </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Pre-filled with current values, per the Phase 4 plan — the person changes
+ * whichever field(s) need fixing and states why. Fields match
+ * apply_correction's vehicle allow-list exactly (decision 0009); type,
+ * status, current_driver_id, expected_daily_amount_minor, and
+ * yearly_target_minor are deliberately not here — see that decision.
+ */
+function RequestVehicleCorrectionForm({
+  vehicle,
+  currentUserId,
+  onRequested,
+}: {
+  vehicle: VehicleDetail
+  currentUserId: string
+  onRequested: () => void
+}) {
+  const [fleetId, setFleetId] = useState(vehicle.fleetId)
+  const [plate, setPlate] = useState(vehicle.plate ?? '')
+  const [color, setColor] = useState(vehicle.color ?? '')
+  const [distinguishingMarks, setDistinguishingMarks] = useState(vehicle.distinguishingMarks ?? '')
+  const [customType, setCustomType] = useState(vehicle.customType ?? '')
+  const [customDescription, setCustomDescription] = useState(vehicle.customDescription ?? '')
+  const [purchasedOn, setPurchasedOn] = useState(vehicle.purchasedOn ?? '')
+  const [purchasePrice, setPurchasePrice] = useState(
+    vehicle.purchasePriceMinor !== null ? formatMinorUnits(vehicle.purchasePriceMinor).replace('SLE ', '').replace(/,/g, '') : '',
+  )
+  const [enteredServiceOn, setEnteredServiceOn] = useState(vehicle.enteredServiceOn ?? '')
+  const [expectedRetirementOn, setExpectedRetirementOn] = useState(vehicle.expectedRetirementOn ?? '')
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const priceMinor = purchasePrice.trim() === '' ? null : parseMinorUnits(purchasePrice)
+  const priceInvalid = purchasePrice.trim() !== '' && priceMinor === null
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (reason.trim().length < 3) {
+      setError('Say why this correction is needed (at least a few words).')
+      return
+    }
+    if (priceInvalid) {
+      setError('Purchase price is not a valid amount.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await requestCorrection({
+        targetTable: 'VEHICLE',
+        targetId: vehicle.id,
+        reason: reason.trim(),
+        requestedBy: currentUserId,
+        afterJson: {
+          fleet_id: fleetId.trim(),
+          plate: plate.trim() === '' ? null : plate.trim(),
+          color: color.trim() === '' ? null : color.trim(),
+          distinguishing_marks: distinguishingMarks.trim() === '' ? null : distinguishingMarks.trim(),
+          custom_type: customType.trim() === '' ? null : customType.trim(),
+          custom_description: customDescription.trim() === '' ? null : customDescription.trim(),
+          purchased_on: purchasedOn === '' ? null : purchasedOn,
+          purchase_price_minor: priceMinor,
+          entered_service_on: enteredServiceOn === '' ? null : enteredServiceOn,
+          expected_retirement_on: expectedRetirementOn === '' ? null : expectedRetirementOn,
+        },
+      })
+      onRequested()
+    } catch {
+      setError('Something went wrong. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Fleet ID</span>
+        <input
+          type="text"
+          value={fleetId}
+          onChange={(e) => setFleetId(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Plate</span>
+        <input
+          type="text"
+          value={plate}
+          onChange={(e) => setPlate(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Color</span>
+        <input
+          type="text"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Distinguishing marks</span>
+        <input
+          type="text"
+          value={distinguishingMarks}
+          onChange={(e) => setDistinguishingMarks(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      {vehicle.type === 'OTHER' && (
+        <>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-700">Type description</span>
+            <input
+              type="text"
+              value={customType}
+              onChange={(e) => setCustomType(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-700">Description</span>
+            <input
+              type="text"
+              value={customDescription}
+              onChange={(e) => setCustomDescription(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+        </>
+      )}
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Purchase date</span>
+        <input
+          type="date"
+          value={purchasedOn}
+          onChange={(e) => setPurchasedOn(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Purchase price</span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={purchasePrice}
+          onChange={(e) => setPurchasePrice(e.target.value)}
+          placeholder="0.00"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Service entry date</span>
+        <input
+          type="date"
+          value={enteredServiceOn}
+          onChange={(e) => setEnteredServiceOn(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Expected retirement date</span>
+        <input
+          type="date"
+          value={expectedRetirementOn}
+          onChange={(e) => setExpectedRetirementOn(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Reason for this correction</span>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={2}
+          required
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {submitting ? 'Submitting…' : 'Request correction'}
+      </button>
+    </form>
   )
 }

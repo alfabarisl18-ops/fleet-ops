@@ -346,3 +346,57 @@ correct live for both mobile roles — rather than reproducing that PIN
 sign-in test here.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+---
+
+## [2026-08-11] vehicles-drivers | Phase 3 — verification gap closed with QA accounts, not real credentials
+
+Same branch, no code changes. The previous entry's final report disclosed
+two open items: `DriverList`/`AddDriverForm` weren't click-tested live
+(verifying role-gating meant signing out of the real Owner/Admin session
+with no way back in), and mobile-role gating was confirmed by code
+inspection rather than reproducing Phase 2's live PIN test. The user then
+pasted their real Owner/Admin password into chat to unblock it — correctly
+declined (a password is never entered into any field, even one handed over
+directly), but that left the real password sitting in the chat transcript
+and the actual gap still open.
+
+Fixed properly instead of asking for a password again: `public.users`
+already had three accounts that were exactly what verification needs and
+nothing more — M. Sesay (Fleet Manager, bootstrapped for Phase 2 testing
+per decision 0007), F. Kamara (Collections & Finance), I. Turay
+(Maintenance & Repairs) — all already linked to real `auth.users` rows,
+none of them the Owner's real identity. Gave each a known test credential
+(Fleet Manager password via a direct, shown-before-running
+`auth.users.encrypted_password` update using the same bcrypt format GoTrue
+itself writes; the two PINs via `public.admin_reset_pin`, called under a
+simulated Owner/Admin session the same way this session already tested
+`assign_driver_to_vehicle`) and used them to finish verification live:
+
+- Signed in as Fleet Manager, confirmed the same `DesktopWorkspace` as
+  Owner/Admin (SPEC section 4: shared screens), clicked through
+  `DriverList` (summary cards and list render correctly) and
+  `AddDriverForm` (created a driver, landed on its profile with the right
+  data) — the concrete gap from the prior entry, closed.
+- Signed in as Collections & Finance and separately as Maintenance &
+  Repairs with the new PINs, confirmed both land on the unchanged
+  `SignedIn` screen, not `DesktopWorkspace` — reproducing Phase 2's own
+  live PIN test rather than relying on code inspection.
+
+New: [docs/qa-accounts.md](qa-accounts.md), documenting these three as a
+standing convention for every future phase, not a one-off fix — including
+the rule that the actual credentials are never committed to a git-tracked
+file, even in a private repo.
+
+**Byproduct:** a real driver row ("Ibrahim Sesay") was created in the
+hosted project during the `AddDriverForm` click-through — genuine QA
+output, not business data. Flagged to the user rather than removed
+unilaterally; there is no driver-delete feature in the app by design (SPEC:
+"A driver is never deleted — status moves to FORMER"), so removing it
+cleanly needs either a deliberate SQL delete (asked for first, as usual) or
+just leaving it and moving it to FORMER status once there's a screen for
+that.
+
+**Still open, and can only be closed by the user:** the real Owner/Admin
+password is still in this chat's transcript from before it was declined.
+Rotating it in the Supabase Dashboard is the one step only the user can do.

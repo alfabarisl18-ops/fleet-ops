@@ -10,6 +10,7 @@ specification; these pages record how it was built and why.
 | [schema.md](schema.md) | The database: every table, the permission matrix verified against the live database, how the daily-payment rule is enforced, business dates, money, append-only, offline safety. |
 | [log.md](log.md) | Chronological record of significant changes. One entry per change. |
 | [open-questions.md](open-questions.md) | SPEC section 10, plus what Phase 1 assumed where SPEC was silent. Read before Phase 2. |
+| [qa-accounts.md](qa-accounts.md) | The three non-personal accounts reserved for agent/manual verification, and the rules for using them. Read before signing in to verify anything. |
 
 ## Decisions
 
@@ -33,7 +34,7 @@ start until the current one runs.
 
 1. **Foundation** — repo, stack, database schema, migrations, seed data. ← *done*
 2. Auth and permissions — email/password for desktop, PIN for mobile. ← *done*
-3. Vehicles and Drivers ← *in progress: data layer and screens built, verified live except DriverList/AddDriverForm (see docs/log.md)*
+3. Vehicles and Drivers ← *in progress: data layer and screens built and verified live*
 4. Records spine — ledger, activity records, corrections, audit log
 5. Daily payments — the five outcomes, shortfall, overpayment, bundles, balances
 6. Maintenance — orders, statuses, parts, status events

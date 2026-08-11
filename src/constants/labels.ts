@@ -1,6 +1,7 @@
 import type { AppRole } from '@/data/auth'
 import type { RecordType } from '@/data/activityRecords'
 import type { CorrectionStatus } from '@/data/corrections'
+import type { BalanceStatus, DayOutcome, LedgerCategory, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
 import type { DriverStatus } from '@/data/drivers'
 import type { OwnershipTransferStatus, PaymentFrequency } from '@/data/driverPurchaseAgreements'
 import type { VehicleStatus, VehicleType } from '@/data/vehicles'
@@ -69,6 +70,10 @@ export const RECORD_TYPE_LABELS: Record<RecordType, string> = {
   CORRECTION_REQUESTED: 'Correction requested',
   CORRECTION_APPLIED: 'Correction applied',
   CORRECTION_REJECTED: 'Correction rejected',
+  DAILY_PAYMENT_RECORDED: 'Vehicle payment recorded',
+  BUNDLED_PAYMENT_RECORDED: 'Bundled payment recorded',
+  OTHER_PAYMENT_RECORDED: 'Other payment recorded',
+  SHORTFALL_OVERRIDDEN_TO_DEBT: 'Shortfall converted to driver debt',
 }
 
 export function recordTypeLabel(recordType: RecordType): string {
@@ -81,3 +86,70 @@ export const CORRECTION_STATUS_LABELS: Record<CorrectionStatus, string> = {
   REJECTED: 'Rejected',
   APPLIED: 'Applied',
 }
+
+// CLAUDE.md: "Day outcomes are Full Day, Half Day, Driver's Day, Breakdown,
+// Did Not Work." Exact wording, never abbreviated.
+export const DAY_OUTCOME_LABELS: Record<DayOutcome, string> = {
+  FULL_DAY: 'Full Day',
+  HALF_DAY: 'Half Day',
+  DRIVERS_DAY: "Driver's Day",
+  BREAKDOWN: 'Breakdown',
+  DID_NOT_WORK: 'Did Not Work',
+}
+
+export const SHORTFALL_CAUSE_LABELS: Record<ShortfallCause, string> = {
+  BREAKDOWN: 'Breakdown',
+  ACCIDENT: 'Accident',
+  POLICE_CHECKPOINT: 'Police or checkpoint',
+  OTHER: 'Other',
+}
+
+export const OVERPAYMENT_REASON_LABELS: Record<OverpaymentReason, string> = {
+  SETTLING_BALANCE: 'Settling an earlier shortfall',
+  ADVANCE: 'Advance on a future day',
+  OTHER: 'Other',
+}
+
+export const BALANCE_STATUS_LABELS: Record<BalanceStatus, string> = {
+  OPEN: 'Open',
+  PARTIAL: 'Partially paid',
+  CLEARED: 'Cleared',
+  WRITTEN_OFF: 'Written off',
+}
+
+export const LEDGER_CATEGORY_LABELS: Record<LedgerCategory, string> = {
+  PARTS: 'Parts',
+  LABOUR: 'Labour',
+  MAINTENANCE: 'Maintenance',
+  FUEL: 'Fuel',
+  ROAD_CHECKPOINT: 'Road / checkpoint',
+  DRIVER_OR_HELPER_PAYMENT: 'Driver or helper payment',
+  VEHICLE_PURCHASE: 'Vehicle purchase',
+  LICENSING_INSURANCE: 'Licensing / insurance',
+  OTHER_EXPENSE: 'Other expense',
+  DAILY_VEHICLE_PAYMENT: 'Daily vehicle payment',
+  TRIP_REVENUE: 'Trip revenue',
+  BALANCE_SETTLEMENT: 'Balance settlement',
+  DRIVER_PURCHASE_INSTALLMENT: 'Driver-purchase installment',
+  OTHER_INCOME: 'Other income',
+}
+
+export const EXPENSE_LEDGER_CATEGORIES: LedgerCategory[] = [
+  'PARTS',
+  'LABOUR',
+  'MAINTENANCE',
+  'FUEL',
+  'ROAD_CHECKPOINT',
+  'DRIVER_OR_HELPER_PAYMENT',
+  'VEHICLE_PURCHASE',
+  'LICENSING_INSURANCE',
+  'OTHER_EXPENSE',
+]
+
+export const INCOME_LEDGER_CATEGORIES: LedgerCategory[] = [
+  'DAILY_VEHICLE_PAYMENT',
+  'TRIP_REVENUE',
+  'BALANCE_SETTLEMENT',
+  'DRIVER_PURCHASE_INSTALLMENT',
+  'OTHER_INCOME',
+]

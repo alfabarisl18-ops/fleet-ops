@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { recordTypeLabel } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
+import type { AppRole } from '@/data/auth'
 import type { ActivityRecord } from '@/data/activityRecords'
 import { fetchActivityRecord } from '@/data/activityRecords'
+import type { DailyPaymentRecord } from '@/data/dailyPayments'
+import { fetchDailyPaymentRecord, overrideShortfallTreatment } from '@/data/dailyPayments'
 import { supabase } from '@/lib/supabase'
 
 interface RecordDetailScreenProps {
   recordId: string
+  currentUserRole: AppRole
   onBack: () => void
   onOpenVehicle: (vehicleId: string) => void
   onOpenDriver: (driverId: string) => void
@@ -20,12 +24,14 @@ interface RecordDetailScreenProps {
  * labour, and trip information are also on SPEC's list but don't apply to
  * any record type this phase writes — Phase 5/6's job, not faked here.
  */
-export function RecordDetailScreen({ recordId, onBack, onOpenVehicle, onOpenDriver }: RecordDetailScreenProps) {
+export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVehicle, onOpenDriver }: RecordDetailScreenProps) {
   const [record, setRecord] = useState<ActivityRecord | null>(null)
   const [vehicleFleetId, setVehicleFleetId] = useState<string | null>(null)
   const [driverName, setDriverName] = useState<string | null>(null)
   const [enteredByName, setEnteredByName] = useState<string | null>(null)
+  const [dailyPayment, setDailyPayment] = useState<DailyPaymentRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -33,6 +39,16 @@ export function RecordDetailScreen({ recordId, onBack, onOpenVehicle, onOpenDriv
       .then(async (r) => {
         if (cancelled || !r) return
         setRecord(r)
+
+        if (r.recordType === 'DAILY_PAYMENT_RECORDED') {
+          fetchDailyPaymentRecord(r.targetId)
+            .then((dpr) => {
+              if (!cancelled) setDailyPayment(dpr)
+            })
+            .catch(() => {
+              /* Override action just won't be offered; the rest of the page still works. */
+            })
+        }
 
         const lookups: PromiseLike<void>[] = [
           supabase
@@ -76,7 +92,7 @@ export function RecordDetailScreen({ recordId, onBack, onOpenVehicle, onOpenDriv
     return () => {
       cancelled = true
     }
-  }, [recordId])
+  }, [recordId, reloadKey])
 
   if (error) {
     return (
@@ -141,6 +157,104 @@ export function RecordDetailScreen({ recordId, onBack, onOpenVehicle, onOpenDriv
         <Field label="Applies to" value={record.appliesToDate ?? '—'} />
         <Field label="Entered" value={record.enteredAt.slice(0, 10)} />
         <Field label="Entered by" value={enteredByName ?? '…'} />
+      </div>
+
+      {dailyPayment &&
+        (currentUserRole === 'OWNER_ADMIN' || currentUserRole === 'FLEET_MANAGER') &&
+        dailyPayment.shortfallTreatment === 'ACCEPTED_LOSS' &&
+        dailyPayment.shortfallTreatmentOverride === null && (
+          <ShortfallReviewPanel dailyPaymentId={dailyPayment.id} onDone={() => setReloadKey((k) => k + 1)} />
+        )}
+
+      {dailyPayment?.shortfallTreatmentOverride && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm text-amber-800">
+            Converted to driver debt on review: {dailyPayment.shortfallTreatmentOverrideReason}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * SPEC: "Owner/Admin or Fleet Manager can convert it to driver debt on
+ * review." Only offered when the caller's own record shows an accepted
+ * shortfall that hasn't already been reviewed — real, enforced again
+ * server-side by public.override_shortfall_treatment.
+ */
+function ShortfallReviewPanel({ dailyPaymentId, onDone }: { dailyPaymentId: string; onDone: () => void }) {
+  const [reviewing, setReviewing] = useState(false)
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function confirm() {
+    if (reason.trim().length < 3) {
+      setError('Say why this is being converted to debt.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await overrideShortfallTreatment(dailyPaymentId, reason.trim())
+      onDone()
+    } catch {
+      setError('Could not convert this shortfall. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!reviewing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setReviewing(true)}
+        className="mt-4 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+      >
+        Convert to driver debt
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Reason</span>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={2}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={confirm}
+          disabled={submitting}
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {submitting ? 'Saving…' : 'Confirm'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setReviewing(false)
+            setError(null)
+          }}
+          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   )

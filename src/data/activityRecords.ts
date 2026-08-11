@@ -27,6 +27,10 @@ export type RecordType =
   | 'CORRECTION_REQUESTED'
   | 'CORRECTION_APPLIED'
   | 'CORRECTION_REJECTED'
+  | 'DAILY_PAYMENT_RECORDED'
+  | 'BUNDLED_PAYMENT_RECORDED'
+  | 'OTHER_PAYMENT_RECORDED'
+  | 'SHORTFALL_OVERRIDDEN_TO_DEBT'
 
 export interface ActivityRecord {
   id: string

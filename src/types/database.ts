@@ -2092,6 +2092,35 @@ export type Database = {
           id: string
         }[]
       }
+      override_shortfall_treatment: {
+        Args: { p_daily_payment_id: string; p_reason: string }
+        Returns: undefined
+      }
+      record_bundled_payment: {
+        Args: {
+          p_client_record_id: string
+          p_covers_from_date: string
+          p_days_covered: number
+          p_note?: string
+          p_received_at?: string
+          p_total_amount_minor: number
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
+      record_daily_payment: {
+        Args: {
+          p_client_record_id: string
+          p_day_outcome: Database["public"]["Enums"]["day_outcome"]
+          p_overpayment_reason?: Database["public"]["Enums"]["overpayment_reason"]
+          p_received_amount_minor: number
+          p_service_date: string
+          p_shortfall_cause?: Database["public"]["Enums"]["shortfall_cause"]
+          p_shortfall_note?: string
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
       reject_correction: {
         Args: { p_correction_id: string }
         Returns: undefined

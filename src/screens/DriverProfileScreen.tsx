@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { CorrectionPanel } from '@/components/CorrectionPanel'
-import { DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
+import { BALANCE_STATUS_LABELS, DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
 import type { Correction } from '@/data/corrections'
 import { fetchPendingCorrection, requestCorrection } from '@/data/corrections'
+import type { OutstandingBalance } from '@/data/dailyPayments'
+import { fetchOutstandingBalancesForDriver } from '@/data/dailyPayments'
 import type { AssignmentHistoryItem, DriverDeletePreview, DriverDetail } from '@/data/drivers'
 import {
   assignDriverToVehicle,
@@ -31,6 +33,7 @@ export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, 
   const [driver, setDriver] = useState<DriverDetail | null>(null)
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([])
   const [owedMinor, setOwedMinor] = useState<number | null>(null)
+  const [balances, setBalances] = useState<OutstandingBalance[]>([])
   const [agreement, setAgreement] = useState<DriverPurchaseAgreement | null>(null)
   const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -42,14 +45,16 @@ export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, 
       fetchDriver(driverId),
       fetchAssignmentHistory(driverId),
       fetchOutstandingBalanceForDriver(driverId),
+      fetchOutstandingBalancesForDriver(driverId),
       fetchAgreementsForDriver(driverId),
       fetchPendingCorrection('DRIVER', driverId),
     ])
-      .then(([d, h, owed, agreements, correction]) => {
+      .then(([d, h, owed, balanceList, agreements, correction]) => {
         if (cancelled) return
         setDriver(d)
         setHistory(h)
         setOwedMinor(owed)
+        setBalances(balanceList)
         setAgreement(agreements[0] ?? null)
         setPendingCorrection(correction)
         setError(null)
@@ -173,6 +178,29 @@ export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, 
 
       <Section title="Money">
         <Field label="Current amount owed" value={owedMinor !== null ? formatMinorUnits(owedMinor) : null} />
+
+        {balances.length > 0 && (
+          <div className="mt-3">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Balance history</h3>
+            <ul className="flex flex-col gap-1">
+              {balances.map((b) => (
+                <li key={b.id} className="flex justify-between text-sm">
+                  <span className="text-slate-700">
+                    {formatMinorUnits(b.remainingAmountMinor)}
+                    {b.remainingAmountMinor !== b.originalAmountMinor && (
+                      <span className="text-slate-400"> of {formatMinorUnits(b.originalAmountMinor)}</span>
+                    )}
+                  </span>
+                  <span className="text-slate-500">
+                    {BALANCE_STATUS_LABELS[b.status]}
+                    {b.closedAt ? ` · ${b.closedAt.slice(0, 10)}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {agreement && (
           <>
             <h3 className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">

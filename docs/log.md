@@ -532,3 +532,99 @@ live" limitation from the previous two entries, this time with a genuinely
 authenticated session rather than a SQL stand-in.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+---
+
+## [2026-08-12] daily-payments | Phase 5 — daily payments (Sprinter-only)
+
+New branch `phase-5-daily-payments`. Phase 1 built `daily_payment_records`,
+`bundled_payments`, `outstanding_balances`, `balance_settlements`, and
+`driver_credits` with the five-outcome rule already enforced by
+`GENERATED ALWAYS` columns. Nothing had ever written to them. This is the
+recording workflow: the mobile Collections & Finance screens, the RPCs
+that make one submit atomically produce the right consequences, and the
+desktop review action. Full reasoning in
+[decision 0010](decisions/0010-daily-payments-sprinter-only-bundle-and-overpayment-design.md)
+— Sprinter-only (box trucks are trip-based, deferred), no debt
+forgiveness (SPEC's own open question), the bundle-distribution
+assumption, the overpayment cascade, and why driver-purchase-installment
+re-categorization is included even though it wasn't in the written plan
+(it's the exact deferral named when Phase 3 built
+`driver_purchase_agreements`).
+
+**New:** `app.apply_daily_payment_effects()` (shared side effects: the
+`outstanding_balances` row for a `DRIVER_DEBT` shortfall, the
+`ledger_entries` row for money received, correctly categorized as a
+driver-purchase installment when one's open on the vehicle);
+`public.record_daily_payment()` (single day, plus overpayment routing —
+settle the driver's open balances oldest-first, cascading across more
+than one if needed, or hold the excess as a credit);
+`public.record_bundled_payment()` (several days at once, sharing the same
+side-effect helper); `public.override_shortfall_treatment()` (Owner/Admin
+or Fleet Manager convert an accepted shortfall to driver debt on review).
+Three new `activity_records` triggers extending Phase 4's pattern
+(`daily_payment_records`, `bundled_payments`, and `ledger_entries` rows
+with no `source_type` — i.e. "Other Payment," which has no
+`daily_payment_records` row to already represent it).
+
+**Two real, pre-existing bugs found while verifying against the hosted
+project, both fixed at the root, not worked around:**
+
+1. `app.enforce_append_only()` (Phase 1) falsely flagged *any* update to
+   `daily_payment_records` — the first table with both a `GENERATED`
+   column and a partial mutable-columns allow-list — as changing the
+   generated column, because Postgres recomputes generated columns
+   *after* `BEFORE` triggers run. Fixed by excluding generated columns
+   from the comparison; they can never be directly set by a client
+   anyway, so nothing is lost. This was a latent bug since Phase 1,
+   invisible until this phase became the first to `UPDATE` a row with a
+   generated column present.
+2. `apply_daily_payment_effects()`'s `ledger_entry_id` link-back silently
+   affected zero rows for a Collections & Finance submission — confirmed
+   live, not assumed — because `dpr_update_desktop` only lets desktop
+   roles `UPDATE` that table. The `ledger_entries` row itself was still
+   created correctly; only the back-reference (and, downstream, the
+   `balance_settlements.ledger_entry_id` link for an overpayment) was
+   silently missing. Fixed by making the function `SECURITY DEFINER` —
+   the row was already authorized at insert time by RLS, this only
+   finishes bookkeeping the inserting role is entitled to have happen.
+
+**Mobile: `CollectionsWorkspace`**, replacing the dead-end `SignedIn`
+screen for `COLLECTIONS_FINANCE` the same way `DesktopWorkspace` replaced
+it for desktop roles (`MAINTENANCE_REPAIRS` unchanged, still Phase 6's
+job). "Vehicle Payment" (vehicles grouped by type, box trucks excluded,
+the five-outcome flow, the bundle toggle) and "Other Payment" (general
+ledger entry, category filtered by the income/expense toggle).
+
+**Desktop:** `DriverProfileScreen` shows real balance history now
+(`outstanding_balances` was legitimately empty until this phase — Phase
+3's own comment said so); `RecordDetailScreen` gets the shortfall-review
+action for `DAILY_PAYMENT_RECORDED` records.
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback) — all five day outcomes produce the correct
+`shortfall_treatment`/side effects; overpayment settling against one
+balance and cascading across two; `ADVANCE` creates a credit; a 6-day
+bundled payment produces 6 correctly-split `daily_payment_records` rows
+plus the summary activity record; `override_shortfall_treatment` converts
+correctly, rejects a second attempt, and rejects a non-Owner/Fleet-Manager
+caller; RLS denies Maintenance & Repairs from recording a payment at all;
+driver-purchase-installment re-categorization confirmed. Live in the
+Browser pane, signed in as the Collections & Finance QA account: recorded
+a real Full Day (confirmed the `ledger_entry_id` bug live before the fix,
+then confirmed the fix on the next submission), a real Half Day shortfall
+with a cause, and a real Other Payment (expense, correctly signed
+`−SLE 150`). Signed in as the Fleet Manager QA account: confirmed the new
+record types appear correctly in the Records feed with working filters,
+and confirmed the shortfall-review action correctly refuses to convert a
+shortfall on a vehicle with no driver assigned (a real edge case the
+verification surfaced, not anticipated in the plan) rather than silently
+misattributing debt.
+
+**Not separately click-tested live:** the bundled-payment mobile flow
+(exhaustively proven correct via SQL instead) and the override happy path
+with a driver actually assigned (also SQL-proven; the one vehicle
+available for live testing happened to have no current driver, itself a
+useful real-world edge case).
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react'
 import { fetchCurrentUser } from '@/data/auth'
 import type { MobileRole, SignedInUser } from '@/data/auth'
 import { RoleChooser } from '@/screens/RoleChooser'
+import { CollectionsWorkspace } from '@/screens/CollectionsWorkspace'
 import { DesktopSignIn } from '@/screens/DesktopSignIn'
 import { DesktopWorkspace } from '@/screens/DesktopWorkspace'
 import { MobilePinSignIn } from '@/screens/MobilePinSignIn'
 import { SignedIn } from '@/screens/SignedIn'
 
 /** Owner/Admin and Fleet Manager get the Vehicles/Drivers workspace (Phase
- *  3); Collections & Finance and Maintenance & Repairs still land on the
- *  unchanged SignedIn confirmation screen — their mobile workspaces are
- *  later phases. Matches app.is_desktop() server-side. */
+ *  3). Matches app.is_desktop() server-side. */
 function isDesktopRole(role: SignedInUser['role']): boolean {
   return role === 'OWNER_ADMIN' || role === 'FLEET_MANAGER'
 }
@@ -64,7 +63,11 @@ export function App() {
       <main className="min-h-full">
         {isDesktopRole(user.role) ? (
           <DesktopWorkspace user={user} onSignedOut={() => setUser(null)} />
+        ) : user.role === 'COLLECTIONS_FINANCE' ? (
+          <CollectionsWorkspace user={user} onSignedOut={() => setUser(null)} />
         ) : (
+          // Maintenance & Repairs still lands on the unchanged SignedIn
+          // confirmation screen — its mobile workspace is Phase 6.
           <SignedIn user={user} onSignedOut={() => setUser(null)} />
         )}
       </main>

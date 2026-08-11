@@ -2056,6 +2056,10 @@ export type Database = {
         Args: { p_new_pin: string; p_user_id: string }
         Returns: boolean
       }
+      apply_correction: {
+        Args: { p_correction_id: string }
+        Returns: undefined
+      }
       assign_driver_to_vehicle: {
         Args: {
           p_client_record_id: string
@@ -2087,6 +2091,10 @@ export type Database = {
           display_name: string
           id: string
         }[]
+      }
+      reject_correction: {
+        Args: { p_correction_id: string }
+        Returns: undefined
       }
       touch_session: { Args: { p_session_id: string }; Returns: boolean }
       verify_pin: {

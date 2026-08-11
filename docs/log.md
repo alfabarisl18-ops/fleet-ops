@@ -446,3 +446,89 @@ Owner/Admin session to remove the "Ibrahim Sesay" test driver flagged in
 the previous entry, and the driver list was confirmed live to reflect it:
 active-driver count dropped from 4 to 3, the row is gone. That flagged
 byproduct is now closed.
+
+---
+
+## [2026-08-11] records-spine | Phase 4 — Records spine: activity feed, corrections, audit log
+
+New branch `phase-4-records-spine`, off `main` (Phase 3 merged first, per
+the user's request). Phase 1 built `ledger_entries`, `activity_records`,
+`corrections`, and `audit_log` with schema, RLS, and grants already in
+place — its own comment said so: "Phase 1 creates the table and its
+policies. The triggers that populate it from each workflow belong to
+Phase 4." This phase is that population mechanism, plus a real corrections
+workflow for vehicles and drivers. Full reasoning in
+[decision 0009](decisions/0009-corrections-cover-vehicles-and-drivers-approve-and-apply-collapse.md).
+
+**`activity_records` population.** `AFTER INSERT` triggers on `vehicles`,
+`drivers`, `vehicle_status_events`, `driver_assignments`,
+`driver_purchase_agreements` — plain triggers, not `SECURITY DEFINER`,
+since the existing `activity_insert_signed_in` policy already lets
+whichever role is performing the outer insert write their own row.
+`delete_driver()` gets one explicit insert for "driver deleted," not a
+generic delete-trigger (a generic one would also fire for every
+cascade-deleted assignment/agreement row, producing confusing noise on top
+of the one real event).
+
+**Corrections: request → apply/reject.** Request is a plain client insert
+(RLS already allowed it); a new `BEFORE INSERT` trigger captures
+`before_json` from the live target row server-side, never trusted from the
+client. `public.apply_correction()` and `public.reject_correction()` — both
+`SECURITY DEFINER`, self-enforced Owner/Admin-only, same pattern as
+`admin_reset_pin`/`delete_driver()`. Applying uses an explicit per-table
+column allow-list (`CASE WHEN after_json ? 'col'`), not dynamic SQL,
+writes `audit_log` (the only way that table ever gets a row — no client
+role has `INSERT` on it), and writes its own `activity_records` entry.
+
+**Historical backfill.** The approved plan said the Records page should
+show real history "on day one," not just activity from today forward —
+which the triggers alone don't do, since they only fire on new inserts.
+Added a one-time backfill for every vehicle, driver, status change,
+assignment, and agreement that predates this migration (including Phase
+1's original seed data). Disclosed limitation: vehicles/drivers never
+stored who created them, so backfilled rows' `entered_by` is the active
+Owner/Admin account performing the migration, not the real historical
+actor — every row from this point forward has correct, real attribution
+from the trigger that wrote it.
+
+**Two real bugs found while verifying, both fixed before this landed:**
+
+1. `activity_records.driver_id` was still `ON DELETE RESTRICT` from Phase
+   1, back when nothing populated the table. The moment every driver got a
+   `DRIVER_ADDED` row referencing themselves, `delete_driver()` started
+   blocking on every driver's own "added" record — caught by testing the
+   already-shipped delete-driver feature against the new trigger, not
+   assumed safe. Changed to `ON DELETE SET NULL`: deleting a driver should
+   detach their activity history, not erase it or block the delete.
+2. That fix then hit `activity_records`' own append-only trigger (Phase 1,
+   no allow-list = fully frozen) — `SET NULL` is implemented as an
+   `UPDATE` even when the database performs it internally as part of a
+   cascade, and the trigger blocked that too. Widened the allow-list to
+   permit `driver_id` specifically; everything else on the row stays
+   frozen.
+3. (Cosmetic, not structural, but a real vocabulary-rule violation): the
+   vehicle-status-change trigger interpolated the raw enum
+   (`"SPR-05 moved to GROUNDED"`) instead of the display label CLAUDE.md
+   requires ("Grounded"). Fixed the trigger for new events and corrected
+   the two already-backfilled rows via a one-time, explicitly-scoped
+   trigger-disable/fix/re-enable — not a precedent for editing
+   `activity_records` normally.
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback) — each of the five insert-triggers produces the right activity
+record; a full request → apply cycle changes the target row, writes
+`audit_log` with the correct before/after, and writes its own activity
+record; reject leaves the target row untouched; a non-Owner is rejected by
+both `apply_correction` and `reject_correction`. Live in the Browser pane,
+signed in as the real Owner/Admin account: Records page shows real
+backfilled history with working filters; opened a record's detail view and
+clicked through to its vehicle; requested a correction on SPR-06 (added a
+color), approved it, confirmed the color changed, `audit_log` recorded the
+right before/after, and both `CORRECTION_REQUESTED`/`CORRECTION_APPLIED`
+appear in the Records feed. Then, signed in as the Fleet Manager QA
+account: confirmed "Request a correction" works and Approve/Reject do
+**not** appear — closing the "Owner/Admin click-through not reproducible
+live" limitation from the previous two entries, this time with a genuinely
+authenticated session rather than a SQL stand-in.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

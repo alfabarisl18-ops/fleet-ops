@@ -6,6 +6,8 @@ import { AddVehicleForm } from '@/screens/AddVehicleForm'
 import { DesktopHome } from '@/screens/DesktopHome'
 import { DriverList } from '@/screens/DriverList'
 import { DriverProfileScreen } from '@/screens/DriverProfileScreen'
+import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
+import { RecordsList } from '@/screens/RecordsList'
 import { SetUpDriverPurchaseAgreementForm } from '@/screens/SetUpDriverPurchaseAgreementForm'
 import { VehicleList } from '@/screens/VehicleList'
 import { VehicleProfileScreen } from '@/screens/VehicleProfileScreen'
@@ -19,6 +21,8 @@ type DesktopView =
   | { name: 'add-driver'; assignToVehicleId?: string }
   | { name: 'driver-profile'; driverId: string }
   | { name: 'set-up-driver-purchase-agreement'; vehicleId: string }
+  | { name: 'records-list' }
+  | { name: 'record-detail'; recordId: string }
 
 interface DesktopWorkspaceProps {
   user: SignedInUser
@@ -46,6 +50,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
           <DesktopHome
             onOpenVehicles={() => setView({ name: 'vehicle-list' })}
             onOpenDrivers={() => setView({ name: 'driver-list' })}
+            onOpenRecords={() => setView({ name: 'records-list' })}
           />
         )}
 
@@ -67,6 +72,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
           <VehicleProfileScreen
             vehicleId={view.vehicleId}
             currentUserId={user.id}
+            currentUserRole={user.role}
             onBack={() => setView({ name: 'vehicle-list' })}
             onOpenDriver={(driverId) => setView({ name: 'driver-profile', driverId })}
             onAddDriverToAssign={(vehicleId) => setView({ name: 'add-driver', assignToVehicleId: vehicleId })}
@@ -100,6 +106,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
         {view.name === 'driver-profile' && (
           <DriverProfileScreen
             driverId={view.driverId}
+            currentUserId={user.id}
             currentUserRole={user.role}
             onBack={() => setView({ name: 'driver-list' })}
             onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
@@ -111,6 +118,17 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             vehicleId={view.vehicleId}
             onDone={() => setView({ name: 'vehicle-profile', vehicleId: view.vehicleId })}
             onCancel={() => setView({ name: 'vehicle-profile', vehicleId: view.vehicleId })}
+          />
+        )}
+
+        {view.name === 'records-list' && <RecordsList onOpenRecord={(recordId) => setView({ name: 'record-detail', recordId })} />}
+
+        {view.name === 'record-detail' && (
+          <RecordDetailScreen
+            recordId={view.recordId}
+            onBack={() => setView({ name: 'records-list' })}
+            onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
+            onOpenDriver={(driverId) => setView({ name: 'driver-profile', driverId })}
           />
         )}
       </div>

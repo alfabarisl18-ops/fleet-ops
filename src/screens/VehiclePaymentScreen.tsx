@@ -5,6 +5,7 @@ import type { DayOutcome, OverpaymentReason, ShortfallCause } from '@/data/daily
 import { fetchFreetownToday, isDayOutcomeEligible, recordBundledPayment, recordDailyPayment } from '@/data/dailyPayments'
 import type { VehicleListItem, VehicleType } from '@/data/vehicles'
 import { fetchVehicle, fetchVehicles } from '@/data/vehicles'
+import { RecordTripForm } from '@/screens/RecordTripForm'
 
 interface VehiclePaymentScreenProps {
   onDone: () => void
@@ -14,6 +15,7 @@ type Step =
   | { name: 'pick' }
   | { name: 'day-outcome'; vehicleId: string; fleetId: string; date: string; expectedAmountMinor: number }
   | { name: 'bundle'; vehicleId: string; fleetId: string; startDate: string; expectedAmountMinor: number }
+  | { name: 'trip'; vehicleId: string; fleetId: string }
 
 const DAY_OUTCOMES: DayOutcome[] = ['FULL_DAY', 'HALF_DAY', 'DRIVERS_DAY', 'BREAKDOWN', 'DID_NOT_WORK']
 const SHORTFALL_CAUSES: ShortfallCause[] = ['BREAKDOWN', 'ACCIDENT', 'POLICE_CHECKPOINT', 'OTHER']
@@ -21,8 +23,11 @@ const OVERPAYMENT_REASONS: OverpaymentReason[] = ['SETTLING_BALANCE', 'ADVANCE',
 
 /**
  * SPEC section 5: "After choosing a vehicle and date, ask What happened
- * that day?" Vehicles grouped by type, box trucks excluded — see the
- * Phase 5 plan for why.
+ * that day?" for every vehicle except a box truck. Box trucks are paid
+ * per trip, not per day (SPEC's Trips section) — picking one here routes
+ * straight to the trip entry form instead ("Sprinter & Box-Truck Payment
+ * → box truck selected"), skipping the date/bundle controls which don't
+ * apply to a trip.
  */
 export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
   const [step, setStep] = useState<Step>({ name: 'pick' })
@@ -53,9 +58,17 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
     )
   }
 
+  if (step.name === 'trip') {
+    return <RecordTripForm vehicleId={step.vehicleId} fleetId={step.fleetId} onDone={onDone} onBack={() => setStep({ name: 'pick' })} />
+  }
+
   return (
     <VehiclePicker
-      onChoose={async (vehicleId, fleetId, date, bundle) => {
+      onChoose={async (vehicleId, fleetId, type, date, bundle) => {
+        if (type === 'BOX_TRUCK') {
+          setStep({ name: 'trip', vehicleId, fleetId })
+          return
+        }
         const detail = await fetchVehicle(vehicleId)
         const expectedAmountMinor = detail?.expectedDailyAmountMinor ?? 0
         if (bundle) {
@@ -71,7 +84,7 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
 function VehiclePicker({
   onChoose,
 }: {
-  onChoose: (vehicleId: string, fleetId: string, date: string, bundle: boolean) => void
+  onChoose: (vehicleId: string, fleetId: string, type: VehicleType, date: string, bundle: boolean) => void
 }) {
   const [vehicles, setVehicles] = useState<VehicleListItem[] | null>(null)
   const [date, setDate] = useState('')
@@ -83,7 +96,7 @@ function VehiclePicker({
     Promise.all([fetchVehicles(), fetchFreetownToday()])
       .then(([v, today]) => {
         if (cancelled) return
-        setVehicles(v.filter((vehicle) => isDayOutcomeEligible(vehicle.type)))
+        setVehicles(v)
         setDate(today)
       })
       .catch(() => {
@@ -124,6 +137,7 @@ function VehiclePicker({
           onChange={(e) => setDate(e.target.value)}
           className="rounded-lg border border-slate-300 px-4 py-3 text-base"
         />
+        <span className="text-xs text-slate-400">Not used for a box truck — trip entry has its own dates.</span>
       </label>
 
       <label className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -141,8 +155,8 @@ function VehiclePicker({
               <li key={v.id}>
                 <button
                   type="button"
-                  disabled={date === ''}
-                  onClick={() => onChoose(v.id, v.fleetId, date, bundle)}
+                  disabled={!isDayOutcomeEligible(v.type) ? false : date === ''}
+                  onClick={() => onChoose(v.id, v.fleetId, v.type, date, bundle)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50 disabled:opacity-50"
                 >
                   {v.fleetId}

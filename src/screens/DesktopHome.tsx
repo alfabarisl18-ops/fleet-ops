@@ -3,17 +3,21 @@ interface DesktopHomeProps {
   onOpenDrivers: () => void
   onOpenRecords: () => void
   onOpenMaintenance: () => void
+  onOpenAccounting: () => void
 }
 
 /**
- * SPEC section 4 lists a much larger Home than this — Accounting, Future
- * Purchases, Approvals, Payment targets, Export report, Settings alongside
- * Vehicles, Drivers, Records, and (as of Phase 6) Maintenance. None of the
- * rest exist yet, and SPEC's own rule is "every card that looks actionable
- * must work" — so Home shows exactly the entry points that do something
- * real, not placeholders for the rest. See docs/log.md.
+ * SPEC section 4 lists a much larger Home than this — Future Purchases,
+ * Payment targets, Export report, Settings alongside Vehicles, Drivers,
+ * Records, Maintenance, and (as of Phase 8) Accounting. None of the
+ * rest exist yet, and SPEC's own rule is "every card that looks
+ * actionable must work" — so Home shows exactly the entry points that
+ * do something real, not placeholders for the rest. See docs/log.md.
+ * (Payment targets and Approvals are folded into the vehicle profile
+ * and Accounting respectively — see decision 0013 — rather than getting
+ * their own top-level cards yet.)
  */
-export function DesktopHome({ onOpenVehicles, onOpenDrivers, onOpenRecords, onOpenMaintenance }: DesktopHomeProps) {
+export function DesktopHome({ onOpenVehicles, onOpenDrivers, onOpenRecords, onOpenMaintenance, onOpenAccounting }: DesktopHomeProps) {
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Home</h1>
@@ -53,6 +57,15 @@ export function DesktopHome({ onOpenVehicles, onOpenDrivers, onOpenRecords, onOp
         >
           <span className="block text-lg font-semibold text-slate-900">Maintenance</span>
           <span className="mt-1 block text-sm text-slate-500">Problems, repairs, parts, and vehicle status</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenAccounting}
+          className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+        >
+          <span className="block text-lg font-semibold text-slate-900">Accounting</span>
+          <span className="mt-1 block text-sm text-slate-500">Income, expenses, and the ledger</span>
         </button>
       </div>
     </div>

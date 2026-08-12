@@ -1,5 +1,6 @@
 import type { AppRole } from '@/data/auth'
 import type { RecordType } from '@/data/activityRecords'
+import type { ApprovalStatus, TripStatus, WeightUnit } from '@/data/accounting'
 import type { CorrectionStatus } from '@/data/corrections'
 import type { AlertType } from '@/data/alerts'
 import type { BalanceStatus, DayOutcome, LedgerCategory, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
@@ -253,4 +254,23 @@ export const PROBLEM_DESCRIPTOR_LABELS: Record<ProblemDescriptor, string> = {
   NEEDS_REPLACEMENT: 'Needs replacement',
   INTERMITTENT_PROBLEM: 'Intermittent problem',
   OTHER: 'Other',
+}
+
+export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
+  PLANNED: 'Planned',
+  IN_PROGRESS: 'In progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+}
+
+export const WEIGHT_UNIT_LABELS: Record<WeightUnit, string> = {
+  LB: 'lb',
+  KG: 'kg',
+}
+
+export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
+  NOT_REQUIRED: 'Not required',
+  PENDING: 'Unusual — pending review',
+  APPROVED: 'Approved',
+  DISPUTED: 'Disputed',
 }

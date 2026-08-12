@@ -97,6 +97,17 @@ export type Insertable<T extends keyof PublicSchema['Tables']> = Omit<
  */
 export const NULLABLE_RPC_ARGS = {
   assign_driver_to_vehicle: ['p_route_id'],
+  record_trip: [
+    'p_driver_id',
+    'p_helper_name',
+    'p_pickup_location',
+    'p_destination_location',
+    'p_returned_on',
+    'p_load_quantity',
+    'p_load_weight',
+    'p_load_weight_unit',
+    'p_notes',
+  ],
 } as const satisfies Partial<Record<keyof PublicSchema['Functions'], readonly string[]>>
 
 type NullableArgKeysFor<T> = T extends keyof typeof NULLABLE_RPC_ARGS

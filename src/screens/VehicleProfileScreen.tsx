@@ -9,8 +9,13 @@ import type { DriverListItem } from '@/data/drivers'
 import { assignDriverToVehicle, fetchDrivers } from '@/data/drivers'
 import type { DriverPurchaseAgreement } from '@/data/driverPurchaseAgreements'
 import { fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
+import { updateVehicleTarget } from '@/data/accounting'
 import type { RouteOption, VehicleDetail, VehicleStatus } from '@/data/vehicles'
 import { changeVehicleStatus, fetchRoutes, fetchVehicle } from '@/data/vehicles'
+
+function isDesktopRole(role: AppRole): boolean {
+  return role === 'OWNER_ADMIN' || role === 'FLEET_MANAGER'
+}
 
 interface VehicleProfileScreenProps {
   vehicleId: string
@@ -151,6 +156,11 @@ export function VehicleProfileScreen({
         />
         <Field label="Entered service on" value={vehicle.enteredServiceOn} />
         <Field label="Expected retirement" value={vehicle.expectedRetirementOn} />
+        {isDesktopRole(currentUserRole) ? (
+          <TargetPanel vehicleId={vehicle.id} yearlyTargetMinor={vehicle.yearlyTargetMinor} onSaved={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <Field label="Yearly target" value={formatMinorUnits(vehicle.yearlyTargetMinor)} />
+        )}
       </Section>
 
       <Section title="Driver-purchase agreement">
@@ -200,6 +210,82 @@ function Field({ label, value }: { label: string; value: string | null | undefin
       <span className="text-slate-500">{label}</span>
       <span className="text-right text-slate-900">{value ?? '—'}</span>
     </p>
+  )
+}
+
+/** Desktop-only via vehicles_update_desktop. Closes the gap
+ *  yearly_target_minor had no edit path at all (excluded from the
+ *  vehicle correction allow-list, decision 0009) — Accounting's
+ *  Sprinter Income and the VEHICLE_BELOW_TARGET alert both depend on it. */
+function TargetPanel({ vehicleId, yearlyTargetMinor, onSaved }: { vehicleId: string; yearlyTargetMinor: number; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(String(yearlyTargetMinor / 100))
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    const minor = parseMinorUnits(value)
+    if (minor === null || minor < 0) {
+      setError('Enter a valid amount.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await updateVehicleTarget(vehicleId, minor)
+      setEditing(false)
+      onSaved()
+    } catch {
+      setError('Could not save. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <p className="flex justify-between gap-4 border-b border-slate-100 py-1.5 text-sm last:border-b-0">
+        <span className="text-slate-500">Yearly target</span>
+        <span className="text-right text-slate-900">
+          {formatMinorUnits(yearlyTargetMinor)}{' '}
+          <button type="button" onClick={() => setEditing(true)} className="text-slate-500 underline decoration-slate-300">
+            Edit
+          </button>
+        </span>
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm last:border-b-0">
+      <span className="text-slate-500">Yearly target</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+      />
+      <button type="button" onClick={save} disabled={submitting} className="text-slate-900 underline decoration-slate-300 disabled:opacity-50">
+        {submitting ? 'Saving…' : 'Save'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(false)
+          setError(null)
+        }}
+        className="text-slate-400"
+      >
+        Cancel
+      </button>
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
   )
 }
 

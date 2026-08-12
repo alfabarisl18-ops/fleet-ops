@@ -1,6 +1,7 @@
 import type { AppRole } from '@/data/auth'
 import type { RecordType } from '@/data/activityRecords'
 import type { CorrectionStatus } from '@/data/corrections'
+import type { AlertType } from '@/data/alerts'
 import type { BalanceStatus, DayOutcome, LedgerCategory, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
 import type { DriverStatus } from '@/data/drivers'
 import type { OwnershipTransferStatus, PaymentFrequency } from '@/data/driverPurchaseAgreements'
@@ -210,6 +211,35 @@ export const ROADWORTHINESS_LABELS: Record<Roadworthiness, string> = {
   LIMITED_USE: 'Limited use',
   NOT_ROADWORTHY: 'Not roadworthy',
   UNKNOWN: 'Unknown',
+}
+
+// SPEC section 7 names all 21 alert types; only 5 have generation logic
+// yet (Phase 7 — see the migration). The rest belong to Accounting
+// (Phase 8) and Future Purchases (Phase 10) and get labels now so this
+// stays exhaustive, the same way every other full-enum label map here
+// does, even though nothing raises them yet.
+export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
+  MAINTENANCE_DUE: 'Maintenance due',
+  MAINTENANCE_OVERDUE: 'Maintenance overdue',
+  VEHICLE_GROUNDED: 'Vehicle grounded',
+  BALANCE_OUTSTANDING: 'Balance outstanding',
+  MISSED_PAYMENT: 'Missed payment',
+  UNUSUAL_EXPENSE: 'Unusual expense',
+  DISPUTED_EXPENSE: 'Disputed expense',
+  RECONCILIATION_DIFFERENCE: 'Reconciliation difference',
+  VEHICLE_BELOW_TARGET: 'Vehicle below target',
+  SAVINGS_BEHIND: 'Savings behind',
+  PURCHASE_DATE_WITHOUT_FUNDS: 'Purchase date approaching without funds',
+  DEPOSIT_OR_INSTALLMENT_DUE: 'Deposit or installment due',
+  SHIPPING_DEPARTURE: 'Shipping departure',
+  EXPECTED_PORT_ARRIVAL: 'Expected port arrival',
+  ARRIVAL_DELAY: 'Arrival delay',
+  CUSTOMS_DEADLINE: 'Customs deadline',
+  DEMURRAGE_RISK: 'Demurrage risk',
+  REGISTRATION_DUE: 'Registration due',
+  INSURANCE_DUE: 'Insurance due',
+  MISSING_DOCUMENTS: 'Missing documents',
+  VEHICLE_READY_FOR_ONBOARDING: 'Vehicle ready for onboarding',
 }
 
 export const PROBLEM_DESCRIPTOR_LABELS: Record<ProblemDescriptor, string> = {

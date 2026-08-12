@@ -240,6 +240,28 @@ export async function fetchMaintenanceParts(orderId: string): Promise<Maintenanc
   }))
 }
 
+export interface ReminderInput {
+  reminderDate?: string | null
+  expectedCompletionOn?: string | null
+  estimatedGroundedDays?: number | null
+}
+
+/** Desktop-only via mo_update_desktop (Maintenance & Repairs can INSERT
+ *  an order but never UPDATE it — an existing Phase 1 rule). Closes the
+ *  Phase 6 gap Phase 7's alerts depend on: without these dates set,
+ *  MAINTENANCE_DUE/MAINTENANCE_OVERDUE can never fire. */
+export async function updateMaintenanceReminder(orderId: string, input: ReminderInput): Promise<void> {
+  const { error } = await supabase
+    .from('maintenance_orders')
+    .update({
+      reminder_date: input.reminderDate ?? null,
+      expected_completion_on: input.expectedCompletionOn ?? null,
+      estimated_grounded_days: input.estimatedGroundedDays ?? null,
+    })
+    .eq('id', orderId)
+  if (error) throw error
+}
+
 export interface RecordMaintenancePartInput {
   orderId: string
   partName: string

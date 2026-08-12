@@ -28,6 +28,7 @@ import {
   fetchMaintenanceStatusHistory,
   recordMaintenancePart,
   toggleOldPartsReturned,
+  updateMaintenanceReminder,
 } from '@/data/maintenance'
 
 interface MaintenanceOrderDetailScreenProps {
@@ -183,6 +184,12 @@ export function MaintenanceOrderDetailScreen({
         <Field label="Grounded" value={order.isGrounded ? 'Yes' : 'No'} />
         <Field label="Notes" value={order.notes} />
       </Section>
+
+      {isDesktopRole(currentUserRole) && (
+        <Section title="Reminder">
+          <ReminderPanel order={order} onSaved={reload} />
+        </Section>
+      )}
 
       <Section title="Parts">
         {parts.length > 0 && (
@@ -349,6 +356,97 @@ function StatusControl({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Desktop-only (gated by the caller). Closes the Phase 6 gap Phase 7's
+ * alerts depend on — without a reminder date or expected completion date
+ * set, MAINTENANCE_DUE/MAINTENANCE_OVERDUE can never fire for this order.
+ */
+function ReminderPanel({ order, onSaved }: { order: MaintenanceOrderDetail; onSaved: () => void }) {
+  const [reminderDate, setReminderDate] = useState(order.reminderDate ?? '')
+  const [expectedCompletionOn, setExpectedCompletionOn] = useState(order.expectedCompletionOn ?? '')
+  const [estimatedGroundedDays, setEstimatedGroundedDays] = useState(
+    order.estimatedGroundedDays !== null ? String(order.estimatedGroundedDays) : '',
+  )
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  async function save() {
+    setError(null)
+    setSaved(false)
+
+    const days = estimatedGroundedDays.trim() === '' ? null : Number(estimatedGroundedDays)
+    if (days !== null && (!Number.isInteger(days) || days < 0)) {
+      setError('Enter a valid number of days.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await updateMaintenanceReminder(order.id, {
+        reminderDate: reminderDate === '' ? null : reminderDate,
+        expectedCompletionOn: expectedCompletionOn === '' ? null : expectedCompletionOn,
+        estimatedGroundedDays: days,
+      })
+      setSaved(true)
+      onSaved()
+    } catch {
+      setError('Could not save. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Reminder date</span>
+        <input
+          type="date"
+          value={reminderDate}
+          onChange={(e) => setReminderDate(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Expected completion date</span>
+        <input
+          type="date"
+          value={expectedCompletionOn}
+          onChange={(e) => setExpectedCompletionOn(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Estimated days grounded</span>
+        <input
+          type="number"
+          min={0}
+          value={estimatedGroundedDays}
+          onChange={(e) => setEstimatedGroundedDays(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      {saved && !submitting && <p className="text-sm text-emerald-600">Saved.</p>}
+
+      <button
+        type="button"
+        onClick={save}
+        disabled={submitting}
+        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {submitting ? 'Saving…' : 'Save'}
+      </button>
     </div>
   )
 }

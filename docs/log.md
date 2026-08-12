@@ -696,3 +696,80 @@ optional, and the fleet ID renders as plain text when it's omitted.
 maintenance-specific automated tests were added — this phase's
 correctness rests on the SQL-level and live verification above, matching
 how prior phases' database-enforced business rules were verified.
+
+## [2026-08-13] alerts | Phase 7 — Alerts (4 of 21 types, with working deep links)
+
+Phase 1 built the full `public.alerts` schema with nothing ever writing
+to it. This phase wires 4 of SPEC's 21 alert types to what's already
+built — `MAINTENANCE_DUE`, `MAINTENANCE_OVERDUE`, `VEHICLE_GROUNDED`,
+`BALANCE_OUTSTANDING`, `MISSED_PAYMENT` — the rest belong to Accounting
+(Phase 8) and Future Purchases (Phase 10).
+
+**Migration:** two plain `AFTER` triggers for the two types with a single
+causing event (`VEHICLE_GROUNDED` on `maintenance_orders.is_grounded`,
+`BALANCE_OUTSTANDING` on `outstanding_balances.status`), plus one daily
+`pg_cron` job (`app.evaluate_scheduled_alerts()`, confirmed with the
+user, 06:00 GMT = Freetown local) for the three genuinely date-driven
+types. `alerts_resolved_pair` amended to allow automated resolution
+without a human resolver; a one-time backfill catches conditions that
+predate the migration (SPR-01's already-grounded order from Phase 6
+testing, three vehicles missing yesterday's payment record). Full
+reasoning in decision 0012.
+
+**`src/data/alerts.ts`** — read-only by design: fetches and one review
+action, nothing here ever raises or resolves an alert by hand, matching
+how the rest of this app treats state as something that reflects
+reality. **`AlertsBell`** (new, `src/components/`) — badge count, a
+dropdown panel, clicking an alert both marks it reviewed and opens the
+exact record in one action. Rendered from `WorkspaceHeader`, which
+neither mobile workspace uses — satisfies SPEC's "no alerts bell in
+either mobile workspace" for free.
+
+**Deep links** route on `subject_type`, matching SPEC's own phrasing for
+what "the exact record" means: maintenance alerts open the maintenance
+order; `BALANCE_OUTSTANDING` opens the driver profile with a new
+`highlightBalanceId` prop that scrolls to and highlights the row (no
+standalone balance screen exists); `MISSED_PAYMENT` opens the vehicle
+profile.
+
+**Closed a Phase 6 gap this phase depends on:** `MaintenanceOrderDetailScreen`
+gets a new desktop-only "Reminder" panel for `reminder_date`/
+`expected_completion_on`/`estimated_grounded_days` — without it,
+`MAINTENANCE_DUE`/`MAINTENANCE_OVERDUE` could never fire.
+
+**Two real bugs found and fixed during verification**, both in
+`app.evaluate_scheduled_alerts()`: a `CASE` expression inside an
+`INSERT ... SELECT` needed an explicit `::alert_severity` cast (Postgres
+doesn't infer it there the way it does in a plain `VALUES` insert); and
+`reviewed_at` was being set from the client's clock, caught by this
+project's own `no-restricted-syntax` ESLint rule — fixed with a small
+server-side stamp-on-review trigger, same pattern as every other event
+time in this app.
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback) — both triggers fire and resolve correctly; the scheduled
+function creates and resolves all three date-driven types under the
+right conditions, including severity escalation and the
+`MAINTENANCE_OVERDUE`-supersedes-`MAINTENANCE_DUE` rule; a second
+idempotent run doesn't duplicate; RLS confirms only Owner/Admin and
+Fleet Manager can see, insert, or update alerts. Also surfaced a real
+testing-technique gap, not a schema bug: simulating a second role via
+`set_config` silently no-ops once the connection has already demoted to
+`authenticated` (a genuine Supabase security boundary) — fixed by
+`reset role` between switches; documented in decision 0012 since every
+future SQL verification in this project needs it.
+
+Live in the Browser pane, Fleet Manager QA account: the bell showed the
+real backfilled count (4), opening the panel listed real alerts
+(`SPR-01` grounded, three vehicles' missed payments), clicking each
+correctly marked it reviewed (badge dropped) and opened the exact
+record — the maintenance order for `VEHICLE_GROUNDED`, the vehicle
+profile for `MISSED_PAYMENT`. Set a reminder date on `SPR-01`'s order
+through the new panel, confirmed it persisted, then confirmed the full
+loop by re-running the scheduled function and watching a real
+`MAINTENANCE_DUE` alert appear for it. The `BALANCE_OUTSTANDING` →
+driver-profile-with-highlight path was proven at the SQL/RLS level but
+not separately click-tested live — no outstanding balance existed in
+this session's data to generate one from.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

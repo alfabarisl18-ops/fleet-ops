@@ -31,6 +31,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0010](decisions/0010-daily-payments-sprinter-only-bundle-and-overpayment-design.md) | Daily payments: Sprinter-only, the bundle split, the overpayment cascade, and two real append-only/RLS bugs fixed at the root |
 | [0011](decisions/0011-maintenance-oil-change-literal-and-shared-screens.md) | Maintenance: `OIL_CHANGE` is a literal sentinel string, one pair of screens serves both roles, and the mobile-role SQL verification limitation |
 | [0012](decisions/0012-alerts-trigger-vs-cron-and-resolved-by-nullable.md) | Alerts: trigger vs. cron decided per type, `resolved_by` becomes nullable for automated resolution, deep-link subject mapping, the one-time backfill |
+| [0013](decisions/0013-accounting-scope-and-trips-mobile-correction.md) | Accounting scope (targets, trips, approvals in; reconciliation-difference alert out); correcting a mistake caught mid-implementation — trip entry is mobile Collections & Finance, not desktop |
 
 ## Build order
 
@@ -45,8 +46,9 @@ start until the current one runs.
    audit log, the clickable read-only detail view. ← *done*. `ledger_entries`
    has no UI yet — nothing writes to it until Phase 5/6.
 5. **Daily payments** — the five outcomes, shortfall, overpayment, bundles,
-   balances. ← *done, Sprinter-only*. Box-truck trip payments and debt
-   write-off/forgiveness are deferred — see decision 0010.
+   balances. ← *done, Sprinter-only*. Box-truck trip payments (built in
+   Phase 8) and debt write-off/forgiveness (still deferred) — see
+   decision 0010.
 6. **Maintenance** — orders, statuses, parts, status events, both a desktop
    workspace and Maintenance & Repairs' mobile workspace. ← *done*. Recorded
    Cost is a running total, not the full analytics breakdown — see
@@ -55,7 +57,10 @@ start until the current one runs.
    due/overdue, vehicle grounded, balance outstanding, missed payment —
    the rest belong to Accounting/Future Purchases and get generation
    logic when those phases exist. See decision 0012.
-8. Accounting — clickable cards and analytics
+8. **Accounting** — clickable cards and analytics. ← *done*. Sprinter
+   Income, Truck Income, Known Expenses, box-truck trip recording
+   (mobile), the approvals queue, and yearly payment targets. See
+   decision 0013.
 9. Offline sync — queue, idempotency, pending indicators
 10. Future Purchases
 11. Export, settings, polish

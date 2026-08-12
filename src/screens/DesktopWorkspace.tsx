@@ -2,17 +2,22 @@ import { useState } from 'react'
 import { WorkspaceHeader } from '@/components/WorkspaceHeader'
 import type { AlertListItem } from '@/data/alerts'
 import type { SignedInUser } from '@/data/auth'
+import { AccountingHome } from '@/screens/AccountingHome'
 import { AddDriverForm } from '@/screens/AddDriverForm'
 import { AddMaintenanceOrderForm } from '@/screens/AddMaintenanceOrderForm'
 import { AddVehicleForm } from '@/screens/AddVehicleForm'
+import { ApprovalsList } from '@/screens/ApprovalsList'
 import { DesktopHome } from '@/screens/DesktopHome'
 import { DriverList } from '@/screens/DriverList'
 import { DriverProfileScreen } from '@/screens/DriverProfileScreen'
+import { KnownExpensesScreen } from '@/screens/KnownExpensesScreen'
 import { MaintenanceList } from '@/screens/MaintenanceList'
 import { MaintenanceOrderDetailScreen } from '@/screens/MaintenanceOrderDetailScreen'
 import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
 import { RecordsList } from '@/screens/RecordsList'
 import { SetUpDriverPurchaseAgreementForm } from '@/screens/SetUpDriverPurchaseAgreementForm'
+import { SprinterIncomeScreen } from '@/screens/SprinterIncomeScreen'
+import { TruckIncomeScreen } from '@/screens/TruckIncomeScreen'
 import { VehicleList } from '@/screens/VehicleList'
 import { VehicleProfileScreen } from '@/screens/VehicleProfileScreen'
 
@@ -30,6 +35,11 @@ type DesktopView =
   | { name: 'maintenance-list' }
   | { name: 'add-maintenance-order' }
   | { name: 'maintenance-order-detail'; orderId: string }
+  | { name: 'accounting-home' }
+  | { name: 'sprinter-income' }
+  | { name: 'truck-income' }
+  | { name: 'known-expenses' }
+  | { name: 'approvals-list' }
 
 interface DesktopWorkspaceProps {
   user: SignedInUser
@@ -51,6 +61,8 @@ function viewForAlert(alert: AlertListItem): DesktopView {
         : { name: 'home' }
     case 'VEHICLE':
       return { name: 'vehicle-profile', vehicleId: alert.subjectId }
+    case 'LEDGER_ENTRY':
+      return { name: 'approvals-list' }
     default:
       return { name: 'home' }
   }
@@ -80,6 +92,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onOpenDrivers={() => setView({ name: 'driver-list' })}
             onOpenRecords={() => setView({ name: 'records-list' })}
             onOpenMaintenance={() => setView({ name: 'maintenance-list' })}
+            onOpenAccounting={() => setView({ name: 'accounting-home' })}
           />
         )}
 
@@ -186,6 +199,30 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onBack={() => setView({ name: 'maintenance-list' })}
             onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
           />
+        )}
+
+        {view.name === 'accounting-home' && (
+          <AccountingHome
+            onOpenSprinterIncome={() => setView({ name: 'sprinter-income' })}
+            onOpenTruckIncome={() => setView({ name: 'truck-income' })}
+            onOpenKnownExpenses={() => setView({ name: 'known-expenses' })}
+            onOpenApprovals={() => setView({ name: 'approvals-list' })}
+          />
+        )}
+
+        {view.name === 'sprinter-income' && (
+          <SprinterIncomeScreen
+            onBack={() => setView({ name: 'accounting-home' })}
+            onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
+          />
+        )}
+
+        {view.name === 'truck-income' && <TruckIncomeScreen onBack={() => setView({ name: 'accounting-home' })} />}
+
+        {view.name === 'known-expenses' && <KnownExpensesScreen onBack={() => setView({ name: 'accounting-home' })} />}
+
+        {view.name === 'approvals-list' && (
+          <ApprovalsList currentUserRole={user.role} onBack={() => setView({ name: 'accounting-home' })} />
         )}
       </div>
     </div>

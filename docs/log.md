@@ -773,3 +773,74 @@ not separately click-tested live — no outstanding balance existed in
 this session's data to generate one from.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+## [2026-08-14] accounting | Phase 8 — Accounting (income, expenses, box-truck trips, approvals, targets)
+
+Phase 1 built `ledger_entries` with everything this phase needs already
+in place — nothing in `src/` had ever aggregated it; every prior phase
+only wrote individual rows. This is the first read/reporting layer over
+data four phases have already produced.
+
+**Migration:** `record_trip`, `flag_ledger_entry`, and
+`approve_flagged_expense` RPCs; a plain trigger raising/resolving
+`UNUSUAL_EXPENSE`/`DISPUTED_EXPENSE` on `ledger_entries.approval_status`
+changes; `VEHICLE_BELOW_TARGET` added to Phase 7's daily
+`evaluate_scheduled_alerts()` (calendar-year-to-date income vs. a
+pro-rated `yearly_target_minor`); two more server-stamp fixes
+(`reconciled_at`, matching Phase 7's `reviewed_at`). Full reasoning,
+including a real mid-implementation correction, in decision 0013.
+
+**A real mistake, caught and fixed before it shipped:** the plan
+assumed trip entry was a desktop screen using the *original* Phase 1
+`trips` schema (`origin`/`destination`/`cargo`). Applying the migration
+failed outright — a later Phase 1 follow-up had already rewritten
+SPEC's Trips section to put entry on the **mobile Collections & Finance
+screen** ("under Sprinter & Box-Truck Payment → box truck selected")
+with different columns (`pickup_location`/`destination_location`, no
+`cargo`, plus `load_quantity`/`load_weight`/`load_weight_unit`). Fixed
+before any frontend code was written: `record_trip` rebuilt against the
+real schema, callable by both desktop and Collections & Finance;
+`RecordTripForm` built as a mobile screen reached from
+`VehiclePaymentScreen`'s existing vehicle picker, which now includes
+box trucks and branches to trip entry instead of the day-outcome flow.
+
+**New:** `src/data/accounting.ts` (read-only analytics — ledger summary,
+recent transactions, Sprinter income, Truck income, known expenses,
+owed-to/owed-by, backdated/unreconciled counts, target progress — plus
+`recordTrip`/`flagLedgerEntry`/`approveFlaggedExpense`/
+`reconcileLedgerEntry`/`updateVehicleTarget`), `AccountingHome.tsx`
+(desktop, three clickable summary cards plus the ledger split),
+`SprinterIncomeScreen.tsx`, `TruckIncomeScreen.tsx`,
+`KnownExpensesScreen.tsx` (where a transaction gets flagged
+unusual/disputed), `ApprovalsList.tsx` (Approve gated to Fleet Manager
+in the UI, real enforcement is `approve_flagged_expense`'s own role
+check), `RecordTripForm.tsx` (mobile). `VehicleProfileScreen` gets a
+small inline Yearly target edit, closing a gap that column had no edit
+path at all since Phase 3 (excluded from the correction allow-list,
+decision 0009).
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback) — `record_trip` creates the trip and correctly linked
+INCOME/EXPENSE ledger rows; the trip-expense category constraint
+accepts all three SPEC categories and rejects others;
+`flag_ledger_entry`/`approve_flagged_expense` correctly gate to Fleet
+Manager only (Owner/Admin refused, matching SPEC's literal wording);
+the approval-change trigger fires and resolves correctly; a vehicle
+genuinely behind its pro-rated target gets `VEHICLE_BELOW_TARGET`, one
+on pace doesn't; RLS confirms Collections & Finance and Maintenance &
+Repairs can't reach the flag/approve actions or (for Maintenance &
+Repairs) record a trip. Live in the Browser pane: recorded a real trip
+as Collections & Finance through the real PIN-authenticated mobile
+path (not simulated claims — this is exactly what decision 0011 flagged
+as unprovable that way, proven for real this time), confirmed Truck
+Income showed the correct net; flagged and approved a real expense as
+Fleet Manager, confirmed the resulting alert resolved; set a vehicle's
+yearly target through the new panel, confirmed Sprinter Income and a
+real `VEHICLE_BELOW_TARGET` alert both reflected it end to end,
+including the deep link back to the vehicle profile. The Owner/Admin-side
+rejection of `approve_flagged_expense` was proven at the SQL level and
+by reading the UI's role gate directly, not through a live Owner/Admin
+session — `docs/qa-accounts.md` explicitly reserves that account and
+says Fleet Manager already covers these screens.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

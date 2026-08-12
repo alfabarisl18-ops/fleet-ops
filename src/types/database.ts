@@ -2052,6 +2052,10 @@ export type Database = {
         Args: { p_correction_id: string }
         Returns: undefined
       }
+      approve_flagged_expense: {
+        Args: { p_ledger_entry_id: string }
+        Returns: undefined
+      }
       assign_driver_to_vehicle: {
         Args: {
           p_client_record_id: string
@@ -2075,6 +2079,13 @@ export type Database = {
           id_image_key: string
           licence_image_key: string
         }[]
+      }
+      flag_ledger_entry: {
+        Args: {
+          p_ledger_entry_id: string
+          p_status: Database["public"]["Enums"]["approval_status"]
+        }
+        Returns: undefined
       }
       freetown_today: { Args: never; Returns: string }
       mobile_role_roster: {
@@ -2122,6 +2133,25 @@ export type Database = {
           p_part_source: Database["public"]["Enums"]["part_source"]
           p_quantity: number
           p_unit_cost_minor: number
+        }
+        Returns: string
+      }
+      record_trip: {
+        Args: {
+          p_client_record_id: string
+          p_departed_on: string
+          p_destination_location: string
+          p_driver_id: string
+          p_expenses?: Json
+          p_helper_name: string
+          p_load_quantity: number
+          p_load_weight: number
+          p_load_weight_unit: Database["public"]["Enums"]["weight_unit"]
+          p_notes: string
+          p_pickup_location: string
+          p_returned_on: string
+          p_revenue_minor: number
+          p_vehicle_id: string
         }
         Returns: string
       }

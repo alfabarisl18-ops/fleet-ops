@@ -30,6 +30,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0009](decisions/0009-corrections-cover-vehicles-and-drivers-approve-and-apply-collapse.md) | Corrections are the intended edit path for vehicles/drivers (not a direct-edit form); approve+apply collapse to one action; the correction column allow-list |
 | [0010](decisions/0010-daily-payments-sprinter-only-bundle-and-overpayment-design.md) | Daily payments: Sprinter-only, the bundle split, the overpayment cascade, and two real append-only/RLS bugs fixed at the root |
 | [0011](decisions/0011-maintenance-oil-change-literal-and-shared-screens.md) | Maintenance: `OIL_CHANGE` is a literal sentinel string, one pair of screens serves both roles, and the mobile-role SQL verification limitation |
+| [0012](decisions/0012-alerts-trigger-vs-cron-and-resolved-by-nullable.md) | Alerts: trigger vs. cron decided per type, `resolved_by` becomes nullable for automated resolution, deep-link subject mapping, the one-time backfill |
 
 ## Build order
 
@@ -50,7 +51,10 @@ start until the current one runs.
    workspace and Maintenance & Repairs' mobile workspace. ← *done*. Recorded
    Cost is a running total, not the full analytics breakdown — see
    decision 0011.
-7. Alerts — with working deep links
+7. **Alerts** — with working deep links. ← *done, 4 of 21 types*. Maintenance
+   due/overdue, vehicle grounded, balance outstanding, missed payment —
+   the rest belong to Accounting/Future Purchases and get generation
+   logic when those phases exist. See decision 0012.
 8. Accounting — clickable cards and analytics
 9. Offline sync — queue, idempotency, pending indicators
 10. Future Purchases

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { WorkspaceHeader } from '@/components/WorkspaceHeader'
+import type { AlertListItem } from '@/data/alerts'
 import type { SignedInUser } from '@/data/auth'
 import { AddDriverForm } from '@/screens/AddDriverForm'
 import { AddMaintenanceOrderForm } from '@/screens/AddMaintenanceOrderForm'
@@ -22,7 +23,7 @@ type DesktopView =
   | { name: 'vehicle-profile'; vehicleId: string }
   | { name: 'driver-list' }
   | { name: 'add-driver'; assignToVehicleId?: string }
-  | { name: 'driver-profile'; driverId: string }
+  | { name: 'driver-profile'; driverId: string; highlightBalanceId?: string }
   | { name: 'set-up-driver-purchase-agreement'; vehicleId: string }
   | { name: 'records-list' }
   | { name: 'record-detail'; recordId: string }
@@ -33,6 +34,26 @@ type DesktopView =
 interface DesktopWorkspaceProps {
   user: SignedInUser
   onSignedOut: () => void
+}
+
+/**
+ * SPEC's own phrasing for "the exact record" an alert deep-links to —
+ * "the specific maintenance order, balance, or purchase goal" — is
+ * literally the subject_type mapping here (decision 0012).
+ */
+function viewForAlert(alert: AlertListItem): DesktopView {
+  switch (alert.subjectType) {
+    case 'MAINTENANCE_ORDER':
+      return { name: 'maintenance-order-detail', orderId: alert.subjectId }
+    case 'OUTSTANDING_BALANCE':
+      return alert.driverId
+        ? { name: 'driver-profile', driverId: alert.driverId, highlightBalanceId: alert.subjectId }
+        : { name: 'home' }
+    case 'VEHICLE':
+      return { name: 'vehicle-profile', vehicleId: alert.subjectId }
+    default:
+      return { name: 'home' }
+  }
 }
 
 /**
@@ -50,6 +71,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
         user={user}
         {...(view.name !== 'home' ? { onHome: () => setView({ name: 'home' }) } : {})}
         onSignOut={onSignedOut}
+        onOpenAlert={(alert) => setView(viewForAlert(alert))}
       />
       <div className="flex-1">
         {view.name === 'home' && (
@@ -117,6 +139,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             currentUserRole={user.role}
             onBack={() => setView({ name: 'driver-list' })}
             onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
+            {...(view.highlightBalanceId ? { highlightBalanceId: view.highlightBalanceId } : {})}
           />
         )}
 

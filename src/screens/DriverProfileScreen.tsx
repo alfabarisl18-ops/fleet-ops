@@ -27,9 +27,20 @@ interface DriverProfileScreenProps {
   currentUserRole: AppRole
   onBack: () => void
   onOpenVehicle: (vehicleId: string) => void
+  /** Set when arriving from a BALANCE_OUTSTANDING alert (Phase 7) — scrolls
+   *  to and highlights the matching row in the balance-history list below,
+   *  since there's no standalone balance screen for the alert to open. */
+  highlightBalanceId?: string
 }
 
-export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, onBack, onOpenVehicle }: DriverProfileScreenProps) {
+export function DriverProfileScreen({
+  driverId,
+  currentUserId,
+  currentUserRole,
+  onBack,
+  onOpenVehicle,
+  highlightBalanceId,
+}: DriverProfileScreenProps) {
   const [driver, setDriver] = useState<DriverDetail | null>(null)
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([])
   const [owedMinor, setOwedMinor] = useState<number | null>(null)
@@ -66,6 +77,11 @@ export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, 
       cancelled = true
     }
   }, [driverId, reloadKey])
+
+  useEffect(() => {
+    if (!highlightBalanceId || balances.length === 0) return
+    document.getElementById(`balance-${highlightBalanceId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [highlightBalanceId, balances])
 
   // A failed background reload (e.g. after a new assignment) shouldn't wipe
   // an already-loaded profile off the screen — only block on error before
@@ -184,7 +200,13 @@ export function DriverProfileScreen({ driverId, currentUserId, currentUserRole, 
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Balance history</h3>
             <ul className="flex flex-col gap-1">
               {balances.map((b) => (
-                <li key={b.id} className="flex justify-between text-sm">
+                <li
+                  key={b.id}
+                  id={`balance-${b.id}`}
+                  className={`flex justify-between rounded text-sm ${
+                    b.id === highlightBalanceId ? 'bg-amber-50 ring-2 ring-amber-300' : ''
+                  }`}
+                >
                   <span className="text-slate-700">
                     {formatMinorUnits(b.remainingAmountMinor)}
                     {b.remainingAmountMinor !== b.originalAmountMinor && (

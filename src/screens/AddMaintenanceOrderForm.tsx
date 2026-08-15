@@ -14,6 +14,10 @@ import { fetchVehicles } from '@/data/vehicles'
 interface AddMaintenanceOrderFormProps {
   currentUserId: string
   onCreated: (orderId: string) => void
+  /** Saved locally, no signal yet (Phase 9) — no order id exists
+   *  server-side until the queue flushes, so there's nowhere real to
+   *  navigate to; the caller just returns to a list. */
+  onQueued: () => void
   onCancel: () => void
 }
 
@@ -43,7 +47,7 @@ type Step = { name: 'pick-vehicle' } | { name: 'details'; vehicleId: string; fle
  * No date field: identified_on is a server-side business date, never picked
  * on the client (CLAUDE.md).
  */
-export function AddMaintenanceOrderForm({ currentUserId, onCreated, onCancel }: AddMaintenanceOrderFormProps) {
+export function AddMaintenanceOrderForm({ currentUserId, onCreated, onQueued, onCancel }: AddMaintenanceOrderFormProps) {
   const [step, setStep] = useState<Step>({ name: 'pick-vehicle' })
 
   if (step.name === 'details') {
@@ -53,6 +57,7 @@ export function AddMaintenanceOrderForm({ currentUserId, onCreated, onCancel }: 
         fleetId={step.fleetId}
         currentUserId={currentUserId}
         onCreated={onCreated}
+        onQueued={onQueued}
         onBack={() => setStep({ name: 'pick-vehicle' })}
       />
     )
@@ -131,12 +136,14 @@ function OrderDetailsForm({
   fleetId,
   currentUserId,
   onCreated,
+  onQueued,
   onBack,
 }: {
   vehicleId: string
   fleetId: string
   currentUserId: string
   onCreated: (orderId: string) => void
+  onQueued: () => void
   onBack: () => void
 }) {
   const [recordType, setRecordType] = useState<MaintenanceRecordType | null>(null)
@@ -177,7 +184,7 @@ function OrderDetailsForm({
 
     setSubmitting(true)
     try {
-      const id = await createMaintenanceOrder({
+      const outcome = await createMaintenanceOrder({
         vehicleId,
         recordType,
         serviceArea: finalServiceArea,
@@ -188,7 +195,11 @@ function OrderDetailsForm({
         ...(notes.trim() !== '' ? { notes: notes.trim() } : {}),
         openedBy: currentUserId,
       })
-      onCreated(id)
+      if (outcome.status === 'queued') {
+        onQueued()
+      } else {
+        onCreated(outcome.result)
+      }
     } catch {
       setError('Something went wrong. Try again.')
     } finally {

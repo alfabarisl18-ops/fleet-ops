@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PendingSyncBadge } from '@/components/PendingSyncBadge'
 import { MAINTENANCE_RECORD_TYPE_LABELS, MAINTENANCE_STATUS_LABELS } from '@/constants/labels'
 import type { SignedInUser } from '@/data/auth'
 import type { MaintenanceOrderListItem } from '@/data/maintenance'
@@ -28,6 +29,12 @@ interface MaintenanceWorkspaceProps {
  */
 export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspaceProps) {
   const [view, setView] = useState<MaintenanceView>({ name: 'home' })
+  const [queuedMessage, setQueuedMessage] = useState<string | null>(null)
+
+  function goHomeQueued(message: string) {
+    setQueuedMessage(message)
+    setView({ name: 'home' })
+  }
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50">
@@ -39,17 +46,28 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
             ← Back
           </button>
         )}
-        <button type="button" onClick={onSignedOut} className="text-sm font-medium text-slate-700">
-          Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <PendingSyncBadge />
+          <button type="button" onClick={onSignedOut} className="text-sm font-medium text-slate-700">
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div className="flex-1">
         {view.name === 'home' && (
           <div className="mx-auto flex max-w-sm flex-col gap-4 p-4 sm:p-6">
+            {queuedMessage && (
+              <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {queuedMessage}
+              </p>
+            )}
             <button
               type="button"
-              onClick={() => setView({ name: 'add-order' })}
+              onClick={() => {
+                setQueuedMessage(null)
+                setView({ name: 'add-order' })
+              }}
               className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">New maintenance record</span>
@@ -58,7 +76,10 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
 
             <button
               type="button"
-              onClick={() => setView({ name: 'open-orders' })}
+              onClick={() => {
+                setQueuedMessage(null)
+                setView({ name: 'open-orders' })
+              }}
               className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">Open records</span>
@@ -80,6 +101,7 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
           <AddMaintenanceOrderForm
             currentUserId={user.id}
             onCreated={(orderId) => setView({ name: 'order-detail', orderId })}
+            onQueued={() => goHomeQueued('Saved — will sync when back online.')}
             onCancel={() => setView({ name: 'home' })}
           />
         )}

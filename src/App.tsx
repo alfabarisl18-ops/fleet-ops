@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchCurrentUser } from '@/data/auth'
 import type { MobileRole, SignedInUser } from '@/data/auth'
+import { initOfflineQueueAutoFlush } from '@/lib/offlineQueueReplay'
 import { RoleChooser } from '@/screens/RoleChooser'
 import { CollectionsWorkspace } from '@/screens/CollectionsWorkspace'
 import { DesktopSignIn } from '@/screens/DesktopSignIn'
@@ -25,6 +26,13 @@ type View = { name: 'loading' } | { name: 'chooser' } | { name: 'desktop' } | { 
 export function App() {
   const [user, setUser] = useState<SignedInUser | null>(null)
   const [view, setView] = useState<View>({ name: 'loading' })
+
+  // Phase 9: flushes on the `online` event and once at startup, in case
+  // the device was signed in already offline. Safe to call once per app
+  // load regardless of role — desktop just never has anything queued.
+  useEffect(() => {
+    initOfflineQueueAutoFlush()
+  }, [])
 
   useEffect(() => {
     // Guards against a stale response landing after the user has already

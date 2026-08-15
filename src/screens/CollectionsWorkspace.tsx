@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PendingSyncBadge } from '@/components/PendingSyncBadge'
 import type { SignedInUser } from '@/data/auth'
 import { OtherPaymentForm } from '@/screens/OtherPaymentForm'
 import { VehiclePaymentScreen } from '@/screens/VehiclePaymentScreen'
@@ -15,9 +16,9 @@ interface CollectionsWorkspaceProps {
  * screen the same way DesktopWorkspace replaced it for desktop roles.
  * SPEC section 5: "Large touch controls. Simple. A data-entry tool, not a
  * dashboard. No alerts bell." Two entry points, matching SPEC's two
- * subsections — "Vehicle Payment" here, not SPEC's literal "Sprinter &
- * Box-Truck Payment," since box trucks aren't supported yet (see the
- * Phase 5 plan).
+ * subsections — "Vehicle Payment" covers both Sprinter and box-truck
+ * trip entry now (Phase 8; box trucks route to the trip form from
+ * within the vehicle picker).
  */
 export function CollectionsWorkspace({ user, onSignedOut }: CollectionsWorkspaceProps) {
   const [view, setView] = useState<CollectionsView>({ name: 'home' })
@@ -32,9 +33,12 @@ export function CollectionsWorkspace({ user, onSignedOut }: CollectionsWorkspace
             ← Back
           </button>
         )}
-        <button type="button" onClick={onSignedOut} className="text-sm font-medium text-slate-700">
-          Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <PendingSyncBadge />
+          <button type="button" onClick={onSignedOut} className="text-sm font-medium text-slate-700">
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div className="flex-1">

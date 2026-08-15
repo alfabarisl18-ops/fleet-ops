@@ -1010,6 +1010,64 @@ export type Database = {
         }
         Relationships: []
       }
+      flagged_duplicate_payments: {
+        Row: {
+          client_record_id: string
+          id: string
+          payload: Json
+          resolved_at: string | null
+          resolved_by: string | null
+          service_date: string
+          submitted_at: string
+          submitted_by: string
+          vehicle_id: string
+        }
+        Insert: {
+          client_record_id?: string
+          id?: string
+          payload: Json
+          resolved_at?: string | null
+          resolved_by?: string | null
+          service_date: string
+          submitted_at?: string
+          submitted_by: string
+          vehicle_id: string
+        }
+        Update: {
+          client_record_id?: string
+          id?: string
+          payload?: Json
+          resolved_at?: string | null
+          resolved_by?: string | null
+          service_date?: string
+          submitted_at?: string
+          submitted_by?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flagged_duplicate_payments_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flagged_duplicate_payments_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flagged_duplicate_payments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ledger_entries: {
         Row: {
           amount_minor: number
@@ -2079,6 +2137,15 @@ export type Database = {
           id_image_key: string
           licence_image_key: string
         }[]
+      }
+      flag_duplicate_payment: {
+        Args: {
+          p_client_record_id: string
+          p_payload: Json
+          p_service_date: string
+          p_vehicle_id: string
+        }
+        Returns: string
       }
       flag_ledger_entry: {
         Args: {

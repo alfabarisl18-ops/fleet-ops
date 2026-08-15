@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase'
+import type { WriteOutcome } from '@/lib/offlineQueue'
+import { withOfflineQueue } from '@/lib/offlineQueue'
 import type { Enums } from '@/types/db'
 
 // Screens never call Supabase directly — same convention as src/data/vehicles.ts.
@@ -137,29 +139,42 @@ export interface CreateMaintenanceOrderInput {
 }
 
 /** identified_on is deliberately not sent — it defaults server-side to
- *  app.freetown_today(), same rule as every other business date. */
-export async function createMaintenanceOrder(input: CreateMaintenanceOrderInput): Promise<string> {
+ *  app.freetown_today(), same rule as every other business date.
+ *  Offline-queue-aware (Phase 9). */
+type CreateMaintenanceOrderPayload = CreateMaintenanceOrderInput & { clientRecordId: string }
+
+async function createMaintenanceOrderLive(payload: CreateMaintenanceOrderPayload): Promise<string> {
   const { data, error } = await supabase
     .from('maintenance_orders')
     .insert({
-      client_record_id: crypto.randomUUID(),
-      vehicle_id: input.vehicleId,
-      record_type: input.recordType,
-      service_area: input.serviceArea,
-      work_action: input.workAction ?? null,
-      problem_descriptor: input.problemDescriptor ?? null,
-      handled_by: input.handledBy ?? null,
-      safety_status: input.safetyStatus ?? 'UNKNOWN',
-      expected_completion_on: input.expectedCompletionOn ?? null,
-      estimated_grounded_days: input.estimatedGroundedDays ?? null,
-      notes: input.notes ?? null,
-      opened_by: input.openedBy,
+      client_record_id: payload.clientRecordId,
+      vehicle_id: payload.vehicleId,
+      record_type: payload.recordType,
+      service_area: payload.serviceArea,
+      work_action: payload.workAction ?? null,
+      problem_descriptor: payload.problemDescriptor ?? null,
+      handled_by: payload.handledBy ?? null,
+      safety_status: payload.safetyStatus ?? 'UNKNOWN',
+      expected_completion_on: payload.expectedCompletionOn ?? null,
+      estimated_grounded_days: payload.estimatedGroundedDays ?? null,
+      notes: payload.notes ?? null,
+      opened_by: payload.openedBy,
     })
     .select('id')
     .single()
 
   if (error) throw error
   return data.id
+}
+
+export async function createMaintenanceOrder(input: CreateMaintenanceOrderInput): Promise<WriteOutcome<string>> {
+  const payload: CreateMaintenanceOrderPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  return withOfflineQueue('createMaintenanceOrder', payload.clientRecordId, payload, () => createMaintenanceOrderLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayCreateMaintenanceOrder(payload: unknown): Promise<string> {
+  return createMaintenanceOrderLive(payload as CreateMaintenanceOrderPayload)
 }
 
 export interface MaintenanceStatusEvent {
@@ -189,24 +204,43 @@ export async function fetchMaintenanceStatusHistory(orderId: string): Promise<Ma
   }))
 }
 
+interface ChangeMaintenanceStatusPayload {
+  clientRecordId: string
+  orderId: string
+  toStatus: MaintenanceStatus
+  changedBy: string
+  note?: string
+}
+
+async function changeMaintenanceStatusLive(payload: ChangeMaintenanceStatusPayload): Promise<void> {
+  const { error } = await supabase.from('maintenance_status_events').insert({
+    client_record_id: payload.clientRecordId,
+    order_id: payload.orderId,
+    to_status: payload.toStatus,
+    changed_by: payload.changedBy,
+    note: payload.note ?? null,
+  })
+  if (error) throw error
+}
+
 /** Maintenance order status is a projection of maintenance_status_events
  *  (Phase 1) — mirrors changeVehicleStatus's shape exactly: this never
  *  writes maintenance_orders.status directly, it appends an event and the
- *  database trigger updates status/is_grounded/closed_at. */
+ *  database trigger updates status/is_grounded/closed_at. Offline-queue-
+ *  aware (Phase 9). */
 export async function changeMaintenanceStatus(
   orderId: string,
   toStatus: MaintenanceStatus,
   changedBy: string,
   note?: string,
-): Promise<void> {
-  const { error } = await supabase.from('maintenance_status_events').insert({
-    client_record_id: crypto.randomUUID(),
-    order_id: orderId,
-    to_status: toStatus,
-    changed_by: changedBy,
-    note: note ?? null,
-  })
-  if (error) throw error
+): Promise<WriteOutcome<void>> {
+  const payload: ChangeMaintenanceStatusPayload = { clientRecordId: crypto.randomUUID(), orderId, toStatus, changedBy, ...(note !== undefined ? { note } : {}) }
+  return withOfflineQueue('changeMaintenanceStatus', payload.clientRecordId, payload, () => changeMaintenanceStatusLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayChangeMaintenanceStatus(payload: unknown): Promise<void> {
+  return changeMaintenanceStatusLive(payload as ChangeMaintenanceStatusPayload)
 }
 
 export interface MaintenancePart {
@@ -277,18 +311,31 @@ export interface RecordMaintenancePartInput {
  *  is desktop-only to UPDATE, so the ledger_entry_id link-back needs to
  *  bypass RLS for a Maintenance & Repairs caller. Returns the new
  *  maintenance_parts id. */
-export async function recordMaintenancePart(input: RecordMaintenancePartInput): Promise<string> {
+type RecordMaintenancePartPayload = RecordMaintenancePartInput & { clientRecordId: string }
+
+async function recordMaintenancePartLive(payload: RecordMaintenancePartPayload): Promise<string> {
   const { data, error } = await supabase.rpc('record_maintenance_part', {
-    p_client_record_id: crypto.randomUUID(),
-    p_order_id: input.orderId,
-    p_part_name: input.partName,
-    p_part_source: input.partSource,
-    p_filter_action: input.filterAction ?? 'NOT_CHANGED',
-    p_quantity: input.quantity,
-    p_unit_cost_minor: input.unitCostMinor,
+    p_client_record_id: payload.clientRecordId,
+    p_order_id: payload.orderId,
+    p_part_name: payload.partName,
+    p_part_source: payload.partSource,
+    p_filter_action: payload.filterAction ?? 'NOT_CHANGED',
+    p_quantity: payload.quantity,
+    p_unit_cost_minor: payload.unitCostMinor,
   })
   if (error) throw error
   return data
+}
+
+/** Offline-queue-aware (Phase 9). */
+export async function recordMaintenancePart(input: RecordMaintenancePartInput): Promise<WriteOutcome<string>> {
+  const payload: RecordMaintenancePartPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  return withOfflineQueue('recordMaintenancePart', payload.clientRecordId, payload, () => recordMaintenancePartLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayRecordMaintenancePart(payload: unknown): Promise<string> {
+  return recordMaintenancePartLive(payload as RecordMaintenancePartPayload)
 }
 
 export interface MaintenanceNote {
@@ -314,14 +361,32 @@ export async function fetchMaintenanceNotes(orderId: string): Promise<Maintenanc
   }))
 }
 
-export async function addMaintenanceNote(orderId: string, bodyText: string, enteredBy: string): Promise<void> {
+interface AddMaintenanceNotePayload {
+  clientRecordId: string
+  orderId: string
+  bodyText: string
+  enteredBy: string
+}
+
+async function addMaintenanceNoteLive(payload: AddMaintenanceNotePayload): Promise<void> {
   const { error } = await supabase.from('maintenance_notes').insert({
-    client_record_id: crypto.randomUUID(),
-    order_id: orderId,
-    body_text: bodyText,
-    entered_by: enteredBy,
+    client_record_id: payload.clientRecordId,
+    order_id: payload.orderId,
+    body_text: payload.bodyText,
+    entered_by: payload.enteredBy,
   })
   if (error) throw error
+}
+
+/** Offline-queue-aware (Phase 9). */
+export async function addMaintenanceNote(orderId: string, bodyText: string, enteredBy: string): Promise<WriteOutcome<void>> {
+  const payload: AddMaintenanceNotePayload = { clientRecordId: crypto.randomUUID(), orderId, bodyText, enteredBy }
+  return withOfflineQueue('addMaintenanceNote', payload.clientRecordId, payload, () => addMaintenanceNoteLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayAddMaintenanceNote(payload: unknown): Promise<void> {
+  return addMaintenanceNoteLive(payload as AddMaintenanceNotePayload)
 }
 
 /** Desktop-only — mo_update_desktop is the only policy that grants this,

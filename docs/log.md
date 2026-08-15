@@ -844,3 +844,77 @@ session — `docs/qa-accounts.md` explicitly reserves that account and
 says Fleet Manager already covers these screens.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+## [2026-08-15] offline-sync | Phase 9 — Offline sync (PWA shell, write queue, flagged duplicates)
+
+Dexie and vite-plugin-pwa were installed since Phase 1, never wired up.
+This phase builds both pieces SPEC section 8 calls for: a local write
+queue for all 9 mobile-write functions, and (confirmed with the user) a
+full PWA shell — service worker, manifest, installability — not the
+queue alone.
+
+**PWA shell:** `vite-plugin-pwa`, `generateSW` strategy, precaches only
+the app JS/CSS/HTML/icon/manifest. Deliberately no `runtimeCaching`
+entry for Supabase — confirmed in the built `dist/sw.js` that the only
+registered route is the SPA navigation fallback. Reads never go stale;
+only writes queue.
+
+**The queue:** `src/lib/offlineQueue.ts` (generic Dexie-backed mechanism,
+`withOfflineQueue` wrapping each write, `flushQueue` replaying pending
+ones) plus `src/lib/offlineQueueReplay.ts` (the registry mapping each of
+the 9 mobile-write functions to its real implementation, kept separate
+to avoid a circular import). All 9 — `recordDailyPayment`,
+`recordBundledPayment`, `recordTrip`, `recordOtherPayment`,
+`createMaintenanceOrder`, `changeMaintenanceStatus`,
+`recordMaintenancePart`, `addMaintenanceNote`, `changeVehicleStatus` —
+now return `{status: 'saved'|'queued'}` instead of throwing when there's
+no signal. `PendingSyncBadge.tsx` (new, mobile analog of `AlertsBell`)
+shows what's still pending in both mobile workspace headers.
+
+**Same-vehicle-day collisions** (SPEC: "becomes a flagged duplicate for
+review, never a silent overwrite") are handled on *both* the live path
+and the queued-retry path — a real gap found during design, not after:
+two collectors can both be online at once, so the collision isn't only
+a queued-retry scenario. New table `flagged_duplicate_payments` (the
+first table added since Phase 1's up-front schema — see decision 0014
+for how the project's own "run the guards last" safety test was updated
+to allow it, explicitly, without weakening it) plus
+`FlaggedDuplicatesList.tsx` (desktop, reached from Accounting) for a
+reviewer to dismiss what landed there.
+
+**Two real bugs found and fixed during live verification**, both in
+decision 0014: `orderBy('createdAt')` needs `createdAt` indexed in
+Dexie's schema (it wasn't); supabase-js's `PostgrestError` isn't
+`instanceof Error`, so the original `err instanceof Error ? err.message
+: String(err)` silently produced `"[object Object]"` and the
+duplicate-detection string match never fired — a live duplicate
+submission surfaced this as a generic error instead of the flagged-
+review flow before the fix.
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback) for `flag_duplicate_payment`'s RLS (desktop-select,
+Collections & Finance and desktop can both call it, Maintenance &
+Repairs cannot). Live in the Browser pane, simulating offline via
+`navigator.onLine` override (the harness has no direct network-offline
+toggle): recorded a vehicle payment as Collections & Finance while
+offline, confirmed it queued (badge showed 1 pending, zero rows
+server-side), went back online, used the manual "Retry now," confirmed
+the real record landed; recorded a maintenance order as Maintenance &
+Repairs the same way, confirmed the "Saved — will sync when back
+online" banner and badge, confirmed it flushed correctly. Forced a real
+same-vehicle-day collision while online (not queued) — confirmed the
+correct user-facing message instead of a generic error, confirmed
+nothing was overwritten (exactly one `daily_payment_records` row),
+confirmed it appeared in the desktop `FlaggedDuplicatesList` and that
+dismissing it there correctly server-stamped `resolved_by`/`resolved_at`.
+Confirmed the built app installs the manifest and registers the service
+worker (`dist/index.html`'s auto-injected `<link rel="manifest">` and
+register script, confirmed present).
+
+**Not separately tested:** the `online` browser event's auto-flush
+listener specifically (the harness can flip `navigator.onLine` but
+doesn't dispatch a real `online` event) — the function it calls
+(`flushOfflineQueue`) is the identical one the manual "Retry now" button
+already proved works.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

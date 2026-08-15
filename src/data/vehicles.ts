@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase'
+import type { WriteOutcome } from '@/lib/offlineQueue'
+import { withOfflineQueue } from '@/lib/offlineQueue'
 import type { Enums } from '@/types/db'
 
 // Screens never call Supabase directly — same convention as src/data/auth.ts.
@@ -182,23 +184,43 @@ export async function createVehicle(input: CreateVehicleInput): Promise<string> 
   return data.id
 }
 
+interface ChangeVehicleStatusPayload {
+  clientRecordId: string
+  vehicleId: string
+  toStatus: VehicleStatus
+  reason: string
+  currentUserId: string
+}
+
+async function changeVehicleStatusLive(payload: ChangeVehicleStatusPayload): Promise<void> {
+  const { error } = await supabase.from('vehicle_status_events').insert({
+    client_record_id: payload.clientRecordId,
+    vehicle_id: payload.vehicleId,
+    to_status: payload.toStatus,
+    changed_by: payload.currentUserId,
+    reason: payload.reason,
+  })
+  if (error) throw error
+}
+
 /**
  * Vehicle status is a projection of vehicle_status_events (Phase 1) — this
  * never writes vehicles.status directly, it appends an event and the
- * database trigger updates the column.
+ * database trigger updates the column. Offline-queue-aware (Phase 9) —
+ * used from both the desktop vehicle profile and the mobile Maintenance &
+ * Repairs quick action.
  */
 export async function changeVehicleStatus(
   vehicleId: string,
   toStatus: VehicleStatus,
   reason: string,
   currentUserId: string,
-): Promise<void> {
-  const { error } = await supabase.from('vehicle_status_events').insert({
-    client_record_id: crypto.randomUUID(),
-    vehicle_id: vehicleId,
-    to_status: toStatus,
-    changed_by: currentUserId,
-    reason,
-  })
-  if (error) throw error
+): Promise<WriteOutcome<void>> {
+  const payload: ChangeVehicleStatusPayload = { clientRecordId: crypto.randomUUID(), vehicleId, toStatus, reason, currentUserId }
+  return withOfflineQueue('changeVehicleStatus', payload.clientRecordId, payload, () => changeVehicleStatusLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayChangeVehicleStatus(payload: unknown): Promise<void> {
+  return changeVehicleStatusLive(payload as ChangeVehicleStatusPayload)
 }

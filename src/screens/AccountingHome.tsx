@@ -16,6 +16,7 @@ interface AccountingHomeProps {
   onOpenTruckIncome: () => void
   onOpenKnownExpenses: () => void
   onOpenApprovals: () => void
+  onOpenFlaggedDuplicates: () => void
 }
 
 /**
@@ -25,7 +26,13 @@ interface AccountingHomeProps {
  * summary), amounts owed to/by the business, backdated entries,
  * reconciliation status, profit/loss. Current month by default.
  */
-export function AccountingHome({ onOpenSprinterIncome, onOpenTruckIncome, onOpenKnownExpenses, onOpenApprovals }: AccountingHomeProps) {
+export function AccountingHome({
+  onOpenSprinterIncome,
+  onOpenTruckIncome,
+  onOpenKnownExpenses,
+  onOpenApprovals,
+  onOpenFlaggedDuplicates,
+}: AccountingHomeProps) {
   const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [transactions, setTransactions] = useState<TransactionListItem[] | null>(null)
   const [owedTo, setOwedTo] = useState<number | null>(null)
@@ -68,13 +75,22 @@ export function AccountingHome({ onOpenSprinterIncome, onOpenTruckIncome, onOpen
     <div className="mx-auto max-w-4xl p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Accounting</h1>
-        <button
-          type="button"
-          onClick={onOpenApprovals}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
-        >
-          Approvals
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onOpenFlaggedDuplicates}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+          >
+            Flagged duplicates
+          </button>
+          <button
+            type="button"
+            onClick={onOpenApprovals}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+          >
+            Approvals
+          </button>
+        </div>
       </div>
 
       {error && (

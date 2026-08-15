@@ -235,7 +235,7 @@ function DayOutcomeForm({
 
     setSubmitting(true)
     try {
-      await recordDailyPayment({
+      const outcomeResult = await recordDailyPayment({
         vehicleId,
         serviceDate: date,
         dayOutcome: outcome,
@@ -244,6 +244,10 @@ function DayOutcomeForm({
         ...(note.trim() !== '' ? { shortfallNote: note.trim() } : {}),
         ...(overpaymentReason ? { overpaymentReason } : {}),
       })
+      if (outcomeResult.status === 'duplicate') {
+        setError('This vehicle already has a payment recorded for this date. Flagged for a manager to review — nothing was overwritten.')
+        return
+      }
       onDone()
     } catch {
       setError('Something went wrong. Try again.')

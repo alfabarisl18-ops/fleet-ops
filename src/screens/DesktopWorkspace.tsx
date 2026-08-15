@@ -10,6 +10,7 @@ import { ApprovalsList } from '@/screens/ApprovalsList'
 import { DesktopHome } from '@/screens/DesktopHome'
 import { DriverList } from '@/screens/DriverList'
 import { DriverProfileScreen } from '@/screens/DriverProfileScreen'
+import { FlaggedDuplicatesList } from '@/screens/FlaggedDuplicatesList'
 import { KnownExpensesScreen } from '@/screens/KnownExpensesScreen'
 import { MaintenanceList } from '@/screens/MaintenanceList'
 import { MaintenanceOrderDetailScreen } from '@/screens/MaintenanceOrderDetailScreen'
@@ -40,6 +41,7 @@ type DesktopView =
   | { name: 'truck-income' }
   | { name: 'known-expenses' }
   | { name: 'approvals-list' }
+  | { name: 'flagged-duplicates' }
 
 interface DesktopWorkspaceProps {
   user: SignedInUser
@@ -187,6 +189,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
           <AddMaintenanceOrderForm
             currentUserId={user.id}
             onCreated={(orderId) => setView({ name: 'maintenance-order-detail', orderId })}
+            onQueued={() => setView({ name: 'maintenance-list' })}
             onCancel={() => setView({ name: 'maintenance-list' })}
           />
         )}
@@ -207,6 +210,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onOpenTruckIncome={() => setView({ name: 'truck-income' })}
             onOpenKnownExpenses={() => setView({ name: 'known-expenses' })}
             onOpenApprovals={() => setView({ name: 'approvals-list' })}
+            onOpenFlaggedDuplicates={() => setView({ name: 'flagged-duplicates' })}
           />
         )}
 
@@ -223,6 +227,10 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
 
         {view.name === 'approvals-list' && (
           <ApprovalsList currentUserRole={user.role} onBack={() => setView({ name: 'accounting-home' })} />
+        )}
+
+        {view.name === 'flagged-duplicates' && (
+          <FlaggedDuplicatesList currentUserId={user.id} onBack={() => setView({ name: 'accounting-home' })} />
         )}
       </div>
     </div>

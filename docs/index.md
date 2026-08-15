@@ -32,6 +32,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0011](decisions/0011-maintenance-oil-change-literal-and-shared-screens.md) | Maintenance: `OIL_CHANGE` is a literal sentinel string, one pair of screens serves both roles, and the mobile-role SQL verification limitation |
 | [0012](decisions/0012-alerts-trigger-vs-cron-and-resolved-by-nullable.md) | Alerts: trigger vs. cron decided per type, `resolved_by` becomes nullable for automated resolution, deep-link subject mapping, the one-time backfill |
 | [0013](decisions/0013-accounting-scope-and-trips-mobile-correction.md) | Accounting scope (targets, trips, approvals in; reconciliation-difference alert out); correcting a mistake caught mid-implementation — trip entry is mobile Collections & Finance, not desktop |
+| [0014](decisions/0014-offline-queue-pwa-and-a-new-table-after-guards.md) | Offline sync: PWA shell caches only the app shell (never API reads), same-vehicle-day collisions handled on both the live and queued paths, and the first table added after guards.sql |
 
 ## Build order
 
@@ -61,6 +62,8 @@ start until the current one runs.
    Income, Truck Income, Known Expenses, box-truck trip recording
    (mobile), the approvals queue, and yearly payment targets. See
    decision 0013.
-9. Offline sync — queue, idempotency, pending indicators
+9. **Offline sync** — queue, idempotency, pending indicators. ← *done*.
+   PWA shell (service worker, manifest, installability) plus the write
+   queue for all 9 mobile-write functions. See decision 0014.
 10. Future Purchases
 11. Export, settings, polish

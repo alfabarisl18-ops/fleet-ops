@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase'
+import type { WriteOutcome } from '@/lib/offlineQueue'
+import { withOfflineQueue } from '@/lib/offlineQueue'
 import type { LedgerDirection } from '@/data/activityRecords'
 import type { LedgerCategory } from '@/data/dailyPayments'
+import type { Json } from '@/types/database'
 import type { Enums } from '@/types/db'
 import { rpcArgs } from '@/types/db'
 
@@ -325,30 +328,43 @@ export interface RecordTripInput {
   expenses?: { category: 'ROAD_CHECKPOINT' | 'DRIVER_OR_HELPER_PAYMENT' | 'FUEL'; amountMinor: number; note?: string }[]
 }
 
-/** Mobile entry point per SPEC: Collections & Finance, under Sprinter &
- *  Box-Truck Payment -> box truck selected. Also reachable from desktop. */
-export async function recordTrip(input: RecordTripInput): Promise<string> {
+type RecordTripPayload = RecordTripInput & { clientRecordId: string }
+
+async function recordTripLive(payload: RecordTripPayload): Promise<string> {
   const { data, error } = await supabase.rpc(
     'record_trip',
     rpcArgs<'record_trip'>({
-      p_client_record_id: crypto.randomUUID(),
-      p_vehicle_id: input.vehicleId,
-      p_driver_id: input.driverId ?? null,
-      p_helper_name: input.helperName ?? null,
-      p_pickup_location: input.pickupLocation ?? null,
-      p_destination_location: input.destinationLocation ?? null,
-      p_departed_on: input.departedOn,
-      p_returned_on: input.returnedOn ?? null,
-      p_load_quantity: input.loadQuantity ?? null,
-      p_load_weight: input.loadWeight ?? null,
-      p_load_weight_unit: input.loadWeightUnit ?? null,
-      p_notes: input.notes ?? null,
-      p_revenue_minor: input.revenueMinor,
-      p_expenses: (input.expenses ?? []).map((e) => ({ category: e.category, amount_minor: e.amountMinor, note: e.note ?? null })),
+      p_client_record_id: payload.clientRecordId,
+      p_vehicle_id: payload.vehicleId,
+      p_driver_id: payload.driverId ?? null,
+      p_helper_name: payload.helperName ?? null,
+      p_pickup_location: payload.pickupLocation ?? null,
+      p_destination_location: payload.destinationLocation ?? null,
+      p_departed_on: payload.departedOn,
+      p_returned_on: payload.returnedOn ?? null,
+      p_load_quantity: payload.loadQuantity ?? null,
+      p_load_weight: payload.loadWeight ?? null,
+      p_load_weight_unit: payload.loadWeightUnit ?? null,
+      p_notes: payload.notes ?? null,
+      p_revenue_minor: payload.revenueMinor,
+      p_expenses: (payload.expenses ?? []).map((e) => ({ category: e.category, amount_minor: e.amountMinor, note: e.note ?? null })),
     }),
   )
   if (error) throw error
   return data
+}
+
+/** Mobile entry point per SPEC: Collections & Finance, under Sprinter &
+ *  Box-Truck Payment -> box truck selected. Also reachable from desktop.
+ *  Offline-queue-aware (Phase 9). */
+export async function recordTrip(input: RecordTripInput): Promise<WriteOutcome<string>> {
+  const payload: RecordTripPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  return withOfflineQueue('recordTrip', payload.clientRecordId, payload, () => recordTripLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayRecordTrip(payload: unknown): Promise<string> {
+  return recordTripLive(payload as RecordTripPayload)
 }
 
 /** Desktop-only — a reviewer flags a transaction after entry (SPEC's own
@@ -382,5 +398,59 @@ export async function reconcileLedgerEntry(ledgerEntryId: string, currentUserId:
  *  vehicle correction allow-list, decision 0009). */
 export async function updateVehicleTarget(vehicleId: string, yearlyTargetMinor: number): Promise<void> {
   const { error } = await supabase.from('vehicles').update({ yearly_target_minor: yearlyTargetMinor }).eq('id', vehicleId)
+  if (error) throw error
+}
+
+/**
+ * Phase 9 (Offline sync): called by the queue flush handler, never
+ * directly by a screen, when a queued recordDailyPayment collides with
+ * daily_payment_records_vehicle_service_date_key on retry — SPEC:
+ * "becomes a flagged duplicate for review, never a silent overwrite."
+ * SECURITY DEFINER RPC — Collections & Finance can't otherwise write a
+ * desktop-only-readable table.
+ */
+export async function flagDuplicatePayment(vehicleId: string, serviceDate: string, payload: unknown): Promise<string> {
+  const { data, error } = await supabase.rpc('flag_duplicate_payment', {
+    p_client_record_id: crypto.randomUUID(),
+    p_vehicle_id: vehicleId,
+    p_service_date: serviceDate,
+    p_payload: payload as Json,
+  })
+  if (error) throw error
+  return data
+}
+
+export interface FlaggedDuplicatePayment {
+  id: string
+  vehicleId: string
+  vehicleFleetId: string
+  serviceDate: string
+  payload: unknown
+  submittedAt: string
+}
+
+/** Desktop-only via fdp_select_desktop. */
+export async function fetchFlaggedDuplicatePayments(): Promise<FlaggedDuplicatePayment[]> {
+  const { data, error } = await supabase
+    .from('flagged_duplicate_payments')
+    .select('id, vehicle_id, service_date, payload, submitted_at, vehicles(fleet_id)')
+    .is('resolved_at', null)
+    .order('submitted_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    vehicleId: row.vehicle_id,
+    vehicleFleetId: (row.vehicles as unknown as { fleet_id: string } | null)?.fleet_id ?? '(unknown)',
+    serviceDate: row.service_date,
+    payload: row.payload,
+    submittedAt: row.submitted_at,
+  }))
+}
+
+/** Desktop-only via fdp_update_desktop. SPEC says "for review," not "for
+ *  automatic reconciliation" — this only dismisses the flag, it never
+ *  merges or replays the losing submission. */
+export async function resolveFlaggedDuplicatePayment(id: string, currentUserId: string): Promise<void> {
+  const { error } = await supabase.from('flagged_duplicate_payments').update({ resolved_by: currentUserId }).eq('id', id)
   if (error) throw error
 }

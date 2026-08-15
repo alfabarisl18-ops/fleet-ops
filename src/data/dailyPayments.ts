@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabase'
+import type { WriteOutcome } from '@/lib/offlineQueue'
+import { isDailyPaymentDuplicate, withOfflineQueue } from '@/lib/offlineQueue'
 import type { LedgerDirection } from '@/data/activityRecords'
+import { flagDuplicatePayment } from '@/data/accounting'
 import type { Enums } from '@/types/db'
 
 // Screens never call Supabase directly — same convention as src/data/vehicles.ts.
@@ -41,21 +44,52 @@ export interface RecordDailyPaymentInput {
   overpaymentReason?: OverpaymentReason
 }
 
-/** Records one vehicle-day payment and its consequences atomically —
- *  public.record_daily_payment(). Returns the new daily_payment_records id. */
-export async function recordDailyPayment(input: RecordDailyPaymentInput): Promise<string> {
+type RecordDailyPaymentPayload = RecordDailyPaymentInput & { clientRecordId: string }
+
+async function recordDailyPaymentLive(payload: RecordDailyPaymentPayload): Promise<string> {
   const { data, error } = await supabase.rpc('record_daily_payment', {
-    p_client_record_id: crypto.randomUUID(),
-    p_vehicle_id: input.vehicleId,
-    p_service_date: input.serviceDate,
-    p_day_outcome: input.dayOutcome,
-    p_received_amount_minor: input.receivedAmountMinor,
-    ...(input.shortfallCause ? { p_shortfall_cause: input.shortfallCause } : {}),
-    ...(input.shortfallNote ? { p_shortfall_note: input.shortfallNote } : {}),
-    ...(input.overpaymentReason ? { p_overpayment_reason: input.overpaymentReason } : {}),
+    p_client_record_id: payload.clientRecordId,
+    p_vehicle_id: payload.vehicleId,
+    p_service_date: payload.serviceDate,
+    p_day_outcome: payload.dayOutcome,
+    p_received_amount_minor: payload.receivedAmountMinor,
+    ...(payload.shortfallCause ? { p_shortfall_cause: payload.shortfallCause } : {}),
+    ...(payload.shortfallNote ? { p_shortfall_note: payload.shortfallNote } : {}),
+    ...(payload.overpaymentReason ? { p_overpayment_reason: payload.overpaymentReason } : {}),
   })
   if (error) throw error
   return data
+}
+
+/** Specific to recordDailyPayment — the only one of the 9 mobile-write
+ *  functions that can hit SPEC's same-vehicle-day collision. Kept out of
+ *  the shared WriteOutcome<T> so the other 8 callers don't have to
+ *  handle a case that can never happen to them. */
+export type RecordDailyPaymentOutcome = WriteOutcome<string> | { status: 'duplicate' }
+
+/** Records one vehicle-day payment and its consequences atomically —
+ *  public.record_daily_payment(). Offline-queue-aware (Phase 9): queues
+ *  on the device when there's no signal or the network drops mid-call,
+ *  see src/lib/offlineQueue.ts. SPEC section 8's same-vehicle-day
+ *  collision can happen on a live double-submission just as easily as
+ *  on a queued retry (two collectors can both be online) — caught here
+ *  too, not only in the queue's own flush handler. */
+export async function recordDailyPayment(input: RecordDailyPaymentInput): Promise<RecordDailyPaymentOutcome> {
+  const payload: RecordDailyPaymentPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  try {
+    return await withOfflineQueue('recordDailyPayment', payload.clientRecordId, payload, () => recordDailyPaymentLive(payload))
+  } catch (err) {
+    if (isDailyPaymentDuplicate(err)) {
+      await flagDuplicatePayment(payload.vehicleId, payload.serviceDate, payload)
+      return { status: 'duplicate' }
+    }
+    throw err
+  }
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayRecordDailyPayment(payload: unknown): Promise<string> {
+  return recordDailyPaymentLive(payload as RecordDailyPaymentPayload)
 }
 
 export interface RecordBundledPaymentInput {
@@ -67,20 +101,32 @@ export interface RecordBundledPaymentInput {
   note?: string
 }
 
-/** Records several consecutive days as one lump-sum catch-up payment —
- *  public.record_bundled_payment(). Returns the new bundled_payments id. */
-export async function recordBundledPayment(input: RecordBundledPaymentInput): Promise<string> {
+type RecordBundledPaymentPayload = RecordBundledPaymentInput & { clientRecordId: string }
+
+async function recordBundledPaymentLive(payload: RecordBundledPaymentPayload): Promise<string> {
   const { data, error } = await supabase.rpc('record_bundled_payment', {
-    p_client_record_id: crypto.randomUUID(),
-    p_vehicle_id: input.vehicleId,
-    p_covers_from_date: input.coversFromDate,
-    p_days_covered: input.daysCovered,
-    p_total_amount_minor: input.totalAmountMinor,
-    ...(input.receivedAt ? { p_received_at: input.receivedAt } : {}),
-    ...(input.note ? { p_note: input.note } : {}),
+    p_client_record_id: payload.clientRecordId,
+    p_vehicle_id: payload.vehicleId,
+    p_covers_from_date: payload.coversFromDate,
+    p_days_covered: payload.daysCovered,
+    p_total_amount_minor: payload.totalAmountMinor,
+    ...(payload.receivedAt ? { p_received_at: payload.receivedAt } : {}),
+    ...(payload.note ? { p_note: payload.note } : {}),
   })
   if (error) throw error
   return data
+}
+
+/** Records several consecutive days as one lump-sum catch-up payment —
+ *  public.record_bundled_payment(). Offline-queue-aware (Phase 9). */
+export async function recordBundledPayment(input: RecordBundledPaymentInput): Promise<WriteOutcome<string>> {
+  const payload: RecordBundledPaymentPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  return withOfflineQueue('recordBundledPayment', payload.clientRecordId, payload, () => recordBundledPaymentLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayRecordBundledPayment(payload: unknown): Promise<string> {
+  return recordBundledPaymentLive(payload as RecordBundledPaymentPayload)
 }
 
 /** General ledger entry with no vehicle-day behind it ("Other Payment") —
@@ -96,17 +142,30 @@ export interface RecordOtherPaymentInput {
   currentUserId: string
 }
 
-export async function recordOtherPayment(input: RecordOtherPaymentInput): Promise<void> {
+type RecordOtherPaymentPayload = RecordOtherPaymentInput & { clientRecordId: string }
+
+async function recordOtherPaymentLive(payload: RecordOtherPaymentPayload): Promise<void> {
   const { error } = await supabase.from('ledger_entries').insert({
-    client_record_id: crypto.randomUUID(),
-    direction: input.direction,
-    amount_minor: input.amountMinor,
-    category: input.category,
-    applies_to_date: input.applyDate,
-    entered_by_user_id: input.currentUserId,
-    ...(input.note ? { note: input.note } : {}),
+    client_record_id: payload.clientRecordId,
+    direction: payload.direction,
+    amount_minor: payload.amountMinor,
+    category: payload.category,
+    applies_to_date: payload.applyDate,
+    entered_by_user_id: payload.currentUserId,
+    ...(payload.note ? { note: payload.note } : {}),
   })
   if (error) throw error
+}
+
+/** Offline-queue-aware (Phase 9). */
+export async function recordOtherPayment(input: RecordOtherPaymentInput): Promise<WriteOutcome<void>> {
+  const payload: RecordOtherPaymentPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  return withOfflineQueue('recordOtherPayment', payload.clientRecordId, payload, () => recordOtherPaymentLive(payload))
+}
+
+/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
+export async function replayRecordOtherPayment(payload: unknown): Promise<void> {
+  return recordOtherPaymentLive(payload as RecordOtherPaymentPayload)
 }
 
 export interface DailyPaymentRecord {

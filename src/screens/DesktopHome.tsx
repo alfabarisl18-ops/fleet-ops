@@ -5,18 +5,16 @@ interface DesktopHomeProps {
   onOpenMaintenance: () => void
   onOpenAccounting: () => void
   onOpenFuturePurchases: () => void
+  onOpenExport: () => void
+  onOpenSettings: () => void
 }
 
 /**
- * SPEC section 4 lists a much larger Home than this — Payment targets,
- * Export report, Settings alongside Vehicles, Drivers, Records,
- * Maintenance, Accounting, and (as of Phase 10) Future Purchases. The
- * rest don't exist yet, and SPEC's own rule is "every card that looks
- * actionable must work" — so Home shows exactly the entry points that
- * do something real, not placeholders for the rest. See docs/log.md.
- * (Payment targets and Approvals are folded into the vehicle profile
- * and Accounting respectively — see decision 0013 — rather than getting
- * their own top-level cards yet.)
+ * SPEC section 4's full Home card list, now all built: Vehicles, Drivers,
+ * Records, Maintenance, Accounting, Future Purchases, Export report,
+ * Settings. (Payment targets and Approvals are folded into the vehicle
+ * profile and Accounting respectively — see decision 0013 — rather than
+ * getting their own top-level cards.)
  */
 export function DesktopHome({
   onOpenVehicles,
@@ -25,6 +23,8 @@ export function DesktopHome({
   onOpenMaintenance,
   onOpenAccounting,
   onOpenFuturePurchases,
+  onOpenExport,
+  onOpenSettings,
 }: DesktopHomeProps) {
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
@@ -83,6 +83,24 @@ export function DesktopHome({
         >
           <span className="block text-lg font-semibold text-slate-900">Future Purchases</span>
           <span className="mt-1 block text-sm text-slate-500">Savings goals, purchases, transit, and onboarding</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenExport}
+          className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+        >
+          <span className="block text-lg font-semibold text-slate-900">Export report</span>
+          <span className="mt-1 block text-sm text-slate-500">Download ledger transactions as a CSV</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+        >
+          <span className="block text-lg font-semibold text-slate-900">Settings</span>
+          <span className="mt-1 block text-sm text-slate-500">People, roles, PINs, and permissions</span>
         </button>
       </div>
     </div>

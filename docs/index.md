@@ -34,6 +34,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0013](decisions/0013-accounting-scope-and-trips-mobile-correction.md) | Accounting scope (targets, trips, approvals in; reconciliation-difference alert out); correcting a mistake caught mid-implementation — trip entry is mobile Collections & Finance, not desktop |
 | [0014](decisions/0014-offline-queue-pwa-and-a-new-table-after-guards.md) | Offline sync: PWA shell caches only the app shell (never API reads), same-vehicle-day collisions handled on both the live and queued paths, and the first table added after guards.sql |
 | [0015](decisions/0015-future-purchases-alert-heuristics-and-storage-scope.md) | Future Purchases: the invented alert-threshold table, Storage scoped to desktop only, no new `vehicles` columns, and a live PostgREST to-one-embed bug |
+| [0016](decisions/0016-settings-scope-and-export-format.md) | Settings: desktop account creation stays out of scope (a Phase 2 decision, not a new one), the same-category role-change guard, no self-edit, Export as client-side CSV |
 
 ## Build order
 
@@ -70,4 +71,9 @@ start until the current one runs.
     onboarding. ← *done*. Savings targets, cash reservations (Owner-only),
     candidate comparison, forecasting, real Storage document upload
     (desktop only), and the last 12 of 21 alert types. See decision 0015.
-11. Export, settings, polish
+11. **Export, settings.** ← *done*. Export: a CSV of ledger transactions
+    over a date range. Settings: a people list (Owner/Admin manages,
+    Fleet Manager reads), adding/provisioning a mobile person, PIN
+    reset — all built on the Edge Function and RPCs Phase 2 already
+    shipped for exactly this. See decision 0016. "Polish" — no further
+    named work; the build order ends here.

@@ -16,6 +16,17 @@ import type {
   Roadworthiness,
 } from '@/data/maintenance'
 import type { VehicleStatus, VehicleType } from '@/data/vehicles'
+import type {
+  AcquisitionCostCategory,
+  AcquisitionPaymentType,
+  FuelType,
+  PurchaseGoalStatus,
+  PurchasePriority,
+  PurchaseStage,
+  TransmissionType,
+  VehicleCondition,
+} from '@/data/futurePurchases'
+import type { DocumentType } from '@/lib/documents'
 
 // Every user-facing status string comes from here, so wording stays
 // consistent as more screens are built. See CLAUDE.md "Vocabulary".
@@ -273,4 +284,109 @@ export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
   PENDING: 'Unusual — pending review',
   APPROVED: 'Approved',
   DISPUTED: 'Disputed',
+}
+
+// --- Future Purchases (Phase 10) --------------------------------------------
+
+export const PURCHASE_PRIORITY_LABELS: Record<PurchasePriority, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+}
+
+export const PURCHASE_GOAL_STATUS_LABELS: Record<PurchaseGoalStatus, string> = {
+  ACTIVE: 'Active',
+  ON_HOLD: 'On hold',
+  ACHIEVED: 'Achieved',
+  CANCELLED: 'Cancelled',
+}
+
+/** SPEC's own stage list, verbatim. */
+export const PURCHASE_STAGE_LABELS: Record<PurchaseStage, string> = {
+  IDEA_CONSIDERING: 'Idea/considering',
+  RESEARCHING: 'Researching',
+  SAVING: 'Saving',
+  READY_TO_PURCHASE: 'Ready to purchase',
+  SELLER_SELECTED: 'Seller selected',
+  DEPOSIT_PAID: 'Deposit paid',
+  FULLY_PURCHASED: 'Fully purchased',
+  AWAITING_SHIPMENT: 'Awaiting shipment',
+  IN_TRANSIT: 'In transit',
+  ARRIVED_AT_PORT: 'Arrived at port',
+  CUSTOMS_CLEARING: 'Customs/clearing',
+  TRANSPORTING_FROM_PORT: 'Transporting from port',
+  INSPECTION_AND_REGISTRATION: 'Inspection and registration',
+  READY_FOR_ONBOARDING: 'Ready for onboarding',
+  ACTIVE_IN_SERVICE: 'Active/in service',
+  CANCELLED: 'Cancelled',
+}
+
+export const ACQUISITION_PAYMENT_TYPE_LABELS: Record<AcquisitionPaymentType, string> = {
+  DEPOSIT: 'Deposit',
+  INSTALLMENT: 'Installment',
+  FINAL: 'Final payment',
+}
+
+export const ACQUISITION_COST_CATEGORY_LABELS: Record<AcquisitionCostCategory, string> = {
+  VEHICLE_PRICE: 'Vehicle price',
+  PRE_PURCHASE_INSPECTION: 'Pre-purchase inspection',
+  AUCTION_FEES: 'Auction fees',
+  SELLER_OR_AGENT_FEES: 'Seller or agent fees',
+  INLAND_TRANSPORT_TO_PORT: 'Inland transport to port',
+  EXPORT_DOCUMENTATION: 'Export documentation',
+  SHIPPING: 'Shipping',
+  MARINE_INSURANCE: 'Marine insurance',
+  PORT_AND_TERMINAL_CHARGES: 'Port and terminal charges',
+  CUSTOMS_DUTIES: 'Customs duties',
+  CLEARING_AGENT_FEES: 'Clearing-agent fees',
+  STORAGE_OR_DEMURRAGE: 'Storage or demurrage',
+  TRANSPORT_FROM_PORT: 'Transport from port',
+  REGISTRATION: 'Registration',
+  PLATES: 'Plates',
+  ROADWORTHINESS_INSPECTION: 'Roadworthiness inspection',
+  INSURANCE: 'Insurance',
+  INITIAL_REPAIRS: 'Initial repairs',
+  SPARE_PARTS: 'Spare parts',
+  TYRES: 'Tyres',
+  BATTERY: 'Battery',
+  OIL_AND_FLUIDS: 'Oil and fluids',
+  BRANDING_OR_PAINTING: 'Branding or painting',
+  GPS_EQUIPMENT: 'GPS equipment',
+  OTHER: 'Other',
+  CONTINGENCY: 'Contingency',
+}
+
+export const VEHICLE_CONDITION_LABELS: Record<VehicleCondition, string> = {
+  NEW: 'New',
+  USED: 'Used',
+}
+
+export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
+  PETROL: 'Petrol',
+  DIESEL: 'Diesel',
+  HYBRID: 'Hybrid',
+  ELECTRIC: 'Electric',
+  OTHER: 'Other',
+}
+
+export const TRANSMISSION_TYPE_LABELS: Record<TransmissionType, string> = {
+  MANUAL: 'Manual',
+  AUTOMATIC: 'Automatic',
+  OTHER: 'Other',
+}
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  VEHICLE_PHOTO: 'Vehicle photo',
+  DRIVER_PHOTO: 'Driver photo',
+  DRIVER_ID: 'Driver ID',
+  DRIVER_LICENCE: 'Driver licence',
+  PURCHASE_AGREEMENT: 'Purchase agreement',
+  BILL_OF_LADING: 'Bill of lading',
+  RECEIPT: 'Receipt',
+  REGISTRATION: 'Registration',
+  INSURANCE: 'Insurance',
+  ROADWORTHINESS_CERTIFICATE: 'Roadworthiness certificate',
+  EXPORT_DOCUMENT: 'Export document',
+  CUSTOMS_DOCUMENT: 'Customs document',
+  OTHER: 'Other',
 }

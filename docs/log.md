@@ -917,4 +917,96 @@ doesn't dispatch a real `online` event) — the function it calls
 (`flushOfflineQueue`) is the identical one the manual "Retry now" button
 already proved works.
 
+---
+
+## [2026-08-16] future-purchases | Phase 10 — Future Purchases (goals, landed cost, funding, transit, onboarding)
+
+Phase 1 built the entire schema this phase needed — `purchase_goals`,
+`planned_vehicles`, `acquisition_cost_lines`, `acquisition_payments`,
+`savings_targets`, `cash_reservations`, `transit_records`, plus the
+polymorphic `documents` table — all desktop-only via RLS. Nothing in
+`src/` had ever written to any of them. This phase adds two RPCs, one new
+invariant, two event triggers, wires the last 12 of 21 alert types, and
+(confirmed with the user) builds real Supabase Storage upload rather than
+document screens alone — the first real file upload anywhere in the app.
+
+**Two RPCs, both `SECURITY INVOKER`** (desktop already has every grant
+they need — no privilege bypass to make, same reasoning `record_trip`
+documents): `record_acquisition_payment` (payment + linked
+`VEHICLE_PURCHASE` ledger expense, same link-back shape as
+`record_maintenance_part`) and `onboard_vehicle` (creates the real
+`vehicles` row from a planned vehicle at Ready for onboarding, summing
+*actual* landed cost as `purchase_price_minor`, linking
+`onboarded_vehicle_id` back). A new check constraint,
+`pv_active_in_service_is_onboarded`, makes `onboard_vehicle` the only
+path into stage Active/in service — a plain stage update can reach every
+other stage.
+
+**Alerts:** two new event triggers (`VEHICLE_READY_FOR_ONBOARDING` on a
+stage change, `SHIPPING_DEPARTURE` on `shipped_on` going from null to
+set — the latter has no auto-resolve, it's a one-time fact) plus 10 new
+blocks in the existing daily `app.evaluate_scheduled_alerts()` cron job.
+Every numeric threshold is a stated default inferred from the schema,
+not a SPEC number — full table in decision 0015.
+
+**Storage:** a new private `documents` bucket, RLS scoped to desktop
+only (mirrors the `documents` table's own desktop policies, not its
+mobile ones — the pre-existing gap where Maintenance/Collections have a
+table grant but no upload path stays a disclosed limitation, not fixed
+here). `src/lib/documents.ts` validates mime type and size client-side
+before upload, generates the document id client-side so the storage key
+(`{ownerType}/{ownerId}/{id}-{filename}`) is known up front.
+
+**Frontend:** `FuturePurchasesHome` (all 8 SPEC cards, clickable),
+`PurchaseGoalList`/`AddPurchaseGoalForm`/`PurchaseGoalDetailScreen`
+(funding progress bar, Owner-gated cash reservations, forecasting from
+real `ledger_entries`, candidate comparison cards — never auto-selected),
+`PlannedVehicleDetailScreen` (all 25 landed-cost categories est/actual,
+stage control — "Advance to `<next>`" plus every other stage including
+Cancelled, payments, transit once a plan reaches Awaiting shipment),
+`OnboardVehicleForm`, `PlannedVehicleList`/`OverduePurchaseActionsList`
+(the four cross-goal stage cards and the overdue-actions card), shared
+`DocumentPanel`. `vehicles` gets no new columns — make/model/VIN/etc.
+stay on the acquisition side as the vehicle's attached history, per
+structural rule against duplicate sources of truth (decision 0015).
+
+**Verified against the hosted project:** SQL-level (transaction +
+rollback, Fleet Manager desktop role) — full happy path goal → candidate
+→ cost lines → deposit payment (confirmed ledger link) → 12 stage
+transitions → confirmed the check constraint blocks a direct jump to
+Active/in service → `onboard_vehicle` (confirmed vehicle row, landed
+cost, `onboarded_vehicle_id`, alert auto-resolved and attributed to the
+acting user) → cash reservation correctly blocked for Fleet Manager
+(`0 rows`, policy text confirmed) → 12 of 14 alert conditions raised
+then resolved live (`SHIPPING_DEPARTURE`'s no-auto-resolve and
+`DEPOSIT_OR_INSTALLMENT_DUE`'s resolve leg both explained, not just
+asserted — see decision 0015). `npm run typecheck && lint && test &&
+build` all clean; no new advisor warnings. Live in the Browser pane as
+M. Sesay (QA Fleet Manager): created a real goal with a budget, added a
+candidate, edited a landed-cost line, recorded a deposit, walked every
+stage to Ready for onboarding (confirmed the alert fired and appeared in
+the bell), onboarded it into a real vehicle (confirmed purchase price
+and yearly target carried over correctly, confirmed the alert
+auto-resolved), confirmed Home's card counts updated.
+
+**A real bug found live, not by inspection:** the Home summary and goal
+list both embedded `savings_targets(total_budget_minor)` in a
+`purchase_goals` query and read it as an array
+(`(g.savings_targets ?? [])[0]?.total_budget_minor`) — silently
+`undefined` every time, because `savings_targets.goal_id` is `unique`
+(Phase 1), so PostgREST returns a to-one embed as a single object, not
+an array (unlike the `cash_reservations` embed in the same query, which
+has no unique constraint and does come back as an array). "Amount Still
+Required" showed `SLE 0` for a goal with a real SLE 50,000 budget until
+caught by comparing the Home card against the goal detail screen's own,
+separately-queried figure. Fixed and reverified live. Full detail in
+decision 0015.
+
+**Not cleaned up:** live verification created real rows in the hosted
+project — a purchase goal, its candidate, a payment/ledger entry, and a
+real vehicle (`SPR-TEST-99`) now visible in the actual fleet list. The
+user was shown a proposed cleanup and hasn't yet confirmed the deletion
+SQL; the DELETE statements need approval before they touch the hosted
+database, same rule as everything else.
+
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

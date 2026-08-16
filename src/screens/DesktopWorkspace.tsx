@@ -2,18 +2,28 @@ import { useState } from 'react'
 import { WorkspaceHeader } from '@/components/WorkspaceHeader'
 import type { AlertListItem } from '@/data/alerts'
 import type { SignedInUser } from '@/data/auth'
+import { fetchTransitRecordPlannedVehicleId } from '@/data/futurePurchases'
 import { AccountingHome } from '@/screens/AccountingHome'
 import { AddDriverForm } from '@/screens/AddDriverForm'
 import { AddMaintenanceOrderForm } from '@/screens/AddMaintenanceOrderForm'
+import { AddPurchaseGoalForm } from '@/screens/AddPurchaseGoalForm'
 import { AddVehicleForm } from '@/screens/AddVehicleForm'
 import { ApprovalsList } from '@/screens/ApprovalsList'
 import { DesktopHome } from '@/screens/DesktopHome'
 import { DriverList } from '@/screens/DriverList'
 import { DriverProfileScreen } from '@/screens/DriverProfileScreen'
 import { FlaggedDuplicatesList } from '@/screens/FlaggedDuplicatesList'
+import type { PlannedVehicleFilter } from '@/screens/FuturePurchasesHome'
+import { FuturePurchasesHome } from '@/screens/FuturePurchasesHome'
 import { KnownExpensesScreen } from '@/screens/KnownExpensesScreen'
 import { MaintenanceList } from '@/screens/MaintenanceList'
 import { MaintenanceOrderDetailScreen } from '@/screens/MaintenanceOrderDetailScreen'
+import { OnboardVehicleForm } from '@/screens/OnboardVehicleForm'
+import { OverduePurchaseActionsList } from '@/screens/OverduePurchaseActionsList'
+import { PlannedVehicleDetailScreen } from '@/screens/PlannedVehicleDetailScreen'
+import { PlannedVehicleList } from '@/screens/PlannedVehicleList'
+import { PurchaseGoalDetailScreen } from '@/screens/PurchaseGoalDetailScreen'
+import { PurchaseGoalList } from '@/screens/PurchaseGoalList'
 import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
 import { RecordsList } from '@/screens/RecordsList'
 import { SetUpDriverPurchaseAgreementForm } from '@/screens/SetUpDriverPurchaseAgreementForm'
@@ -42,6 +52,14 @@ type DesktopView =
   | { name: 'known-expenses' }
   | { name: 'approvals-list' }
   | { name: 'flagged-duplicates' }
+  | { name: 'future-purchases-home' }
+  | { name: 'purchase-goal-list' }
+  | { name: 'add-purchase-goal' }
+  | { name: 'purchase-goal-detail'; goalId: string }
+  | { name: 'planned-vehicle-list'; filter: PlannedVehicleFilter; title: string }
+  | { name: 'planned-vehicle-detail'; plannedVehicleId: string }
+  | { name: 'onboard-vehicle'; plannedVehicleId: string; goalName: string }
+  | { name: 'overdue-purchase-actions' }
 
 interface DesktopWorkspaceProps {
   user: SignedInUser
@@ -51,9 +69,12 @@ interface DesktopWorkspaceProps {
 /**
  * SPEC's own phrasing for "the exact record" an alert deep-links to —
  * "the specific maintenance order, balance, or purchase goal" — is
- * literally the subject_type mapping here (decision 0012).
+ * literally the subject_type mapping here (decision 0012). Async because
+ * one case (TRANSIT_RECORD) needs a lookup: the alert's subject is the
+ * transit_records row, but the screen it opens is keyed by
+ * planned_vehicle_id — see fetchTransitRecordPlannedVehicleId.
  */
-function viewForAlert(alert: AlertListItem): DesktopView {
+async function resolveAlertView(alert: AlertListItem): Promise<DesktopView> {
   switch (alert.subjectType) {
     case 'MAINTENANCE_ORDER':
       return { name: 'maintenance-order-detail', orderId: alert.subjectId }
@@ -65,6 +86,14 @@ function viewForAlert(alert: AlertListItem): DesktopView {
       return { name: 'vehicle-profile', vehicleId: alert.subjectId }
     case 'LEDGER_ENTRY':
       return { name: 'approvals-list' }
+    case 'PURCHASE_GOAL':
+      return { name: 'purchase-goal-detail', goalId: alert.subjectId }
+    case 'PLANNED_VEHICLE':
+      return { name: 'planned-vehicle-detail', plannedVehicleId: alert.subjectId }
+    case 'TRANSIT_RECORD': {
+      const plannedVehicleId = await fetchTransitRecordPlannedVehicleId(alert.subjectId)
+      return plannedVehicleId ? { name: 'planned-vehicle-detail', plannedVehicleId } : { name: 'home' }
+    }
     default:
       return { name: 'home' }
   }
@@ -85,7 +114,9 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
         user={user}
         {...(view.name !== 'home' ? { onHome: () => setView({ name: 'home' }) } : {})}
         onSignOut={onSignedOut}
-        onOpenAlert={(alert) => setView(viewForAlert(alert))}
+        onOpenAlert={(alert) => {
+          void resolveAlertView(alert).then(setView)
+        }}
       />
       <div className="flex-1">
         {view.name === 'home' && (
@@ -95,6 +126,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onOpenRecords={() => setView({ name: 'records-list' })}
             onOpenMaintenance={() => setView({ name: 'maintenance-list' })}
             onOpenAccounting={() => setView({ name: 'accounting-home' })}
+            onOpenFuturePurchases={() => setView({ name: 'future-purchases-home' })}
           />
         )}
 
@@ -231,6 +263,76 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
 
         {view.name === 'flagged-duplicates' && (
           <FlaggedDuplicatesList currentUserId={user.id} onBack={() => setView({ name: 'accounting-home' })} />
+        )}
+
+        {view.name === 'future-purchases-home' && (
+          <FuturePurchasesHome
+            onOpenGoals={() => setView({ name: 'purchase-goal-list' })}
+            onOpenPlannedVehicles={(filter, title) => setView({ name: 'planned-vehicle-list', filter, title })}
+            onOpenOverdueActions={() => setView({ name: 'overdue-purchase-actions' })}
+          />
+        )}
+
+        {view.name === 'purchase-goal-list' && (
+          <PurchaseGoalList
+            onOpenGoal={(goalId) => setView({ name: 'purchase-goal-detail', goalId })}
+            onAddGoal={() => setView({ name: 'add-purchase-goal' })}
+          />
+        )}
+
+        {view.name === 'add-purchase-goal' && (
+          <AddPurchaseGoalForm
+            currentUserId={user.id}
+            onCreated={(goalId) => setView({ name: 'purchase-goal-detail', goalId })}
+            onCancel={() => setView({ name: 'purchase-goal-list' })}
+          />
+        )}
+
+        {view.name === 'purchase-goal-detail' && (
+          <PurchaseGoalDetailScreen
+            goalId={view.goalId}
+            currentUserId={user.id}
+            currentUserRole={user.role}
+            onBack={() => setView({ name: 'purchase-goal-list' })}
+            onOpenPlannedVehicle={(plannedVehicleId) => setView({ name: 'planned-vehicle-detail', plannedVehicleId })}
+          />
+        )}
+
+        {view.name === 'planned-vehicle-list' && (
+          <PlannedVehicleList
+            filter={view.filter}
+            title={view.title}
+            onBack={() => setView({ name: 'future-purchases-home' })}
+            onOpenPlannedVehicle={(plannedVehicleId) => setView({ name: 'planned-vehicle-detail', plannedVehicleId })}
+          />
+        )}
+
+        {view.name === 'planned-vehicle-detail' && (
+          <PlannedVehicleDetailScreen
+            plannedVehicleId={view.plannedVehicleId}
+            currentUserId={user.id}
+            onBack={() => setView({ name: 'future-purchases-home' })}
+            onOnboard={(plannedVehicleId, goalName) => setView({ name: 'onboard-vehicle', plannedVehicleId, goalName })}
+          />
+        )}
+
+        {view.name === 'onboard-vehicle' && (
+          <OnboardVehicleForm
+            plannedVehicleId={view.plannedVehicleId}
+            goalName={view.goalName}
+            onOnboarded={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
+            onCancel={() => setView({ name: 'planned-vehicle-detail', plannedVehicleId: view.plannedVehicleId })}
+          />
+        )}
+
+        {view.name === 'overdue-purchase-actions' && (
+          <OverduePurchaseActionsList
+            currentUserId={user.id}
+            onBack={() => setView({ name: 'future-purchases-home' })}
+            onOpenAlert={(alert) => {
+              void resolveAlertView(alert).then(setView)
+            }}
+          />
         )}
       </div>
     </div>

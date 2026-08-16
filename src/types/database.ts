@@ -2162,9 +2162,40 @@ export type Database = {
           id: string
         }[]
       }
+      onboard_vehicle: {
+        Args: {
+          p_client_record_id: string
+          p_current_driver_id: string
+          p_entered_service_on: string
+          p_expected_daily_amount_minor: number
+          p_fleet_id: string
+          p_planned_vehicle_id: string
+          p_plate: string
+          p_route_id: string
+          p_status: Database["public"]["Enums"]["vehicle_status"]
+          p_yearly_target_minor: number
+        }
+        Returns: string
+      }
       override_shortfall_treatment: {
         Args: { p_daily_payment_id: string; p_reason: string }
         Returns: undefined
+      }
+      record_acquisition_payment: {
+        Args: {
+          p_amount_minor: number
+          p_client_record_id: string
+          p_exchange_rate: number
+          p_method: string
+          p_next_due_on: string
+          p_original_amount_minor: number
+          p_original_currency: string
+          p_paid_on: string
+          p_paid_to: string
+          p_payment_type: Database["public"]["Enums"]["acquisition_payment_type"]
+          p_planned_vehicle_id: string
+        }
+        Returns: string
       }
       record_bundled_payment: {
         Args: {

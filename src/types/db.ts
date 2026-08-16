@@ -108,6 +108,15 @@ export const NULLABLE_RPC_ARGS = {
     'p_load_weight_unit',
     'p_notes',
   ],
+  record_acquisition_payment: [
+    'p_method',
+    'p_paid_to',
+    'p_original_currency',
+    'p_original_amount_minor',
+    'p_exchange_rate',
+    'p_next_due_on',
+  ],
+  onboard_vehicle: ['p_plate', 'p_current_driver_id', 'p_route_id', 'p_entered_service_on'],
 } as const satisfies Partial<Record<keyof PublicSchema['Functions'], readonly string[]>>
 
 type NullableArgKeysFor<T> = T extends keyof typeof NULLABLE_RPC_ARGS

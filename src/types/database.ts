@@ -1440,6 +1440,7 @@ export type Database = {
         Row: {
           client_record_id: string
           closed_at: string | null
+          closed_by: string | null
           created_at: string
           driver_id: string
           id: string
@@ -1450,10 +1451,12 @@ export type Database = {
           reminder_date: string | null
           status: Database["public"]["Enums"]["balance_status"]
           vehicle_id: string | null
+          write_off_reason: string | null
         }
         Insert: {
           client_record_id?: string
           closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           driver_id: string
           id?: string
@@ -1464,10 +1467,12 @@ export type Database = {
           reminder_date?: string | null
           status?: Database["public"]["Enums"]["balance_status"]
           vehicle_id?: string | null
+          write_off_reason?: string | null
         }
         Update: {
           client_record_id?: string
           closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           driver_id?: string
           id?: string
@@ -1478,8 +1483,16 @@ export type Database = {
           reminder_date?: string | null
           status?: Database["public"]["Enums"]["balance_status"]
           vehicle_id?: string | null
+          write_off_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "outstanding_balances_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "outstanding_balances_driver_id_fkey"
             columns: ["driver_id"]
@@ -2152,6 +2165,10 @@ export type Database = {
           p_ledger_entry_id: string
           p_status: Database["public"]["Enums"]["approval_status"]
         }
+        Returns: undefined
+      }
+      forgive_driver_debt: {
+        Args: { p_balance_id: string; p_reason: string }
         Returns: undefined
       }
       freetown_today: { Args: never; Returns: string }

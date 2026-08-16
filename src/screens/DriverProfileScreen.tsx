@@ -6,7 +6,7 @@ import type { AppRole } from '@/data/auth'
 import type { Correction } from '@/data/corrections'
 import { fetchPendingCorrection, requestCorrection } from '@/data/corrections'
 import type { OutstandingBalance } from '@/data/dailyPayments'
-import { fetchOutstandingBalancesForDriver } from '@/data/dailyPayments'
+import { fetchOutstandingBalancesForDriver, forgiveDriverDebt } from '@/data/dailyPayments'
 import type { AssignmentHistoryItem, DriverDeletePreview, DriverDetail } from '@/data/drivers'
 import {
   assignDriverToVehicle,
@@ -203,20 +203,24 @@ export function DriverProfileScreen({
                 <li
                   key={b.id}
                   id={`balance-${b.id}`}
-                  className={`flex justify-between rounded text-sm ${
-                    b.id === highlightBalanceId ? 'bg-amber-50 ring-2 ring-amber-300' : ''
-                  }`}
+                  className={`rounded text-sm ${b.id === highlightBalanceId ? 'bg-amber-50 ring-2 ring-amber-300' : ''}`}
                 >
-                  <span className="text-slate-700">
-                    {formatMinorUnits(b.remainingAmountMinor)}
-                    {b.remainingAmountMinor !== b.originalAmountMinor && (
-                      <span className="text-slate-400"> of {formatMinorUnits(b.originalAmountMinor)}</span>
-                    )}
-                  </span>
-                  <span className="text-slate-500">
-                    {BALANCE_STATUS_LABELS[b.status]}
-                    {b.closedAt ? ` · ${b.closedAt.slice(0, 10)}` : ''}
-                  </span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-700">
+                      {formatMinorUnits(b.remainingAmountMinor)}
+                      {b.remainingAmountMinor !== b.originalAmountMinor && (
+                        <span className="text-slate-400"> of {formatMinorUnits(b.originalAmountMinor)}</span>
+                      )}
+                    </span>
+                    <span className="text-slate-500">
+                      {BALANCE_STATUS_LABELS[b.status]}
+                      {b.closedAt ? ` · ${b.closedAt.slice(0, 10)}` : ''}
+                    </span>
+                  </div>
+                  {b.writeOffReason && <p className="text-xs text-slate-400">Forgiven — {b.writeOffReason}</p>}
+                  {(b.status === 'OPEN' || b.status === 'PARTIAL') && currentUserRole === 'OWNER_ADMIN' && (
+                    <ForgiveDebtPanel balanceId={b.id} onForgiven={() => setReloadKey((k) => k + 1)} />
+                  )}
                 </li>
               ))}
             </ul>
@@ -717,5 +721,77 @@ function RequestDriverCorrectionForm({
         {submitting ? 'Submitting…' : 'Request correction'}
       </button>
     </form>
+  )
+}
+
+/**
+ * Owner/Admin only — visibility is already gated by the caller, this is
+ * just the confirm-with-reason flow. SPEC open question 7, answered: a
+ * reason is required, and forgiving records the amount as a real expense
+ * (forgive_driver_debt does that server-side) — never a silent write-off.
+ */
+function ForgiveDebtPanel({ balanceId, onForgiven }: { balanceId: string; onForgiven: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="mt-1 text-xs text-red-600 underline decoration-red-300">
+        Forgive this debt
+      </button>
+    )
+  }
+
+  async function submit() {
+    if (reason.trim() === '') {
+      setError('Say why this debt is being forgiven.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await forgiveDriverDebt(balanceId, reason.trim())
+      onForgiven()
+    } catch {
+      setError('Could not forgive this debt. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-slate-700">Reason for forgiving this debt</span>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={2}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        />
+      </label>
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button type="button" onClick={submit} disabled={submitting} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+          {submitting ? 'Forgiving…' : 'Forgive debt'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            setError(null)
+          }}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   )
 }

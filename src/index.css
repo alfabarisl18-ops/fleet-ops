@@ -3,8 +3,17 @@
 /* Tailwind v4 is configured in CSS, not in a tailwind.config.js.
    Design tokens belong here when the first screens are built in Phase 2. */
 
+/* This app has no dark-mode styling anywhere -- every screen hardcodes
+   light colors (bg-white, text-slate-900, etc.), zero dark: variants.
+   "light dark" here told the browser it was safe to render native form
+   control chrome (date inputs, select dropdowns, scrollbars) in dark
+   colors on a device with system dark mode on -- very common on Android,
+   the field devices this app targets. The result: a date input's text and
+   calendar icon rendered white while its Tailwind-styled background
+   stayed light, so the date was there but invisible. Pin to light until
+   the app actually has a dark theme to offer. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 html,

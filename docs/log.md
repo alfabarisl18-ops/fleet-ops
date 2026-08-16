@@ -1009,4 +1009,53 @@ user was shown a proposed cleanup and hasn't yet confirmed the deletion
 SQL; the DELETE statements need approval before they touch the hosted
 database, same rule as everything else.
 
+---
+
+## [2026-08-16] export-settings | Phase 11 — Export report and Settings
+
+The last two Home cards SPEC names, closing out the build order. No
+migration this phase — everything reuses schema and functions Phase 1/2
+already built.
+
+**Export:** confirmed with the user — a CSV of ledger transactions over
+a date range, generated entirely client-side (`src/data/export.ts`:
+`fetchTransactionsForExport`, a pure `buildTransactionsCsv` with proper
+RFC 4180 quoting, `downloadCsv` via `Blob` + a same-page `<a download>`
+click). No new dependency; a PDF report would have needed one.
+
+**Settings:** `src/data/users.ts` (new) is almost entirely a thin layer
+over mechanisms Phase 2 already shipped and never gave a UI —
+`public.admin_reset_pin` and the `admin-provision-mobile-account` Edge
+Function, both built specifically so a later phase could "build the
+mechanism, not necessarily a UI for it yet" (that RPC's own comment).
+`PeopleList.tsx` (Owner/Admin manages; Fleet Manager reads — matches
+`users_update_owner`'s RLS exactly), `AddPersonForm.tsx` (mobile roles
+only — desktop account creation is out of scope on purpose, an existing
+Phase 2 boundary, not a new one), an inline PIN-reset dialog. A person's
+role can only move within its own device category (desktop↔desktop,
+mobile↔mobile) and nobody can edit their own row — both client-side
+guards, not server constraints, documented as such. No separate
+permissions table exists; "permissions" in Settings is an explanatory
+block, not another control surface. See decision 0016 for the reasoning
+behind every one of these.
+
+**Verified:** SQL transaction+rollback confirming Fleet Manager is
+blocked on both `INSERT` and `UPDATE` against `users`. `npm run
+typecheck && lint && test && build` all clean (bundle +16 KB raw / +3 KB
+gzip). Live in the Browser pane as M. Sesay (Fleet Manager): People list
+correctly read-only, Export correctly built a real CSV from real ledger
+data (verified the actual string output, not just that the button didn't
+error). Owner-only actions aren't provable live under the same
+"never use the real Owner account" rule Phase 10 hit — covered by the
+SQL-level RLS test plus the fact the underlying mechanisms were already
+proven end-to-end in Phase 2's own testing.
+
+**A live incident, not a code bug:** mid-verification the Browser pane's
+session resolved to the real Owner/Admin account instead of the QA
+session that had just been active — a stale `localStorage` token
+surviving a dev-server restart, not anything this phase wrote. Caught
+immediately, no action taken as that identity, the stored session
+cleared and QA sign-in redone before continuing. Full account in
+decision 0016.
+
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

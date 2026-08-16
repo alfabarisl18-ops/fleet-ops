@@ -6,12 +6,14 @@ import { fetchTransitRecordPlannedVehicleId } from '@/data/futurePurchases'
 import { AccountingHome } from '@/screens/AccountingHome'
 import { AddDriverForm } from '@/screens/AddDriverForm'
 import { AddMaintenanceOrderForm } from '@/screens/AddMaintenanceOrderForm'
+import { AddPersonForm } from '@/screens/AddPersonForm'
 import { AddPurchaseGoalForm } from '@/screens/AddPurchaseGoalForm'
 import { AddVehicleForm } from '@/screens/AddVehicleForm'
 import { ApprovalsList } from '@/screens/ApprovalsList'
 import { DesktopHome } from '@/screens/DesktopHome'
 import { DriverList } from '@/screens/DriverList'
 import { DriverProfileScreen } from '@/screens/DriverProfileScreen'
+import { ExportReportScreen } from '@/screens/ExportReportScreen'
 import { FlaggedDuplicatesList } from '@/screens/FlaggedDuplicatesList'
 import type { PlannedVehicleFilter } from '@/screens/FuturePurchasesHome'
 import { FuturePurchasesHome } from '@/screens/FuturePurchasesHome'
@@ -20,6 +22,7 @@ import { MaintenanceList } from '@/screens/MaintenanceList'
 import { MaintenanceOrderDetailScreen } from '@/screens/MaintenanceOrderDetailScreen'
 import { OnboardVehicleForm } from '@/screens/OnboardVehicleForm'
 import { OverduePurchaseActionsList } from '@/screens/OverduePurchaseActionsList'
+import { PeopleList } from '@/screens/PeopleList'
 import { PlannedVehicleDetailScreen } from '@/screens/PlannedVehicleDetailScreen'
 import { PlannedVehicleList } from '@/screens/PlannedVehicleList'
 import { PurchaseGoalDetailScreen } from '@/screens/PurchaseGoalDetailScreen'
@@ -60,6 +63,9 @@ type DesktopView =
   | { name: 'planned-vehicle-detail'; plannedVehicleId: string }
   | { name: 'onboard-vehicle'; plannedVehicleId: string; goalName: string }
   | { name: 'overdue-purchase-actions' }
+  | { name: 'export-report' }
+  | { name: 'people-list' }
+  | { name: 'add-person' }
 
 interface DesktopWorkspaceProps {
   user: SignedInUser
@@ -127,6 +133,8 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
             onOpenMaintenance={() => setView({ name: 'maintenance-list' })}
             onOpenAccounting={() => setView({ name: 'accounting-home' })}
             onOpenFuturePurchases={() => setView({ name: 'future-purchases-home' })}
+            onOpenExport={() => setView({ name: 'export-report' })}
+            onOpenSettings={() => setView({ name: 'people-list' })}
           />
         )}
 
@@ -333,6 +341,21 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
               void resolveAlertView(alert).then(setView)
             }}
           />
+        )}
+
+        {view.name === 'export-report' && <ExportReportScreen onBack={() => setView({ name: 'home' })} />}
+
+        {view.name === 'people-list' && (
+          <PeopleList
+            currentUserId={user.id}
+            currentUserRole={user.role}
+            onBack={() => setView({ name: 'home' })}
+            onAddPerson={() => setView({ name: 'add-person' })}
+          />
+        )}
+
+        {view.name === 'add-person' && (
+          <AddPersonForm onCreated={() => setView({ name: 'people-list' })} onCancel={() => setView({ name: 'people-list' })} />
         )}
       </div>
     </div>

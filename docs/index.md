@@ -33,6 +33,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0012](decisions/0012-alerts-trigger-vs-cron-and-resolved-by-nullable.md) | Alerts: trigger vs. cron decided per type, `resolved_by` becomes nullable for automated resolution, deep-link subject mapping, the one-time backfill |
 | [0013](decisions/0013-accounting-scope-and-trips-mobile-correction.md) | Accounting scope (targets, trips, approvals in; reconciliation-difference alert out); correcting a mistake caught mid-implementation — trip entry is mobile Collections & Finance, not desktop |
 | [0014](decisions/0014-offline-queue-pwa-and-a-new-table-after-guards.md) | Offline sync: PWA shell caches only the app shell (never API reads), same-vehicle-day collisions handled on both the live and queued paths, and the first table added after guards.sql |
+| [0015](decisions/0015-future-purchases-alert-heuristics-and-storage-scope.md) | Future Purchases: the invented alert-threshold table, Storage scoped to desktop only, no new `vehicles` columns, and a live PostgREST to-one-embed bug |
 
 ## Build order
 
@@ -65,5 +66,8 @@ start until the current one runs.
 9. **Offline sync** — queue, idempotency, pending indicators. ← *done*.
    PWA shell (service worker, manifest, installability) plus the write
    queue for all 9 mobile-write functions. See decision 0014.
-10. Future Purchases
+10. **Future Purchases** — goals, landed cost, funding, stages, transit,
+    onboarding. ← *done*. Savings targets, cash reservations (Owner-only),
+    candidate comparison, forecasting, real Storage document upload
+    (desktop only), and the last 12 of 21 alert types. See decision 0015.
 11. Export, settings, polish

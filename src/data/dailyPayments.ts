@@ -229,9 +229,11 @@ export interface OutstandingBalance {
   status: BalanceStatus
   createdAt: string
   closedAt: string | null
+  writeOffReason: string | null
 }
 
-const BALANCE_COLUMNS = 'id, vehicle_id, original_amount_minor, remaining_amount_minor, promised_date, status, created_at, closed_at'
+const BALANCE_COLUMNS =
+  'id, vehicle_id, original_amount_minor, remaining_amount_minor, promised_date, status, created_at, closed_at, write_off_reason'
 
 /** Every balance a driver has ever had, most recent first — SPEC's driver
  *  profile: "balance history with causes and clearance dates." (Causes
@@ -253,5 +255,18 @@ export async function fetchOutstandingBalancesForDriver(driverId: string): Promi
     status: row.status,
     createdAt: row.created_at,
     closedAt: row.closed_at,
+    writeOffReason: row.write_off_reason,
   }))
+}
+
+/**
+ * SPEC open question 7, answered: forgiving a driver's debt is Owner/Admin
+ * only, with a required reason — enforced inside public.forgive_driver_debt
+ * itself (outstanding_balances' own RLS is broader than this one action).
+ * Also records the forgiven amount as an OTHER_EXPENSE ledger entry, same
+ * as the function's own comment explains.
+ */
+export async function forgiveDriverDebt(balanceId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('forgive_driver_debt', { p_balance_id: balanceId, p_reason: reason })
+  if (error) throw error
 }

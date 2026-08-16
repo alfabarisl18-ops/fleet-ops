@@ -7,7 +7,7 @@ import {
   VEHICLE_TYPE_LABELS,
 } from '@/constants/labels'
 import type { MaintenanceHandledBy, MaintenanceRecordType, ProblemDescriptor, Roadworthiness } from '@/data/maintenance'
-import { OIL_CHANGE_SERVICE_AREA, createMaintenanceOrder } from '@/data/maintenance'
+import { MAINTENANCE_AREAS, OIL_CHANGE_SERVICE_AREA, createMaintenanceOrder } from '@/data/maintenance'
 import type { VehicleListItem, VehicleType } from '@/data/vehicles'
 import { fetchVehicles } from '@/data/vehicles'
 
@@ -149,6 +149,7 @@ function OrderDetailsForm({
   const [recordType, setRecordType] = useState<MaintenanceRecordType | null>(null)
   const [isOilChange, setIsOilChange] = useState(false)
   const [serviceArea, setServiceArea] = useState('')
+  const [customArea, setCustomArea] = useState('')
   const [workAction, setWorkAction] = useState('')
   const [problemDescriptor, setProblemDescriptor] = useState<ProblemDescriptor | null>(null)
   const [handledBy, setHandledBy] = useState<MaintenanceHandledBy | ''>('')
@@ -161,6 +162,7 @@ function OrderDetailsForm({
     setRecordType(rt)
     setIsOilChange(false)
     setServiceArea('')
+    setCustomArea('')
     setWorkAction('')
     setProblemDescriptor(null)
     setError(null)
@@ -170,7 +172,7 @@ function OrderDetailsForm({
     if (!recordType) return
     setError(null)
 
-    const finalServiceArea = isOilChange ? OIL_CHANGE_SERVICE_AREA : serviceArea.trim()
+    const finalServiceArea = isOilChange ? OIL_CHANGE_SERVICE_AREA : serviceArea === 'Other' ? customArea.trim() : serviceArea
     const finalWorkAction = isOilChange ? OIL_CHANGE_SERVICE_AREA : workAction.trim()
 
     if (finalServiceArea === '') {
@@ -256,14 +258,31 @@ function OrderDetailsForm({
           {!isOilChange && (
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium text-slate-700">Area</span>
-              <input
-                type="text"
+              <select
                 autoFocus
                 value={serviceArea}
                 onChange={(e) => setServiceArea(e.target.value)}
-                placeholder="e.g. Brakes, Tires, Engine"
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
-              />
+                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              >
+                <option value="" disabled>
+                  Choose one
+                </option>
+                {MAINTENANCE_AREAS.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
+              {serviceArea === 'Other' && (
+                <input
+                  type="text"
+                  autoFocus
+                  value={customArea}
+                  onChange={(e) => setCustomArea(e.target.value)}
+                  placeholder="Describe the area"
+                  className="mt-1 rounded-lg border border-slate-300 px-4 py-3 text-base"
+                />
+              )}
             </label>
           )}
 

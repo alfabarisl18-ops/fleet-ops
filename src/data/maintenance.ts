@@ -22,6 +22,37 @@ export type ProblemDescriptor = Enums<'problem_descriptor'>
  */
 export const OIL_CHANGE_SERVICE_AREA = 'OIL_CHANGE'
 
+/**
+ * SPEC never enumerates vehicle areas by name (the Phase 1 migration's own
+ * comment on this table says it does, but it doesn't — checked directly).
+ * `service_area` stays free `text` in the database for exactly that reason
+ * — "the allowed values live in the shared constants file at the render
+ * layer" (that same comment) — this is that list. A stated default drawn
+ * from common commercial-vehicle maintenance categories, not something
+ * SPEC specifies; correct it if it doesn't match how the business actually
+ * talks about a vehicle's areas. 'Other' always stays available so a real
+ * area never gets stuck unrepresented.
+ */
+export const MAINTENANCE_AREAS = [
+  'Engine',
+  'Transmission',
+  'Brakes',
+  'Suspension',
+  'Steering',
+  'Electrical',
+  'Battery',
+  'Tyres',
+  'Exhaust',
+  'Cooling system',
+  'Air conditioning',
+  'Fuel system',
+  'Bodywork',
+  'Doors and windows',
+  'Lights',
+  'Interior',
+  'Other',
+] as const
+
 export interface MaintenanceOrderListItem {
   id: string
   vehicleId: string

@@ -4,7 +4,7 @@ import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { DriverListItem } from '@/data/drivers'
 import { fetchDrivers } from '@/data/drivers'
 import type { PaymentFrequency } from '@/data/driverPurchaseAgreements'
-import { AGREEMENT_ALREADY_EXISTS, createAgreement, fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
+import { AGREEMENT_ALREADY_EXISTS, setUpAgreement, fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
 import type { VehicleDetail } from '@/data/vehicles'
 import { fetchVehicle } from '@/data/vehicles'
 
@@ -15,6 +15,29 @@ interface SetUpDriverPurchaseAgreementFormProps {
 }
 
 const FREQUENCIES: PaymentFrequency[] = ['DAILY', 'WEEKLY', 'MONTHLY']
+
+/**
+ * Mirrors set_up_driver_purchase_agreement's own computation exactly
+ * (integer division, weekly / 7, monthly / days in that calendar month) —
+ * shown before submit so nobody sets an installment up blind. Returns
+ * null only when there isn't enough information yet (no start date for a
+ * monthly agreement, since the days-in-month depends on it).
+ */
+function computeDailyEquivalentMinor(
+  regularPaymentMinor: number,
+  frequency: PaymentFrequency,
+  startedOn: string,
+): number | null {
+  if (frequency === 'DAILY') return regularPaymentMinor
+  if (frequency === 'WEEKLY') return Math.floor(regularPaymentMinor / 7)
+  if (startedOn === '') return null
+  const parts = startedOn.split('-').map(Number)
+  const year = parts[0]
+  const month = parts[1]
+  if (year === undefined || month === undefined) return null
+  const daysInMonth = new Date(year, month, 0).getDate()
+  return Math.floor(regularPaymentMinor / daysInMonth)
+}
 
 /**
  * Exact behavior per the Phase 3 plan (user-confirmed scope): driver picker
@@ -89,7 +112,7 @@ export function SetUpDriverPurchaseAgreementForm({
 
     setSubmitting(true)
     try {
-      const result = await createAgreement({
+      const result = await setUpAgreement({
         vehicleId,
         driverId,
         agreementAmountMinor,
@@ -225,6 +248,27 @@ export function SetUpDriverPurchaseAgreementForm({
               className="rounded-lg border border-slate-300 px-4 py-3 text-base"
             />
           </label>
+
+          {regularPaymentMinor !== null && regularPaymentMinor > 0 && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+              {(() => {
+                const daily = computeDailyEquivalentMinor(regularPaymentMinor, paymentFrequency, startedOn)
+                if (daily === null) {
+                  return <span className="text-slate-500">Add a start date to see the daily amount this becomes.</span>
+                }
+                return (
+                  <>
+                    <p className="font-medium text-slate-900">New daily target: {formatMinorUnits(daily)}</p>
+                    <p className="mt-1 text-slate-600">
+                      This vehicle&apos;s daily payment target will change to this amount. Every day the driver comes
+                      up short — Full Day, Half Day, or Breakdown — the shortfall becomes driver debt while this
+                      agreement is active.
+                    </p>
+                  </>
+                )
+              })()}
+            </div>
+          )}
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Expected completion date (optional)</span>

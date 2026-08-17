@@ -1059,3 +1059,110 @@ cleared and QA sign-in redone before continuing. Full account in
 decision 0016.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+---
+
+## [2026-08-16] debt-forgiveness | Driver debt forgiveness (SPEC open question 7), plus three field-reported bugs
+
+`public.forgive_driver_debt` — Owner/Admin only, reason required, checked
+inside the function body since `outstanding_balances`' own RLS is
+broader than this one action. Zeroes the balance, marks it
+`WRITTEN_OFF`, and records the forgiven amount as an `OTHER_EXPENSE`
+ledger entry so it stays visible in the books rather than silently
+disappearing. `ForgiveDebtPanel` on `DriverProfileScreen`, matching
+`ResetPinPanel`/`ReservationPanel`'s inline-panel convention.
+
+**A bug the test suite caught before it shipped:** the first version's
+`if not app.is_owner()` is null-unsafe — `NOT NULL` is `NULL`, not
+`TRUE`, so an invalid session would silently pass instead of being
+blocked. The exact bug class this project already fixed once before.
+`npm run test` failed immediately via `db.test.ts`'s guard-pattern check;
+fixed in a follow-up migration with `coalesce(app.is_owner(), false)`.
+
+**Three bugs from real device use, fixed in the same pass:** date input
+text was invisible in system dark mode (`src/index.css` set
+`color-scheme: light dark` globally with zero dark-mode styling anywhere
+in the app — pinned to `light`; this was also the entire cause of a
+separate "dates aren't editable" report — the date was there, just
+invisible); the maintenance area field became a dropdown
+(`MAINTENANCE_AREAS` in `src/data/maintenance.ts`, with an "Other" +
+free-text escape hatch) instead of free text — "I don't want no input
+field."
+
+**Verified:** SQL transaction test confirming a Fleet Manager session
+and a null/invalid session are both blocked from calling
+`forgive_driver_debt`. Live: the dark-mode fix confirmed via
+`getComputedStyle` with the Browser pane forced into dark mode, not just
+visually; a real maintenance record saved end-to-end as I. Turay with
+`service_area = 'Engine'` from the new dropdown. Owner-only forgiveness
+itself not exercised live, under the standing "never use the real
+Owner/Admin account for testing" rule. Full account in decision 0017.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+---
+
+## [2026-08-18] rent-to-own | Rent-to-own redesign (SPEC open question 2): the installment becomes the daily target
+
+Confirmed with the user: once a driver-purchase agreement is set up, the
+vehicle's daily payment target *becomes* the installment — the
+collector's ordinary day-outcome entry is the only way it gets
+collected, no second flow. Every shortfall (Full Day, Half Day,
+Breakdown) becomes driver debt while an agreement is active — the
+accepted-loss exception is suspended for that vehicle. Weekly/Monthly
+installments divide evenly into a daily figure. Payoff retires the
+vehicle (archived).
+
+**Schema:** `shortfall_treatment` (decision 0003's `GENERATED ALWAYS`
+column) grows one more input — a new `under_active_agreement` snapshot
+column, filled by the same trigger that already snapshots
+`expected_amount_minor`. Changing a generated column's expression means
+drop, re-add, and re-index; confirmed directly against production data
+that every historical row (`under_active_agreement` defaults `false`)
+recomputes to exactly the value it already had. Three new RPCs:
+`set_up_driver_purchase_agreement` (creates the agreement and sets the
+vehicle's target in one transaction — replacing a plain insert that had
+no effect on the target at all), `complete_driver_purchase_agreement`
+(archives the vehicle via `vehicle_status_events`, never a direct
+column write), `cancel_driver_purchase_agreement` (reason required,
+deliberately does not restore the previous target). Closed a real,
+independent pre-existing gap: `expected_daily_amount_minor` had no edit
+path anywhere in the app before this — new `updateExpectedDailyAmount`
+and a `VehicleProfileScreen` panel matching the existing yearly-target
+one.
+
+**A bug caught before testing, the same class the test suite has now
+caught twice:** the two new agreement RPCs were first written relying
+only on RLS, no in-body role check. Corrected before running anything to
+match `override_shortfall_treatment`/`forgive_driver_debt`'s existing
+pattern, coalescing from the start.
+
+**A real RLS gap, found only by testing live as the actual mobile
+role:** `driver_purchase_agreements` has exactly one SELECT policy,
+desktop-only. Collections & Finance had zero read access — so the
+mobile day-outcome screen's "this becomes debt regardless of outcome"
+warning never showed, even with a real active agreement. Fixed with a
+narrow SECURITY DEFINER function, `vehicle_has_active_purchase_agreement`,
+granted to any authenticated role — reveals only the one boolean fact
+the mobile screen needs, nothing about the agreement's amount, driver,
+or terms. A Fleet Manager or Owner/Admin test session would never have
+hit this.
+
+**Verified:** SQL, transaction+rollback against real hosted data,
+nothing kept — all three payment frequencies compute the correct
+daily-equivalent, a Half Day shortfall under an active agreement
+produces `DRIVER_DEBT` where it would previously have been
+`ACCEPTED_LOSS`, completing archives the vehicle, cancelling leaves the
+target untouched. Live, as the real QA roles: as M. Sesay, set up a
+Daily agreement — the pre-submit daily-equivalent preview and the
+resulting target both showed correctly; as F. Kamara, recorded a Half
+Day under that agreement — the debt-warning banner showed, the record
+saved, and the database confirms `DRIVER_DEBT` and a new open balance;
+the vehicle profile's paid/remaining figures updated correctly
+afterward. Completing an agreement (archiving a vehicle) was
+deliberately left to the SQL test only — a real, one-way action with no
+supported undo in the app, unlike every other step tested live. Full
+account, including the two live-only test data artifacts left on
+`SPR-TEST-99`, in decision 0018.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

@@ -7,11 +7,11 @@ import type { Correction } from '@/data/corrections'
 import { fetchPendingCorrection, requestCorrection } from '@/data/corrections'
 import type { DriverListItem } from '@/data/drivers'
 import { assignDriverToVehicle, fetchDrivers } from '@/data/drivers'
-import type { DriverPurchaseAgreement } from '@/data/driverPurchaseAgreements'
-import { fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
+import type { AgreementProgress, DriverPurchaseAgreement } from '@/data/driverPurchaseAgreements'
+import { cancelAgreement, completeAgreement, fetchAgreementProgress, fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
 import { updateVehicleTarget } from '@/data/accounting'
 import type { RouteOption, VehicleDetail, VehicleStatus } from '@/data/vehicles'
-import { changeVehicleStatus, fetchRoutes, fetchVehicle } from '@/data/vehicles'
+import { changeVehicleStatus, fetchRoutes, fetchVehicle, updateExpectedDailyAmount } from '@/data/vehicles'
 
 function isDesktopRole(role: AppRole): boolean {
   return role === 'OWNER_ADMIN' || role === 'FLEET_MANAGER'
@@ -40,6 +40,7 @@ export function VehicleProfileScreen({
 }: VehicleProfileScreenProps) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null)
   const [agreement, setAgreement] = useState<(DriverPurchaseAgreement & { driverName: string }) | null>(null)
+  const [progress, setProgress] = useState<AgreementProgress | null>(null)
   const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -61,6 +62,26 @@ export function VehicleProfileScreen({
       cancelled = true
     }
   }, [vehicleId, reloadKey])
+
+  // Amount paid/remaining is derived from ledger entries, not stored on the
+  // agreement — fetched separately, keyed on the agreement so it refetches
+  // after a reload (e.g. right after a new agreement is set up, when it's
+  // still zero paid). Only rendered when `agreement` is truthy (below), so
+  // there's no need to reset it back to null when the agreement goes away.
+  useEffect(() => {
+    if (!vehicle || !agreement) return
+    let cancelled = false
+    fetchAgreementProgress(vehicle.id, agreement.agreementAmountMinor, agreement.startedOn)
+      .then((p) => {
+        if (!cancelled) setProgress(p)
+      })
+      .catch(() => {
+        // Non-critical — the rest of the profile still shows without it.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [vehicle, agreement])
 
   // A failed background reload (e.g. after a status change) shouldn't wipe
   // an already-loaded profile off the screen — only block on error before
@@ -161,6 +182,15 @@ export function VehicleProfileScreen({
         ) : (
           <Field label="Yearly target" value={formatMinorUnits(vehicle.yearlyTargetMinor)} />
         )}
+        {isDesktopRole(currentUserRole) ? (
+          <DailyTargetPanel
+            vehicleId={vehicle.id}
+            expectedDailyAmountMinor={vehicle.expectedDailyAmountMinor}
+            onSaved={() => setReloadKey((k) => k + 1)}
+          />
+        ) : (
+          <Field label="Daily target" value={formatMinorUnits(vehicle.expectedDailyAmountMinor)} />
+        )}
       </Section>
 
       <Section title="Driver-purchase agreement">
@@ -177,6 +207,15 @@ export function VehicleProfileScreen({
             <Field label="Started" value={agreement.startedOn} />
             <Field label="Expected completion" value={agreement.expectedCompletionOn} />
             <Field label="Ownership transfer" value={OWNERSHIP_TRANSFER_STATUS_LABELS[agreement.ownershipTransferStatus]} />
+            {progress && (
+              <>
+                <Field label="Paid so far" value={formatMinorUnits(progress.paidMinor)} />
+                <Field label="Remaining" value={formatMinorUnits(progress.remainingMinor)} />
+              </>
+            )}
+            {isDesktopRole(currentUserRole) && (
+              <AgreementActionsPanel agreementId={agreement.id} onChanged={() => setReloadKey((k) => k + 1)} />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-start gap-2">
@@ -285,6 +324,231 @@ function TargetPanel({ vehicleId, yearlyTargetMinor, onSaved }: { vehicleId: str
           {error}
         </p>
       )}
+    </div>
+  )
+}
+
+/** Same shape as TargetPanel above. Closes a gap that predates this
+ *  feature — expected_daily_amount_minor had no edit path anywhere,
+ *  set once at onboarding. Needed now because set_up_driver_purchase_agreement
+ *  writes this value as a side effect and cancel_driver_purchase_agreement
+ *  deliberately does not restore it — this is how a mistake gets fixed. */
+function DailyTargetPanel({
+  vehicleId,
+  expectedDailyAmountMinor,
+  onSaved,
+}: {
+  vehicleId: string
+  expectedDailyAmountMinor: number
+  onSaved: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(String(expectedDailyAmountMinor / 100))
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    const minor = parseMinorUnits(value)
+    if (minor === null || minor < 0) {
+      setError('Enter a valid amount.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await updateExpectedDailyAmount(vehicleId, minor)
+      setEditing(false)
+      onSaved()
+    } catch {
+      setError('Could not save. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <p className="flex justify-between gap-4 border-b border-slate-100 py-1.5 text-sm last:border-b-0">
+        <span className="text-slate-500">Daily target</span>
+        <span className="text-right text-slate-900">
+          {formatMinorUnits(expectedDailyAmountMinor)}{' '}
+          <button type="button" onClick={() => setEditing(true)} className="text-slate-500 underline decoration-slate-300">
+            Edit
+          </button>
+        </span>
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm last:border-b-0">
+      <span className="text-slate-500">Daily target</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+      />
+      <button type="button" onClick={save} disabled={submitting} className="text-slate-900 underline decoration-slate-300 disabled:opacity-50">
+        {submitting ? 'Saving…' : 'Save'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(false)
+          setError(null)
+        }}
+        className="text-slate-400"
+      >
+        Cancel
+      </button>
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Either desktop role, matching dpa_update_desktop's scope. "Mark
+ *  complete" confirms first — it archives the vehicle, a one-way action.
+ *  "Cancel" requires a reason, matching ForgiveDebtPanel's convention. */
+function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string; onChanged: () => void }) {
+  const [mode, setMode] = useState<'idle' | 'confirm-complete' | 'cancel'>('idle')
+  const [cancelReason, setCancelReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function confirmComplete() {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await completeAgreement(agreementId)
+      setMode('idle')
+      onChanged()
+    } catch {
+      setError('Could not complete this agreement. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function confirmCancel() {
+    if (cancelReason.trim() === '') {
+      setError('A reason is required to cancel an agreement.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await cancelAgreement(agreementId, cancelReason.trim())
+      setMode('idle')
+      setCancelReason('')
+      onChanged()
+    } catch {
+      setError('Could not cancel this agreement. Try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (mode === 'idle') {
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setMode('confirm-complete')}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+        >
+          Mark complete
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('cancel')}
+          className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 active:bg-red-50"
+        >
+          Cancel agreement
+        </button>
+      </div>
+    )
+  }
+
+  if (mode === 'confirm-complete') {
+    return (
+      <div className="mt-2 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+        <p className="text-sm text-slate-700">
+          Marking this agreement complete transfers ownership to the driver and archives this vehicle — it will no longer
+          be an active vehicle. This cannot be undone.
+        </p>
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={confirmComplete}
+            disabled={submitting}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {submitting ? 'Completing…' : 'Yes, mark complete and archive'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('idle')
+              setError(null)
+            }}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded-lg border border-red-200 p-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Reason</span>
+        <textarea
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          rows={2}
+          required
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={confirmCancel}
+          disabled={submitting}
+          className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {submitting ? 'Cancelling…' : 'Confirm cancellation'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('idle')
+            setError(null)
+          }}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+        >
+          Back
+        </button>
+      </div>
     </div>
   )
 }

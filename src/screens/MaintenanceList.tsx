@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { MAINTENANCE_RECORD_TYPE_LABELS, MAINTENANCE_STATUS_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { MaintenanceOrderListItem, MaintenanceSummary } from '@/data/maintenance'
@@ -38,12 +40,15 @@ export function MaintenanceList({ onOpenOrder, onAddOrder }: MaintenanceListProp
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Maintenance</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <IconChip section="maintenance" />
+          <h1 className="font-heading text-xl font-bold text-slate-900">Maintenance</h1>
+        </div>
         <button
           type="button"
           onClick={onAddOrder}
-          className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white active:bg-slate-800"
+          className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white active:bg-primary-700"
         >
           + New maintenance record
         </button>
@@ -67,7 +72,7 @@ export function MaintenanceList({ onOpenOrder, onAddOrder }: MaintenanceListProp
       {orders === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
 
       {orders?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           No maintenance records yet.
         </p>
       )}
@@ -75,11 +80,7 @@ export function MaintenanceList({ onOpenOrder, onAddOrder }: MaintenanceListProp
       <ul className="flex flex-col gap-2">
         {orders?.map((order) => (
           <li key={order.id}>
-            <button
-              type="button"
-              onClick={() => onOpenOrder(order.id)}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm active:bg-slate-50"
-            >
+            <Card onClick={() => onOpenOrder(order.id)} className="flex w-full items-center justify-between">
               <span>
                 <span className="block font-medium text-slate-900">
                   {order.vehicleFleetId}
@@ -95,7 +96,7 @@ export function MaintenanceList({ onOpenOrder, onAddOrder }: MaintenanceListProp
                 {order.isGrounded && <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-red-500" />}
                 {MAINTENANCE_STATUS_LABELS[order.status]}
               </span>
-            </button>
+            </Card>
           </li>
         ))}
       </ul>
@@ -105,8 +106,8 @@ export function MaintenanceList({ onOpenOrder, onAddOrder }: MaintenanceListProp
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+    <div className="rounded-2xl bg-white p-3 shadow-sm">
+      <p className="text-xs font-medium tracking-wide text-slate-400 uppercase">{label}</p>
       <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   )

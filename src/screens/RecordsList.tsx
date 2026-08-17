@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { recordTypeLabel } from '@/constants/labels'
 import type { ActivityRecord } from '@/data/activityRecords'
 import { fetchActivityRecords } from '@/data/activityRecords'
@@ -46,7 +48,10 @@ export function RecordsList({ onOpenRecord }: RecordsListProps) {
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">Records</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="records" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Records</h1>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -57,7 +62,7 @@ export function RecordsList({ onOpenRecord }: RecordsListProps) {
       {records === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
 
       {records?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           No activity yet.
         </p>
       )}
@@ -68,7 +73,7 @@ export function RecordsList({ onOpenRecord }: RecordsListProps) {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
           >
             <option value="ALL">All activity</option>
             {typesPresent.map((t) => (
@@ -83,17 +88,13 @@ export function RecordsList({ onOpenRecord }: RecordsListProps) {
       <ul className="flex flex-col gap-2">
         {filtered.map((record) => (
           <li key={record.id}>
-            <button
-              type="button"
-              onClick={() => onOpenRecord(record.id)}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm active:bg-slate-50"
-            >
+            <Card onClick={() => onOpenRecord(record.id)} className="flex w-full items-center justify-between">
               <span>
                 <span className="block font-medium text-slate-900">{record.summaryText}</span>
                 <span className="block text-sm text-slate-500">{recordTypeLabel(record.recordType)}</span>
               </span>
               <span className="text-sm text-slate-500">{record.appliesToDate ?? record.enteredAt.slice(0, 10)}</span>
-            </button>
+            </Card>
           </li>
         ))}
       </ul>

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { formatMinorUnits } from '@/lib/money'
 import type { FlaggedDuplicatePayment } from '@/data/accounting'
 import { fetchFlaggedDuplicatePayments, resolveFlaggedDuplicatePayment } from '@/data/accounting'
@@ -37,11 +39,16 @@ export function FlaggedDuplicatesList({ currentUserId, onBack }: FlaggedDuplicat
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Flagged duplicates</h1>
-      <p className="mb-4 text-sm text-slate-500">Two submissions for the same vehicle-day</p>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="accounting" />
+        <div>
+          <h1 className="font-heading text-xl font-bold text-slate-900">Flagged duplicates</h1>
+          <p className="text-sm text-slate-500">Two submissions for the same vehicle-day</p>
+        </div>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -50,7 +57,7 @@ export function FlaggedDuplicatesList({ currentUserId, onBack }: FlaggedDuplicat
       )}
       {items === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
       {items?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           No flagged duplicates right now.
         </p>
       )}
@@ -92,33 +99,35 @@ function DuplicateRow({
   const payload = item.payload as { dayOutcome?: string; receivedAmountMinor?: number } | null
 
   return (
-    <li className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="font-medium text-slate-900">
-          {item.vehicleFleetId} — {item.serviceDate}
-        </span>
-        {payload?.receivedAmountMinor !== undefined && (
-          <span className="text-slate-900">{formatMinorUnits(payload.receivedAmountMinor)}</span>
-        )}
-      </div>
-      <p className="mb-2 text-sm text-slate-500">
-        {payload?.dayOutcome ?? 'Unknown outcome'} · submitted {item.submittedAt.slice(0, 10)}
-      </p>
-
-      {error && (
-        <p role="alert" className="mb-2 text-sm text-red-600">
-          {error}
+    <li>
+      <Card>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="font-medium text-slate-900">
+            {item.vehicleFleetId} — {item.serviceDate}
+          </span>
+          {payload?.receivedAmountMinor !== undefined && (
+            <span className="text-slate-900">{formatMinorUnits(payload.receivedAmountMinor)}</span>
+          )}
+        </div>
+        <p className="mb-2 text-sm text-slate-500">
+          {payload?.dayOutcome ?? 'Unknown outcome'} · submitted {item.submittedAt.slice(0, 10)}
         </p>
-      )}
 
-      <button
-        type="button"
-        onClick={dismiss}
-        disabled={submitting}
-        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-      >
-        {submitting ? 'Dismissing…' : 'Dismiss'}
-      </button>
+        {error && (
+          <p role="alert" className="mb-2 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={dismiss}
+          disabled={submitting}
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+        >
+          {submitting ? 'Dismissing…' : 'Dismiss'}
+        </button>
+      </Card>
     </li>
   )
 }

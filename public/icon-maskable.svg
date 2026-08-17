@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="fleetOpsMaskableIconTitle">
+  <title id="fleetOpsMaskableIconTitle">Fleet Operations SL</title>
+  <!-- Maskable icons must fill the canvas edge-to-edge (the OS applies its
+       own mask shape) with all meaningful artwork kept inside the ~80%-
+       diameter "safe zone" circle, per the PWA maskable-icon spec.
+       Unlike icon.svg, no rounded corners here since the platform
+       supplies its own mask. -->
+  <rect width="512" height="512" fill="#2563eb" />
+  <g transform="translate(131.8 111.82) scale(10.8)" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 8.5A1 1 0 0 1 3 7.5h8.5a1 1 0 0 1 .95.68L13.5 12H19a2 2 0 0 1 2 2v2.5H2V8.5Z" />
+    <path d="M13.5 12v4.5" />
+    <path d="M2 16.5h1.6" />
+    <circle cx="6.5" cy="17.5" r="1.7" />
+    <circle cx="16.5" cy="17.5" r="1.7" />
+  </g>
+</svg>

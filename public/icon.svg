@@ -1,12 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#0f172a" />
-  <text
-    x="256"
-    y="296"
-    text-anchor="middle"
-    font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    font-size="200"
-    font-weight="700"
-    fill="#ffffff"
-  >FO</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="fleetOpsIconTitle">
+  <title id="fleetOpsIconTitle">Fleet Operations SL</title>
+  <rect width="512" height="512" rx="96" fill="#2563eb" />
+  <g transform="translate(106.5 82.45) scale(13)" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 8.5A1 1 0 0 1 3 7.5h8.5a1 1 0 0 1 .95.68L13.5 12H19a2 2 0 0 1 2 2v2.5H2V8.5Z" />
+    <path d="M13.5 12v4.5" />
+    <path d="M2 16.5h1.6" />
+    <circle cx="6.5" cy="17.5" r="1.7" />
+    <circle cx="16.5" cy="17.5" r="1.7" />
+  </g>
 </svg>

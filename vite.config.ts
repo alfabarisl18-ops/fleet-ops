@@ -22,18 +22,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       strategies: 'generateSW',
-      includeAssets: ['icon.svg'],
+      // icon-maskable.svg keeps its artwork inside the ~80%-diameter safe
+      // zone the maskable spec requires -- icon.svg (rounded corners, art
+      // closer to the edge) is NOT safe to reuse for both purposes, which
+      // the previous single-asset config did.
+      includeAssets: ['icon.svg', 'icon-maskable.svg', 'fonts/poppins-600.woff2', 'fonts/poppins-700.woff2'],
       manifest: {
         name: 'Fleet Operations SL',
         short_name: 'Fleet Ops',
         description: 'Fleet Operations SL',
-        theme_color: '#0f172a',
+        theme_color: '#2563eb',
         background_color: '#0f172a',
         display: 'standalone',
         start_url: '/',
         icons: [
           { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+          { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
       workbox: {

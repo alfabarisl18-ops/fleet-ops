@@ -3,6 +3,54 @@
 /* Tailwind v4 is configured in CSS, not in a tailwind.config.js.
    Design tokens belong here when the first screens are built in Phase 2. */
 
+/* Visual redesign (2026-08) -- primary blue scale, aliased from Tailwind's
+   own blue values so a future rebrand is a token edit, not a project-wide
+   find/replace. Used for primary buttons, active nav, and the recurring
+   "selected" treatment (border-primary-600 + bg-primary-50 fill) that
+   appears throughout the redesigned desktop screens. Pastel section-chip
+   colors (violet, amber, emerald, etc.) are NOT tokens here -- Tailwind
+   v4's full default palette is still available alongside these additions,
+   and the section-to-color mapping lives in one place, IconChip.tsx, not
+   duplicated across screens.
+   --font-heading is Poppins (self-hosted below), applied only to headings
+   inside desktop-only components via the `font-heading` utility -- never
+   used by anything the two mobile PIN-role workspaces render, so the font
+   file is never fetched on a field worker's phone. */
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+
+  --font-heading: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Self-hosted, not a Google Fonts @import: the PWA's service worker
+   (vite.config.ts, generateSW) deliberately has no runtimeCaching for
+   external origins, so a CDN font would silently fail to load offline.
+   Same-origin files get precached like every other app-shell asset.
+   Two static weights only (SemiBold/Bold, Latin subset), used for
+   headings, never body text. */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/poppins-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/poppins-700.woff2') format('woff2');
+}
+
 /* This app has no dark-mode styling anywhere -- every screen hardcodes
    light colors (bg-white, text-slate-900, etc.), zero dark: variants.
    "light dark" here told the browser it was safe to render native form

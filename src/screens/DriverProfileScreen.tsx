@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
 import { CorrectionPanel } from '@/components/CorrectionPanel'
+import { IconChip } from '@/components/IconChip'
 import { BALANCE_STATUS_LABELS, DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
@@ -114,15 +116,20 @@ export function DriverProfileScreen({
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <h1 className="text-xl font-semibold text-slate-900">{driver.fullName}</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        {DRIVER_STATUS_LABELS[driver.status]}
-        {driver.knownAs ? ` · ${driver.knownAs}` : ''}
-      </p>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="drivers" />
+        <div>
+          <h1 className="font-heading text-xl font-bold text-slate-900">{driver.fullName}</h1>
+          <p className="text-sm text-slate-500">
+            {DRIVER_STATUS_LABELS[driver.status]}
+            {driver.knownAs ? ` · ${driver.knownAs}` : ''}
+          </p>
+        </div>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -130,7 +137,7 @@ export function DriverProfileScreen({
         </p>
       )}
 
-      <Section title="Contact">
+      <Card title="Contact" className="mb-4">
         <Field label="Phone" value={driver.phone} />
         <Field label="Alternate phone" value={driver.phoneAlt} />
         <Field label="Address" value={driver.address} />
@@ -144,25 +151,25 @@ export function DriverProfileScreen({
             <RequestDriverCorrectionForm driver={driver} currentUserId={currentUserId} onRequested={onDone} />
           )}
         />
-      </Section>
+      </Card>
 
-      <Section title="Documents">
+      <Card title="Documents" className="mb-4">
         <Field label="ID document type" value={driver.idDocumentType} />
         <Field label="ID document number" value={driver.idDocumentNumber} />
         <Field label="Licence number" value={driver.licenceNumber} />
         <Field label="Licence expiry" value={driver.licenceExpiry} />
-      </Section>
+      </Card>
 
-      <Section title="Employment">
+      <Card title="Employment" className="mb-4">
         <Field label="Started" value={driver.startedOn} />
         <Field label="Left" value={driver.leftOn} />
         <Field label="Leave reason" value={driver.leaveReason} />
-      </Section>
+      </Card>
 
-      <Section title="Vehicle assignment">
+      <Card title="Vehicle assignment" className="mb-4">
         {currentAssignment ? (
           <button type="button" onClick={() => onOpenVehicle(currentAssignment.vehicleId)} className="text-left">
-            <span className="font-medium text-slate-900 underline decoration-slate-300">
+            <span className="font-medium text-primary-700 underline decoration-primary-200">
               {currentAssignment.vehicleFleetId}
             </span>
             {currentAssignment.routeName && <span className="ml-2 text-sm text-slate-500">{currentAssignment.routeName}</span>}
@@ -175,11 +182,11 @@ export function DriverProfileScreen({
 
         {history.length > 0 && (
           <div className="mt-4">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Assignment history</h3>
+            <h3 className="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">Assignment history</h3>
             <ul className="flex flex-col gap-1">
               {history.map((h) => (
                 <li key={h.id} className="flex justify-between text-sm">
-                  <button type="button" onClick={() => onOpenVehicle(h.vehicleId)} className="text-slate-900 underline decoration-slate-300">
+                  <button type="button" onClick={() => onOpenVehicle(h.vehicleId)} className="text-primary-700 underline decoration-primary-200">
                     {h.vehicleFleetId}
                   </button>
                   <span className="text-slate-500">
@@ -190,20 +197,20 @@ export function DriverProfileScreen({
             </ul>
           </div>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Money">
+      <Card title="Money" className="mb-4">
         <Field label="Current amount owed" value={owedMinor !== null ? formatMinorUnits(owedMinor) : null} />
 
         {balances.length > 0 && (
           <div className="mt-3">
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Balance history</h3>
+            <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">Balance history</h3>
             <ul className="flex flex-col gap-1">
               {balances.map((b) => (
                 <li
                   key={b.id}
                   id={`balance-${b.id}`}
-                  className={`rounded text-sm ${b.id === highlightBalanceId ? 'bg-amber-50 ring-2 ring-amber-300' : ''}`}
+                  className={`rounded-lg text-sm ${b.id === highlightBalanceId ? 'bg-amber-50 ring-2 ring-amber-300' : ''}`}
                 >
                   <div className="flex justify-between">
                     <span className="text-slate-700">
@@ -229,7 +236,7 @@ export function DriverProfileScreen({
 
         {agreement && (
           <>
-            <h3 className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <h3 className="mt-3 mb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">
               Driver-purchase agreement
             </h3>
             <Field label="Agreement amount" value={formatMinorUnits(agreement.agreementAmountMinor)} />
@@ -241,11 +248,11 @@ export function DriverProfileScreen({
             <Field label="Ownership transfer" value={OWNERSHIP_TRANSFER_STATUS_LABELS[agreement.ownershipTransferStatus]} />
           </>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Notes">
+      <Card title="Notes">
         <p className="text-sm text-slate-700">{driver.notes ?? '—'}</p>
-      </Section>
+      </Card>
 
       {currentUserRole === 'OWNER_ADMIN' && (
         <div className="mt-8 border-t border-slate-200 pt-4">
@@ -318,7 +325,7 @@ function DeleteDriverSection({
   const cascadeDetail = cascadeParts.length > 0 ? ` This will also permanently delete ${cascadeParts.join(' and ')}.` : ''
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
       <p className="text-sm text-red-800">
         Delete {driverName}?{cascadeDetail} This can't be undone.
       </p>
@@ -334,7 +341,7 @@ function DeleteDriverSection({
           type="button"
           onClick={confirmDelete}
           disabled={submitting}
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Deleting…' : 'Delete'}
         </button>
@@ -344,21 +351,12 @@ function DeleteDriverSection({
             setConfirming(false)
             setError(null)
           }}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+          className="rounded-xl px-4 py-2 text-sm font-medium text-slate-500"
         >
           Cancel
         </button>
       </div>
     </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {children}
-    </section>
   )
 }
 
@@ -421,7 +419,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+        className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         Assign to vehicle
       </button>
@@ -429,7 +427,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       {vehicles === null && !error && <p className="text-sm text-slate-500">Loading vehicles…</p>}
       {vehicles?.length === 0 && <p className="text-sm text-slate-500">No vehicles yet.</p>}
 
@@ -440,7 +438,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -455,7 +453,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
             <select
               value={routeId}
               onChange={(e) => setRouteId(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               <option value="">None</option>
               {routes.map((r) => (
@@ -480,7 +478,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
             type="button"
             onClick={confirm}
             disabled={submitting}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Assigning…' : 'Assign'}
           </button>
@@ -491,7 +489,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
             setOpen(false)
             setError(null)
           }}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+          className="rounded-xl px-4 py-2 text-sm font-medium text-slate-500"
         >
           Cancel
         </button>
@@ -577,7 +575,7 @@ function RequestDriverCorrectionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3">
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Full name</span>
         <input
@@ -585,7 +583,7 @@ function RequestDriverCorrectionForm({
           required
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -594,7 +592,7 @@ function RequestDriverCorrectionForm({
           type="text"
           value={knownAs}
           onChange={(e) => setKnownAs(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -603,7 +601,7 @@ function RequestDriverCorrectionForm({
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -612,7 +610,7 @@ function RequestDriverCorrectionForm({
           type="tel"
           value={phoneAlt}
           onChange={(e) => setPhoneAlt(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -621,7 +619,7 @@ function RequestDriverCorrectionForm({
           type="text"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -630,7 +628,7 @@ function RequestDriverCorrectionForm({
           type="text"
           value={nextOfKinName}
           onChange={(e) => setNextOfKinName(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -639,7 +637,7 @@ function RequestDriverCorrectionForm({
           type="tel"
           value={nextOfKinPhone}
           onChange={(e) => setNextOfKinPhone(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -648,7 +646,7 @@ function RequestDriverCorrectionForm({
           type="text"
           value={idDocumentType}
           onChange={(e) => setIdDocumentType(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -657,7 +655,7 @@ function RequestDriverCorrectionForm({
           type="text"
           value={idDocumentNumber}
           onChange={(e) => setIdDocumentNumber(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -666,7 +664,7 @@ function RequestDriverCorrectionForm({
           type="text"
           value={licenceNumber}
           onChange={(e) => setLicenceNumber(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -675,7 +673,7 @@ function RequestDriverCorrectionForm({
           type="date"
           value={licenceExpiry}
           onChange={(e) => setLicenceExpiry(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -684,7 +682,7 @@ function RequestDriverCorrectionForm({
           type="date"
           value={startedOn}
           onChange={(e) => setStartedOn(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -693,7 +691,7 @@ function RequestDriverCorrectionForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -703,7 +701,7 @@ function RequestDriverCorrectionForm({
           onChange={(e) => setReason(e.target.value)}
           rows={2}
           required
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
 
@@ -716,7 +714,7 @@ function RequestDriverCorrectionForm({
       <button
         type="submit"
         disabled={submitting}
-        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="self-start rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {submitting ? 'Submitting…' : 'Request correction'}
       </button>
@@ -762,14 +760,14 @@ function ForgiveDebtPanel({ balanceId, onForgiven }: { balanceId: string; onForg
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+    <div className="mt-2 flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
       <label className="flex flex-col gap-1">
         <span className="text-xs font-medium text-slate-700">Reason for forgiving this debt</span>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={2}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
         />
       </label>
       {error && (
@@ -778,7 +776,7 @@ function ForgiveDebtPanel({ balanceId, onForgiven }: { balanceId: string; onForg
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" onClick={submit} disabled={submitting} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+        <button type="button" onClick={submit} disabled={submitting} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {submitting ? 'Forgiving…' : 'Forgive debt'}
         </button>
         <button
@@ -787,7 +785,7 @@ function ForgiveDebtPanel({ balanceId, onForgiven }: { balanceId: string; onForg
             setOpen(false)
             setError(null)
           }}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
         >
           Cancel
         </button>

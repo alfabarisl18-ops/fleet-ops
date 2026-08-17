@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
 import { CorrectionPanel } from '@/components/CorrectionPanel'
+import { IconChip } from '@/components/IconChip'
 import { OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_STATUS_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
@@ -112,16 +114,21 @@ export function VehicleProfileScreen({
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <h1 className="text-xl font-semibold text-slate-900">{vehicle.fleetId}</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        {VEHICLE_TYPE_LABELS[vehicle.type]}
-        {vehicle.type === 'OTHER' && vehicle.customType ? ` — ${vehicle.customType}` : ''}
-        {vehicle.plate ? ` · ${vehicle.plate}` : ''}
-      </p>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="vehicles" />
+        <div>
+          <h1 className="font-heading text-xl font-bold text-slate-900">{vehicle.fleetId}</h1>
+          <p className="text-sm text-slate-500">
+            {VEHICLE_TYPE_LABELS[vehicle.type]}
+            {vehicle.type === 'OTHER' && vehicle.customType ? ` — ${vehicle.customType}` : ''}
+            {vehicle.plate ? ` · ${vehicle.plate}` : ''}
+          </p>
+        </div>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -129,7 +136,7 @@ export function VehicleProfileScreen({
         </p>
       )}
 
-      <Section title="Identity">
+      <Card title="Identity" className="mb-4">
         <Field label="Fleet ID" value={vehicle.fleetId} />
         <Field label="Plate" value={vehicle.plate} />
         <Field label="Color" value={vehicle.color} />
@@ -144,16 +151,16 @@ export function VehicleProfileScreen({
             <RequestVehicleCorrectionForm vehicle={vehicle} currentUserId={currentUserId} onRequested={onDone} />
           )}
         />
-      </Section>
+      </Card>
 
-      <Section title="Status">
+      <Card title="Status" className="mb-4">
         <StatusControl vehicle={vehicle} currentUserId={currentUserId} onChanged={() => setReloadKey((k) => k + 1)} />
-      </Section>
+      </Card>
 
-      <Section title="Current driver">
+      <Card title="Current driver" className="mb-4">
         {vehicle.currentDriverId ? (
           <button type="button" onClick={() => onOpenDriver(vehicle.currentDriverId as string)} className="text-left">
-            <span className="block font-medium text-slate-900 underline decoration-slate-300">
+            <span className="block font-medium text-primary-700 underline decoration-primary-200">
               {vehicle.currentDriverName ?? '(unnamed)'}
             </span>
             {vehicle.currentDriverPhone && <span className="block text-sm text-slate-500">{vehicle.currentDriverPhone}</span>}
@@ -167,9 +174,9 @@ export function VehicleProfileScreen({
           onAssigned={() => setReloadKey((k) => k + 1)}
           onAddNewDriver={() => onAddDriverToAssign(vehicle.id)}
         />
-      </Section>
+      </Card>
 
-      <Section title="Purchase">
+      <Card title="Purchase" className="mb-4">
         <Field label="Purchased on" value={vehicle.purchasedOn} />
         <Field
           label="Purchase price"
@@ -191,13 +198,13 @@ export function VehicleProfileScreen({
         ) : (
           <Field label="Daily target" value={formatMinorUnits(vehicle.expectedDailyAmountMinor)} />
         )}
-      </Section>
+      </Card>
 
-      <Section title="Driver-purchase agreement">
+      <Card title="Driver-purchase agreement">
         {agreement ? (
           <div className="flex flex-col gap-1">
             <button type="button" onClick={() => onOpenDriver(agreement.driverId)} className="text-left">
-              <span className="font-medium text-slate-900 underline decoration-slate-300">{agreement.driverName}</span>
+              <span className="font-medium text-primary-700 underline decoration-primary-200">{agreement.driverName}</span>
             </button>
             <Field label="Agreement amount" value={formatMinorUnits(agreement.agreementAmountMinor)} />
             <Field
@@ -223,23 +230,14 @@ export function VehicleProfileScreen({
             <button
               type="button"
               onClick={() => onSetUpAgreement(vehicle.id)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
             >
               Set up driver-purchase agreement
             </button>
           </div>
         )}
-      </Section>
+      </Card>
     </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {children}
-    </section>
   )
 }
 
@@ -287,7 +285,7 @@ function TargetPanel({ vehicleId, yearlyTargetMinor, onSaved }: { vehicleId: str
         <span className="text-slate-500">Yearly target</span>
         <span className="text-right text-slate-900">
           {formatMinorUnits(yearlyTargetMinor)}{' '}
-          <button type="button" onClick={() => setEditing(true)} className="text-slate-500 underline decoration-slate-300">
+          <button type="button" onClick={() => setEditing(true)} className="text-primary-600 underline decoration-primary-200">
             Edit
           </button>
         </span>
@@ -304,9 +302,14 @@ function TargetPanel({ vehicleId, yearlyTargetMinor, onSaved }: { vehicleId: str
         autoFocus
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+        className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-right text-sm"
       />
-      <button type="button" onClick={save} disabled={submitting} className="text-slate-900 underline decoration-slate-300 disabled:opacity-50">
+      <button
+        type="button"
+        onClick={save}
+        disabled={submitting}
+        className="font-medium text-primary-600 underline decoration-primary-200 disabled:opacity-50"
+      >
         {submitting ? 'Saving…' : 'Save'}
       </button>
       <button
@@ -372,7 +375,7 @@ function DailyTargetPanel({
         <span className="text-slate-500">Daily target</span>
         <span className="text-right text-slate-900">
           {formatMinorUnits(expectedDailyAmountMinor)}{' '}
-          <button type="button" onClick={() => setEditing(true)} className="text-slate-500 underline decoration-slate-300">
+          <button type="button" onClick={() => setEditing(true)} className="text-primary-600 underline decoration-primary-200">
             Edit
           </button>
         </span>
@@ -389,9 +392,14 @@ function DailyTargetPanel({
         autoFocus
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+        className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-right text-sm"
       />
-      <button type="button" onClick={save} disabled={submitting} className="text-slate-900 underline decoration-slate-300 disabled:opacity-50">
+      <button
+        type="button"
+        onClick={save}
+        disabled={submitting}
+        className="font-medium text-primary-600 underline decoration-primary-200 disabled:opacity-50"
+      >
         {submitting ? 'Saving…' : 'Save'}
       </button>
       <button
@@ -461,14 +469,14 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
         <button
           type="button"
           onClick={() => setMode('confirm-complete')}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
         >
           Mark complete
         </button>
         <button
           type="button"
           onClick={() => setMode('cancel')}
-          className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 active:bg-red-50"
+          className="rounded-xl border border-red-300 px-3 py-2 text-sm font-medium text-red-700 active:bg-red-50"
         >
           Cancel agreement
         </button>
@@ -478,7 +486,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
 
   if (mode === 'confirm-complete') {
     return (
-      <div className="mt-2 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+      <div className="mt-2 flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
         <p className="text-sm text-slate-700">
           Marking this agreement complete transfers ownership to the driver and archives this vehicle — it will no longer
           be an active vehicle. This cannot be undone.
@@ -493,7 +501,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
             type="button"
             onClick={confirmComplete}
             disabled={submitting}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Completing…' : 'Yes, mark complete and archive'}
           </button>
@@ -503,7 +511,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
               setMode('idle')
               setError(null)
             }}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
           >
             Cancel
           </button>
@@ -513,7 +521,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-2 rounded-lg border border-red-200 p-3">
+    <div className="mt-2 flex flex-col gap-2 rounded-xl border border-red-200 p-3">
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Reason</span>
         <textarea
@@ -521,7 +529,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
           onChange={(e) => setCancelReason(e.target.value)}
           rows={2}
           required
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       {error && (
@@ -534,7 +542,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
           type="button"
           onClick={confirmCancel}
           disabled={submitting}
-          className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Cancelling…' : 'Confirm cancellation'}
         </button>
@@ -544,7 +552,7 @@ function AgreementActionsPanel({ agreementId, onChanged }: { agreementId: string
             setMode('idle')
             setError(null)
           }}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
         >
           Back
         </button>
@@ -601,7 +609,7 @@ function StatusControl({
               key={s}
               type="button"
               onClick={() => setTarget(s)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
             >
               Move to {VEHICLE_STATUS_LABELS[s]}
             </button>
@@ -610,7 +618,7 @@ function StatusControl({
       )}
 
       {target && (
-        <div className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
           <p className="text-sm text-slate-700">
             Change status to <span className="font-medium">{VEHICLE_STATUS_LABELS[target]}</span>
           </p>
@@ -619,7 +627,7 @@ function StatusControl({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
           />
           {error && (
             <p role="alert" className="text-sm text-red-600">
@@ -631,7 +639,7 @@ function StatusControl({
               type="button"
               onClick={confirm}
               disabled={submitting}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Confirm'}
             </button>
@@ -641,7 +649,7 @@ function StatusControl({
                 setTarget(null)
                 setError(null)
               }}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
             >
               Cancel
             </button>
@@ -713,7 +721,7 @@ function AssignDriverPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+        className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         Assign driver
       </button>
@@ -721,7 +729,7 @@ function AssignDriverPanel({
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       {drivers === null && !error && <p className="text-sm text-slate-500">Loading drivers…</p>}
 
       {drivers?.length === 0 && (
@@ -735,7 +743,7 @@ function AssignDriverPanel({
             <select
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -750,7 +758,7 @@ function AssignDriverPanel({
             <select
               value={routeId}
               onChange={(e) => setRouteId(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               <option value="">None</option>
               {routes.map((r) => (
@@ -775,12 +783,12 @@ function AssignDriverPanel({
             type="button"
             onClick={confirm}
             disabled={submitting}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Assigning…' : 'Assign'}
           </button>
         )}
-        <button type="button" onClick={onAddNewDriver} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+        <button type="button" onClick={onAddNewDriver} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
           + Add a new driver
         </button>
         <button
@@ -789,7 +797,7 @@ function AssignDriverPanel({
             setOpen(false)
             setError(null)
           }}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+          className="rounded-xl px-4 py-2 text-sm font-medium text-slate-500"
         >
           Cancel
         </button>
@@ -875,14 +883,14 @@ function RequestVehicleCorrectionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3">
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Fleet ID</span>
         <input
           type="text"
           value={fleetId}
           onChange={(e) => setFleetId(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -891,7 +899,7 @@ function RequestVehicleCorrectionForm({
           type="text"
           value={plate}
           onChange={(e) => setPlate(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -900,7 +908,7 @@ function RequestVehicleCorrectionForm({
           type="text"
           value={color}
           onChange={(e) => setColor(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -909,7 +917,7 @@ function RequestVehicleCorrectionForm({
           type="text"
           value={distinguishingMarks}
           onChange={(e) => setDistinguishingMarks(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       {vehicle.type === 'OTHER' && (
@@ -920,7 +928,7 @@ function RequestVehicleCorrectionForm({
               type="text"
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -929,7 +937,7 @@ function RequestVehicleCorrectionForm({
               type="text"
               value={customDescription}
               onChange={(e) => setCustomDescription(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
             />
           </label>
         </>
@@ -940,7 +948,7 @@ function RequestVehicleCorrectionForm({
           type="date"
           value={purchasedOn}
           onChange={(e) => setPurchasedOn(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -951,7 +959,7 @@ function RequestVehicleCorrectionForm({
           value={purchasePrice}
           onChange={(e) => setPurchasePrice(e.target.value)}
           placeholder="0.00"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -960,7 +968,7 @@ function RequestVehicleCorrectionForm({
           type="date"
           value={enteredServiceOn}
           onChange={(e) => setEnteredServiceOn(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -969,7 +977,7 @@ function RequestVehicleCorrectionForm({
           type="date"
           value={expectedRetirementOn}
           onChange={(e) => setExpectedRetirementOn(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -979,7 +987,7 @@ function RequestVehicleCorrectionForm({
           onChange={(e) => setReason(e.target.value)}
           rows={2}
           required
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
 
@@ -992,7 +1000,7 @@ function RequestVehicleCorrectionForm({
       <button
         type="submit"
         disabled={submitting}
-        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="self-start rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {submitting ? 'Submitting…' : 'Request correction'}
       </button>

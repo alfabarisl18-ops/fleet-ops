@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { PURCHASE_STAGE_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import type { PlannedVehicleAcrossGoals, PurchaseStage } from '@/data/futurePurchases'
 import { fetchPlannedVehiclesByStages } from '@/data/futurePurchases'
@@ -53,11 +55,14 @@ export function PlannedVehicleList({ filter, title, onBack, onOpenPlannedVehicle
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">{title}</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="future-purchases" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">{title}</h1>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -68,17 +73,13 @@ export function PlannedVehicleList({ filter, title, onBack, onOpenPlannedVehicle
       {items === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
 
       {items?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Nothing here right now.</p>
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Nothing here right now.</p>
       )}
 
       <ul className="flex flex-col gap-2">
         {items?.map((item) => (
           <li key={item.id}>
-            <button
-              type="button"
-              onClick={() => onOpenPlannedVehicle(item.id)}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm active:bg-slate-50"
-            >
+            <Card onClick={() => onOpenPlannedVehicle(item.id)} className="flex w-full items-center justify-between">
               <span>
                 <span className="block font-medium text-slate-900">
                   {item.goalName} — Candidate #{item.sequence}
@@ -86,7 +87,7 @@ export function PlannedVehicleList({ filter, title, onBack, onOpenPlannedVehicle
                 <span className="block text-sm text-slate-500">{VEHICLE_TYPE_LABELS[item.goalVehicleType]}</span>
               </span>
               <span className="text-sm text-slate-600">{PURCHASE_STAGE_LABELS[item.stage]}</span>
-            </button>
+            </Card>
           </li>
         ))}
       </ul>

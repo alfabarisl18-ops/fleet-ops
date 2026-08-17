@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { ROLE_LABELS, USER_STATUS_LABELS } from '@/constants/labels'
 import type { AppRole } from '@/data/auth'
 import type { MobileRole, PersonListItem, UserStatus } from '@/data/users'
@@ -51,14 +53,21 @@ export function PeopleList({ currentUserId, currentUserRole, onBack, onAddPerson
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">People</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <IconChip section="settings" />
+          <h1 className="font-heading text-xl font-bold text-slate-900">People</h1>
+        </div>
         {isOwner && (
-          <button type="button" onClick={onAddPerson} className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white active:bg-slate-800">
+          <button
+            type="button"
+            onClick={onAddPerson}
+            className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white active:bg-primary-700"
+          >
             + Add person
           </button>
         )}
@@ -135,89 +144,91 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   }
 
   return (
-    <li className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <span>
-          <span className="block font-medium text-slate-900">{person.displayName}</span>
-          <span className="block text-sm text-slate-500">{ROLE_LABELS[person.role]}</span>
-        </span>
-        <span className="flex items-center gap-2 text-sm text-slate-600">
-          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT_CLASS[person.status]}`} />
-          {USER_STATUS_LABELS[person.status]}
-        </span>
-      </div>
-
-      {isMobileRole(person.role) && !person.provisioned && (
-        <p className="mt-2 text-sm text-amber-700">Not yet able to sign in.</p>
-      )}
-
-      {editable && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-          <select
-            value={person.status}
-            disabled={busy}
-            onChange={(e) => changeStatus(e.target.value as UserStatus)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:opacity-50"
-          >
-            {(Object.keys(USER_STATUS_LABELS) as UserStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {USER_STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={person.role}
-            disabled={busy}
-            onChange={(e) => changeRole(e.target.value as AppRole)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:opacity-50"
-          >
-            {rolesInSameCategory(person.role).map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
-
-          {isMobileRole(person.role) &&
-            (person.provisioned ? (
-              <button
-                type="button"
-                onClick={() => setResetting(true)}
-                disabled={busy}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-              >
-                Reset PIN
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={finishSetup}
-                disabled={busy}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-              >
-                {busy ? 'Finishing…' : 'Finish setup'}
-              </button>
-            ))}
+    <li>
+      <Card>
+        <div className="flex items-center justify-between">
+          <span>
+            <span className="block font-medium text-slate-900">{person.displayName}</span>
+            <span className="block text-sm text-slate-500">{ROLE_LABELS[person.role]}</span>
+          </span>
+          <span className="flex items-center gap-2 text-sm text-slate-600">
+            <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT_CLASS[person.status]}`} />
+            {USER_STATUS_LABELS[person.status]}
+          </span>
         </div>
-      )}
 
-      {rowError && (
-        <p role="alert" className="mt-2 text-sm text-red-600">
-          {rowError}
-        </p>
-      )}
+        {isMobileRole(person.role) && !person.provisioned && (
+          <p className="mt-2 text-sm text-amber-700">Not yet able to sign in.</p>
+        )}
 
-      {resetting && (
-        <ResetPinPanel
-          userId={person.id}
-          onDone={() => {
-            setResetting(false)
-            onChanged()
-          }}
-          onCancel={() => setResetting(false)}
-        />
-      )}
+        {editable && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+            <select
+              value={person.status}
+              disabled={busy}
+              onChange={(e) => changeStatus(e.target.value as UserStatus)}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:opacity-50"
+            >
+              {(Object.keys(USER_STATUS_LABELS) as UserStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {USER_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={person.role}
+              disabled={busy}
+              onChange={(e) => changeRole(e.target.value as AppRole)}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:opacity-50"
+            >
+              {rolesInSameCategory(person.role).map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+            </select>
+
+            {isMobileRole(person.role) &&
+              (person.provisioned ? (
+                <button
+                  type="button"
+                  onClick={() => setResetting(true)}
+                  disabled={busy}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+                >
+                  Reset PIN
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={finishSetup}
+                  disabled={busy}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+                >
+                  {busy ? 'Finishing…' : 'Finish setup'}
+                </button>
+              ))}
+          </div>
+        )}
+
+        {rowError && (
+          <p role="alert" className="mt-2 text-sm text-red-600">
+            {rowError}
+          </p>
+        )}
+
+        {resetting && (
+          <ResetPinPanel
+            userId={person.id}
+            onDone={() => {
+              setResetting(false)
+              onChanged()
+            }}
+            onCancel={() => setResetting(false)}
+          />
+        )}
+      </Card>
     </li>
   )
 }
@@ -250,7 +261,7 @@ function ResetPinPanel({ userId, onDone, onCancel }: { userId: string; onDone: (
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       <div className="grid grid-cols-2 gap-2">
         <input
           type="password"
@@ -259,7 +270,7 @@ function ResetPinPanel({ userId, onDone, onCancel }: { userId: string; onDone: (
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
           placeholder="New PIN"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
         <input
           type="password"
@@ -268,7 +279,7 @@ function ResetPinPanel({ userId, onDone, onCancel }: { userId: string; onDone: (
           value={confirmPin}
           onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
           placeholder="Confirm PIN"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
       {error && (
@@ -277,10 +288,10 @@ function ResetPinPanel({ userId, onDone, onCancel }: { userId: string; onDone: (
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" onClick={submit} disabled={submitting} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+        <button type="button" onClick={submit} disabled={submitting} className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {submitting ? 'Saving…' : 'Set PIN'}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+        <button type="button" onClick={onCancel} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
           Cancel
         </button>
       </div>
@@ -293,8 +304,7 @@ function ResetPinPanel({ userId, onDone, onCancel }: { userId: string; onDone: (
  *  control. Wording matches SPEC section 1's own role descriptions. */
 function RoleCapabilities() {
   return (
-    <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">What each role can do</h2>
+    <Card title="What each role can do" className="mt-6">
       <dl className="flex flex-col gap-3 text-sm">
         <div>
           <dt className="font-medium text-slate-900">{ROLE_LABELS.OWNER_ADMIN}</dt>
@@ -316,6 +326,6 @@ function RoleCapabilities() {
           <dd className="text-slate-500">Records problems, repairs, parts and vehicle status. Nothing else.</dd>
         </div>
       </dl>
-    </section>
+    </Card>
   )
 }

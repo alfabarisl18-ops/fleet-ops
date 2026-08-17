@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { PURCHASE_GOAL_STATUS_LABELS, PURCHASE_PRIORITY_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { PurchaseGoalListItem } from '@/data/futurePurchases'
@@ -29,12 +31,15 @@ export function PurchaseGoalList({ onOpenGoal, onAddGoal }: PurchaseGoalListProp
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Purchase goals</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <IconChip section="future-purchases" />
+          <h1 className="font-heading text-xl font-bold text-slate-900">Purchase goals</h1>
+        </div>
         <button
           type="button"
           onClick={onAddGoal}
-          className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white active:bg-slate-800"
+          className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white active:bg-primary-700"
         >
           + New purchase goal
         </button>
@@ -49,7 +54,7 @@ export function PurchaseGoalList({ onOpenGoal, onAddGoal }: PurchaseGoalListProp
       {goals === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
 
       {goals?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           No purchase goals yet. Start one to begin saving toward a vehicle.
         </p>
       )}
@@ -59,11 +64,7 @@ export function PurchaseGoalList({ onOpenGoal, onAddGoal }: PurchaseGoalListProp
           const percent = goal.budgetMinor ? Math.min(Math.trunc((goal.savedMinor / goal.budgetMinor) * 100), 100) : null
           return (
             <li key={goal.id}>
-              <button
-                type="button"
-                onClick={() => onOpenGoal(goal.id)}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm active:bg-slate-50"
-              >
+              <Card onClick={() => onOpenGoal(goal.id)} className="flex w-full items-center justify-between">
                 <span>
                   <span className="block font-medium text-slate-900">
                     {goal.name}
@@ -84,7 +85,7 @@ export function PurchaseGoalList({ onOpenGoal, onAddGoal }: PurchaseGoalListProp
                     <span className="text-slate-400">No savings target set</span>
                   )}
                 </span>
-              </button>
+              </Card>
             </li>
           )
         })}

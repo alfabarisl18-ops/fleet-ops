@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { LEDGER_CATEGORY_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
@@ -37,11 +39,16 @@ export function ApprovalsList({ currentUserRole, onBack }: ApprovalsListProps) {
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Approvals</h1>
-      <p className="mb-4 text-sm text-slate-500">Expenses flagged unusual or disputed</p>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="accounting" />
+        <div>
+          <h1 className="font-heading text-xl font-bold text-slate-900">Approvals</h1>
+          <p className="text-sm text-slate-500">Expenses flagged unusual or disputed</p>
+        </div>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -50,7 +57,7 @@ export function ApprovalsList({ currentUserRole, onBack }: ApprovalsListProps) {
       )}
       {items === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
       {items?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           Nothing needs approval right now.
         </p>
       )}
@@ -90,39 +97,41 @@ function ApprovalRow({
   }
 
   return (
-    <li className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="font-medium text-slate-900">
-          {item.vehicleFleetId ? `${item.vehicleFleetId} — ` : ''}
-          {LEDGER_CATEGORY_LABELS[item.category]}
-        </span>
-        <span className="text-slate-900">{formatMinorUnits(-item.amountMinor)}</span>
-      </div>
-      <p className="mb-2 text-sm text-slate-500">
-        {item.appliesToDate} ·{' '}
-        <span className={item.approvalStatus === 'DISPUTED' ? 'text-red-600' : 'text-amber-700'}>
-          {item.approvalStatus === 'DISPUTED' ? 'Disputed' : 'Unusual'}
-        </span>
-      </p>
-
-      {error && (
-        <p role="alert" className="mb-2 text-sm text-red-600">
-          {error}
+    <li>
+      <Card>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="font-medium text-slate-900">
+            {item.vehicleFleetId ? `${item.vehicleFleetId} — ` : ''}
+            {LEDGER_CATEGORY_LABELS[item.category]}
+          </span>
+          <span className="text-slate-900">{formatMinorUnits(-item.amountMinor)}</span>
+        </div>
+        <p className="mb-2 text-sm text-slate-500">
+          {item.appliesToDate} ·{' '}
+          <span className={item.approvalStatus === 'DISPUTED' ? 'text-red-600' : 'text-amber-700'}>
+            {item.approvalStatus === 'DISPUTED' ? 'Disputed' : 'Unusual'}
+          </span>
         </p>
-      )}
 
-      {currentUserRole === 'FLEET_MANAGER' ? (
-        <button
-          type="button"
-          onClick={approve}
-          disabled={submitting}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {submitting ? 'Approving…' : 'Approve'}
-        </button>
-      ) : (
-        <p className="text-xs text-slate-400">Waiting on Fleet Manager approval.</p>
-      )}
+        {error && (
+          <p role="alert" className="mb-2 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+
+        {currentUserRole === 'FLEET_MANAGER' ? (
+          <button
+            type="button"
+            onClick={approve}
+            disabled={submitting}
+            className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {submitting ? 'Approving…' : 'Approve'}
+          </button>
+        ) : (
+          <p className="text-xs text-slate-400">Waiting on Fleet Manager approval.</p>
+        )}
+      </Card>
     </li>
   )
 }

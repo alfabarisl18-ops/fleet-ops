@@ -35,6 +35,8 @@ decided, what else was considered, and what would make us revisit it.
 | [0014](decisions/0014-offline-queue-pwa-and-a-new-table-after-guards.md) | Offline sync: PWA shell caches only the app shell (never API reads), same-vehicle-day collisions handled on both the live and queued paths, and the first table added after guards.sql |
 | [0015](decisions/0015-future-purchases-alert-heuristics-and-storage-scope.md) | Future Purchases: the invented alert-threshold table, Storage scoped to desktop only, no new `vehicles` columns, and a live PostgREST to-one-embed bug |
 | [0016](decisions/0016-settings-scope-and-export-format.md) | Settings: desktop account creation stays out of scope (a Phase 2 decision, not a new one), the same-category role-change guard, no self-edit, Export as client-side CSV |
+| [0017](decisions/0017-debt-forgiveness-owner-only-reason-required.md) | Debt forgiveness: Owner/Admin only, reason required, forgiven amount stays visible as an OTHER_EXPENSE; three field-reported bugs (invisible dates, maintenance area dropdown) |
+| [0018](decisions/0018-rent-to-own-installment-is-the-daily-target.md) | Rent-to-own: the installment becomes the vehicle's daily target, every shortfall is debt while an agreement is active, payoff retires the vehicle; a real RLS gap found only by testing live as the mobile role |
 
 ## Build order
 
@@ -50,8 +52,8 @@ start until the current one runs.
    has no UI yet — nothing writes to it until Phase 5/6.
 5. **Daily payments** — the five outcomes, shortfall, overpayment, bundles,
    balances. ← *done, Sprinter-only*. Box-truck trip payments (built in
-   Phase 8) and debt write-off/forgiveness (still deferred) — see
-   decision 0010.
+   Phase 8) — see decision 0010. Debt forgiveness (decision 0017) and the
+   rent-to-own redesign (decision 0018) extend this after Phase 11.
 6. **Maintenance** — orders, statuses, parts, status events, both a desktop
    workspace and Maintenance & Repairs' mobile workspace. ← *done*. Recorded
    Cost is a running total, not the full analytics breakdown — see
@@ -76,4 +78,10 @@ start until the current one runs.
     Fleet Manager reads), adding/provisioning a mobile person, PIN
     reset — all built on the Edge Function and RPCs Phase 2 already
     shipped for exactly this. See decision 0016. "Polish" — no further
-    named work; the build order ends here.
+    named work; the build order itself ends here.
+
+SPEC's build order is complete as of Phase 11. Work since then closes
+SPEC's two remaining open product questions rather than adding new
+screens: driver debt forgiveness (decision 0017) and the rent-to-own
+redesign (decision 0018), both answered directly with the user and
+implemented as extensions of Phase 5's daily-payments logic.

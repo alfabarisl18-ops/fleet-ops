@@ -146,6 +146,21 @@ export async function fetchRoutes(): Promise<RouteOption[]> {
   return data ?? []
 }
 
+/**
+ * A vehicle's daily target had no edit path anywhere in the app before the
+ * rent-to-own redesign — set once at onboarding (onboard_vehicle), then
+ * immutable. set_up_driver_purchase_agreement now sets it as a side
+ * effect of setting up an agreement, and cancel_driver_purchase_agreement
+ * deliberately does NOT restore the previous value — this plain update
+ * (same shape as updateVehicleTarget in src/data/accounting.ts) is what a
+ * person uses to correct it afterward, or to change it outside any
+ * agreement entirely.
+ */
+export async function updateExpectedDailyAmount(vehicleId: string, expectedDailyAmountMinor: number): Promise<void> {
+  const { error } = await supabase.from('vehicles').update({ expected_daily_amount_minor: expectedDailyAmountMinor }).eq('id', vehicleId)
+  if (error) throw error
+}
+
 export interface CreateVehicleInput {
   fleetId: string
   plate?: string

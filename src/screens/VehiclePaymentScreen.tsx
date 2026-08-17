@@ -3,6 +3,7 @@ import { DAY_OUTCOME_LABELS, OVERPAYMENT_REASON_LABELS, SHORTFALL_CAUSE_LABELS, 
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { DayOutcome, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
 import { fetchFreetownToday, isDayOutcomeEligible, recordBundledPayment, recordDailyPayment } from '@/data/dailyPayments'
+import { fetchVehicleHasActiveAgreement } from '@/data/driverPurchaseAgreements'
 import type { VehicleListItem, VehicleType } from '@/data/vehicles'
 import { fetchVehicle, fetchVehicles } from '@/data/vehicles'
 import { RecordTripForm } from '@/screens/RecordTripForm'
@@ -13,7 +14,7 @@ interface VehiclePaymentScreenProps {
 
 type Step =
   | { name: 'pick' }
-  | { name: 'day-outcome'; vehicleId: string; fleetId: string; date: string; expectedAmountMinor: number }
+  | { name: 'day-outcome'; vehicleId: string; fleetId: string; date: string; expectedAmountMinor: number; underActiveAgreement: boolean }
   | { name: 'bundle'; vehicleId: string; fleetId: string; startDate: string; expectedAmountMinor: number }
   | { name: 'trip'; vehicleId: string; fleetId: string }
 
@@ -39,6 +40,7 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
         fleetId={step.fleetId}
         date={step.date}
         expectedAmountMinor={step.expectedAmountMinor}
+        underActiveAgreement={step.underActiveAgreement}
         onDone={onDone}
         onBack={() => setStep({ name: 'pick' })}
       />
@@ -74,7 +76,8 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
         if (bundle) {
           setStep({ name: 'bundle', vehicleId, fleetId, startDate: date, expectedAmountMinor })
         } else {
-          setStep({ name: 'day-outcome', vehicleId, fleetId, date, expectedAmountMinor })
+          const underActiveAgreement = await fetchVehicleHasActiveAgreement(vehicleId)
+          setStep({ name: 'day-outcome', vehicleId, fleetId, date, expectedAmountMinor, underActiveAgreement })
         }
       }}
     />
@@ -176,6 +179,7 @@ function DayOutcomeForm({
   fleetId,
   date,
   expectedAmountMinor,
+  underActiveAgreement,
   onDone,
   onBack,
 }: {
@@ -183,6 +187,7 @@ function DayOutcomeForm({
   fleetId: string
   date: string
   expectedAmountMinor: number
+  underActiveAgreement: boolean
   onDone: () => void
   onBack: () => void
 }) {
@@ -286,6 +291,13 @@ function DayOutcomeForm({
       {outcome && (
         <div className="flex flex-col gap-4">
           <p className="text-base font-medium text-slate-700">{DAY_OUTCOME_LABELS[outcome]}</p>
+
+          {underActiveAgreement && (outcome === 'HALF_DAY' || outcome === 'BREAKDOWN' || outcome === 'DID_NOT_WORK') && (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+              This vehicle is being purchased by its driver on installment. Any amount short of{' '}
+              {formatMinorUnits(expectedAmountMinor)} today becomes driver debt, regardless of what happened.
+            </p>
+          )}
 
           {outcome === 'HALF_DAY' && (
             <label className="flex flex-col gap-1">

@@ -616,6 +616,7 @@ export type Database = {
           shortfall_treatment_override_at: string | null
           shortfall_treatment_override_by: string | null
           shortfall_treatment_override_reason: string | null
+          under_active_agreement: boolean
           vehicle_id: string
         }
         Insert: {
@@ -647,6 +648,7 @@ export type Database = {
           shortfall_treatment_override_at?: string | null
           shortfall_treatment_override_by?: string | null
           shortfall_treatment_override_reason?: string | null
+          under_active_agreement?: boolean
           vehicle_id: string
         }
         Update: {
@@ -678,6 +680,7 @@ export type Database = {
           shortfall_treatment_override_at?: string | null
           shortfall_treatment_override_by?: string | null
           shortfall_treatment_override_reason?: string | null
+          under_active_agreement?: boolean
           vehicle_id?: string
         }
         Relationships: [
@@ -881,7 +884,12 @@ export type Database = {
       driver_purchase_agreements: {
         Row: {
           agreement_amount_minor: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           client_record_id: string
+          completed_at: string | null
+          completed_by: string | null
           created_at: string
           driver_id: string
           expected_completion_on: string | null
@@ -894,7 +902,12 @@ export type Database = {
         }
         Insert: {
           agreement_amount_minor: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           client_record_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           driver_id: string
           expected_completion_on?: string | null
@@ -907,7 +920,12 @@ export type Database = {
         }
         Update: {
           agreement_amount_minor?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           client_record_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           driver_id?: string
           expected_completion_on?: string | null
@@ -919,6 +937,20 @@ export type Database = {
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "driver_purchase_agreements_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_purchase_agreements_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "driver_purchase_agreements_driver_id_fkey"
             columns: ["driver_id"]
@@ -2136,6 +2168,14 @@ export type Database = {
         }
         Returns: string
       }
+      cancel_driver_purchase_agreement: {
+        Args: { p_agreement_id: string; p_reason: string }
+        Returns: undefined
+      }
+      complete_driver_purchase_agreement: {
+        Args: { p_agreement_id: string }
+        Returns: undefined
+      }
       delete_driver: { Args: { p_driver_id: string }; Returns: undefined }
       driver_delete_preview: {
         Args: { p_driver_id: string }
@@ -2274,7 +2314,24 @@ export type Database = {
         Args: { p_correction_id: string }
         Returns: undefined
       }
+      set_up_driver_purchase_agreement: {
+        Args: {
+          p_agreement_amount_minor: number
+          p_client_record_id: string
+          p_driver_id: string
+          p_expected_completion_on: string
+          p_payment_frequency: Database["public"]["Enums"]["payment_frequency"]
+          p_regular_payment_minor: number
+          p_started_on: string
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
       touch_session: { Args: { p_session_id: string }; Returns: boolean }
+      vehicle_has_active_purchase_agreement: {
+        Args: { p_vehicle_id: string }
+        Returns: boolean
+      }
       verify_pin: {
         Args: { p_pin: string; p_user_id: string }
         Returns: Database["public"]["CompositeTypes"]["pin_check_result"]

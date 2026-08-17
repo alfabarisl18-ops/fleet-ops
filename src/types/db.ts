@@ -117,6 +117,7 @@ export const NULLABLE_RPC_ARGS = {
     'p_next_due_on',
   ],
   onboard_vehicle: ['p_plate', 'p_current_driver_id', 'p_route_id', 'p_entered_service_on'],
+  set_up_driver_purchase_agreement: ['p_expected_completion_on'],
 } as const satisfies Partial<Record<keyof PublicSchema['Functions'], readonly string[]>>
 
 type NullableArgKeysFor<T> = T extends keyof typeof NULLABLE_RPC_ARGS

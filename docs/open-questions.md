@@ -13,23 +13,18 @@ These need answering before the phases that depend on them.
 | # | Question | Blocks |
 |---|---|---|
 | 1 | Box trucks — paid per trip or per day? What is captured per trip: revenue, fuel, checkpoint costs, driver and helper pay? | Phase 5, Phase 8 |
-| 2 | Rent-to-own vehicles — is the installment separate from the daily payment, or does the daily payment count toward the purchase? | Phase 5 |
+| ~~2~~ | ~~Rent-to-own vehicles — is the installment separate from the daily payment, or does the daily payment count toward the purchase?~~ **Resolved** — see [decision 0018](decisions/0018-rent-to-own-installment-is-the-daily-target.md). | Phase 5 |
 | 3 | Which currencies are actually paid in for imported vehicles? | Phase 10 |
 | 4 | Yearly targets — calendar year? Set per vehicle by the Owner? | Phase 8 |
 | 5 | How bad is connectivity where the collectors work — occasional drops, or hours offline daily? | Phase 9 |
 | 6 | Should breakdown simply be a cause under Half Day, with the separate Breakdown option reserved for a vehicle that never worked at all? | Phase 5 |
-| 7 | Can a driver's accumulated debt be forgiven, and does that need Owner approval and a recorded reason? | Phase 5 |
+| ~~7~~ | ~~Can a driver's accumulated debt be forgiven, and does that need Owner approval and a recorded reason?~~ **Resolved** — see [decision 0017](decisions/0017-debt-forgiveness-owner-only-reason-required.md). | Phase 5 |
 
 **Question 1 already bites.** `TRK-01` is seeded with
 `expected_daily_amount_minor = 0`, because a daily target for a vehicle paid per
 trip is meaningless. Zero means "no daily target set", not "expects nothing" — a
 daily payment record against it would compute a full shortfall. No daily records
 should be entered for box trucks until this is settled.
-
-**Question 7 is partly answered by the schema already.** `outstanding_balances`
-has a `WRITTEN_OFF` status, and only the desktop roles can update a balance. So
-forgiveness is possible and is management-only. Whether it additionally needs
-Owner approval and a recorded reason is still open.
 
 ---
 

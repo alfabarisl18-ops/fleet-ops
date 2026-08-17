@@ -86,7 +86,7 @@ export async function fetchOpenAlerts(): Promise<AlertListItem[]> {
 }
 
 /** Desktop-only via alerts_update_desktop — fine, the bell only renders
- *  on desktop (WorkspaceHeader, not either mobile workspace). reviewed_at
+ *  on desktop (TopBar, not either mobile workspace). reviewed_at
  *  is server-stamped by a trigger the first time reviewed_by is set —
  *  never derived from the client's clock. */
 export async function reviewAlert(alertId: string, currentUserId: string): Promise<void> {

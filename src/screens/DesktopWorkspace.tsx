@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { WorkspaceHeader } from '@/components/WorkspaceHeader'
+import { DesktopShell } from '@/components/DesktopShell'
+import type { NavTarget } from '@/components/Sidebar'
+import type { SectionKey } from '@/components/IconChip'
 import type { AlertListItem } from '@/data/alerts'
 import type { SignedInUser } from '@/data/auth'
 import { fetchTransitRecordPlannedVehicleId } from '@/data/futurePurchases'
@@ -73,6 +75,73 @@ interface DesktopWorkspaceProps {
 }
 
 /**
+ * Which sidebar item glows for a given view — pure UI routing, no data or
+ * business logic. The `never`-typed default means a future new
+ * `DesktopView` variant fails typecheck here instead of silently landing
+ * with no active nav highlight.
+ */
+function sectionForView(view: DesktopView): NavTarget {
+  switch (view.name) {
+    case 'home':
+      return 'home'
+    case 'vehicle-list':
+    case 'add-vehicle':
+    case 'vehicle-profile':
+    case 'set-up-driver-purchase-agreement':
+      return 'vehicles'
+    case 'driver-list':
+    case 'add-driver':
+    case 'driver-profile':
+      return 'drivers'
+    case 'records-list':
+    case 'record-detail':
+      return 'records'
+    case 'maintenance-list':
+    case 'add-maintenance-order':
+    case 'maintenance-order-detail':
+      return 'maintenance'
+    case 'accounting-home':
+    case 'sprinter-income':
+    case 'truck-income':
+    case 'known-expenses':
+    case 'approvals-list':
+    case 'flagged-duplicates':
+      return 'accounting'
+    case 'future-purchases-home':
+    case 'purchase-goal-list':
+    case 'add-purchase-goal':
+    case 'purchase-goal-detail':
+    case 'planned-vehicle-list':
+    case 'planned-vehicle-detail':
+    case 'onboard-vehicle':
+    case 'overdue-purchase-actions':
+      return 'future-purchases'
+    case 'export-report':
+      return 'export'
+    case 'people-list':
+    case 'add-person':
+      return 'settings'
+    default: {
+      const exhaustive: never = view
+      return exhaustive
+    }
+  }
+}
+
+/** Where each sidebar click goes — the same view DesktopHome's own
+ *  onOpen* callbacks already navigate to. */
+const HOME_VIEW_FOR_SECTION: Record<SectionKey, DesktopView> = {
+  vehicles: { name: 'vehicle-list' },
+  drivers: { name: 'driver-list' },
+  records: { name: 'records-list' },
+  maintenance: { name: 'maintenance-list' },
+  accounting: { name: 'accounting-home' },
+  'future-purchases': { name: 'future-purchases-home' },
+  export: { name: 'export-report' },
+  settings: { name: 'people-list' },
+}
+
+/**
  * SPEC's own phrasing for "the exact record" an alert deep-links to —
  * "the specific maintenance order, balance, or purchase goal" — is
  * literally the subject_type mapping here (decision 0012). Async because
@@ -115,15 +184,15 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
   const [view, setView] = useState<DesktopView>({ name: 'home' })
 
   return (
-    <div className="flex min-h-full flex-col bg-slate-50">
-      <WorkspaceHeader
-        user={user}
-        {...(view.name !== 'home' ? { onHome: () => setView({ name: 'home' }) } : {})}
-        onSignOut={onSignedOut}
-        onOpenAlert={(alert) => {
-          void resolveAlertView(alert).then(setView)
-        }}
-      />
+    <DesktopShell
+      user={user}
+      active={sectionForView(view)}
+      onNavigate={(target) => setView(target === 'home' ? { name: 'home' } : HOME_VIEW_FOR_SECTION[target])}
+      onSignOut={onSignedOut}
+      onOpenAlert={(alert) => {
+        void resolveAlertView(alert).then(setView)
+      }}
+    >
       <div className="flex-1">
         {view.name === 'home' && (
           <DesktopHome
@@ -358,6 +427,6 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
           <AddPersonForm onCreated={() => setView({ name: 'people-list' })} onCancel={() => setView({ name: 'people-list' })} />
         )}
       </div>
-    </div>
+    </DesktopShell>
   )
 }

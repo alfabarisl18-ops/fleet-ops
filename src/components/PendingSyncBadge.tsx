@@ -16,7 +16,7 @@ const KIND_LABELS: Record<QueuedWrite['kind'], string> = {
 }
 
 /**
- * The mobile analog of AlertsBell (desktop, WorkspaceHeader) — SPEC
+ * The mobile analog of AlertsBell (desktop, TopBar) — SPEC
  * section 8: "The device shows what is still pending sync." Rendered
  * in both CollectionsWorkspace and MaintenanceWorkspace headers.
  */

@@ -18,7 +18,7 @@ const SEVERITY_DOT_CLASS: Record<AlertSeverity, string> = {
 }
 
 /**
- * Desktop-only — rendered from WorkspaceHeader, which neither mobile
+ * Desktop-only — rendered from TopBar, which neither mobile
  * workspace uses (SPEC: "no alerts bell in either mobile workspace").
  * Tapping an alert both marks it reviewed and opens the exact record in
  * one action — immediate badge feedback, no separate mark-read step.

@@ -15,6 +15,31 @@ export type SectionKey =
   | 'export'
   | 'settings'
 
+/** Real DesktopHome card copy, verbatim — the single source other
+ *  components (Sidebar, a future page header) read the display name
+ *  from, instead of re-typing "Future Purchases" etc. by hand. */
+export const SECTION_LABELS: Record<SectionKey, string> = {
+  vehicles: 'Vehicles',
+  drivers: 'Drivers',
+  records: 'Records',
+  maintenance: 'Maintenance',
+  accounting: 'Accounting',
+  'future-purchases': 'Future Purchases',
+  export: 'Export report',
+  settings: 'Settings',
+}
+
+export const SECTION_ORDER: readonly SectionKey[] = [
+  'vehicles',
+  'drivers',
+  'records',
+  'maintenance',
+  'accounting',
+  'future-purchases',
+  'export',
+  'settings',
+]
+
 const CHIP_STYLES: Record<SectionKey, { bg: string; fg: string }> = {
   vehicles: { bg: 'bg-primary-50', fg: 'text-primary-600' },
   drivers: { bg: 'bg-violet-50', fg: 'text-violet-600' },
@@ -32,8 +57,11 @@ const CHIP_STYLES: Record<SectionKey, { bg: string; fg: string }> = {
 /** One simple line-art icon per section, same stroke style as the app's
  *  own logo mark (rounded caps/joins, 1.6-1.8 stroke-width, 24x24 grid) --
  *  hand-drawn to match rather than pulling in an icon-library dependency
- *  for 8 static glyphs. */
-function SectionGlyph({ section }: { section: SectionKey }) {
+ *  for 8 static glyphs. Exported so Sidebar can render the bare glyph
+ *  (no pastel chip background) for nav rows -- the chip treatment is
+ *  reserved for card/header identity, not a persistently-visible nav
+ *  list, per the approved redesign scope. */
+export function SectionGlyph({ section }: { section: SectionKey }) {
   switch (section) {
     case 'vehicles':
       return (

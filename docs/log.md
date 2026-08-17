@@ -1166,3 +1166,27 @@ account, including the two live-only test data artifacts left on
 `SPR-TEST-99`, in decision 0018.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+---
+
+## [2026-08-18] docs | SPEC section 10 closed out — all seven open questions resolved
+
+No code or schema change. `docs/open-questions.md` had drifted from
+reality: question 1 (box trucks) was already resolved in SPEC.md itself
+before Phase 5 was built, and question 4 (yearly targets) was already
+resolved in decision 0013 — neither table row had been updated to
+match. Questions 3 (imported-vehicle currencies) and 5 (connectivity
+severity) turned out never to need a specific answer: `acquisition_payments.original_currency`
+is free-form rather than a fixed enum, and the Phase 9 offline queue was
+built for the worst case regardless of how bad connectivity actually is
+— both marked moot by design rather than resolved by asking.
+
+Question 6 (should `BREAKDOWN` fold into Half Day's cause list, or
+narrow to "worked zero of the day") was asked directly: leave it as-is,
+no change. Both options have been live since Phase 1 with no reported
+field confusion — the strongest evidence available that the apparent
+redundancy isn't actually a problem. See decision 0019.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass
+(no source files touched, docs-only change; re-run to confirm nothing
+else drifted).

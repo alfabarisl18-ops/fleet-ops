@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   MAINTENANCE_HANDLED_BY_LABELS,
   MAINTENANCE_RECORD_TYPE_LABELS,
@@ -6,6 +6,7 @@ import {
   ROADWORTHINESS_LABELS,
   VEHICLE_TYPE_LABELS,
 } from '@/constants/labels'
+import { uploadDocument, validateDocumentFile } from '@/lib/documents'
 import type { MaintenanceHandledBy, MaintenanceRecordType, ProblemDescriptor, Roadworthiness } from '@/data/maintenance'
 import { MAINTENANCE_AREAS, OIL_CHANGE_SERVICE_AREA, createMaintenanceOrder } from '@/data/maintenance'
 import type { VehicleListItem, VehicleType } from '@/data/vehicles'
@@ -158,6 +159,16 @@ function OrderDetailsForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Set only once the order is actually created online — the id a
+  // problem photo attaches to. A queued (offline) write has no id yet,
+  // so it skips straight to onQueued() as before; there's nothing to
+  // attach a photo to until the write really lands.
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoAdded, setPhotoAdded] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
   function choose(rt: MaintenanceRecordType) {
     setRecordType(rt)
     setIsOilChange(false)
@@ -200,13 +211,79 @@ function OrderDetailsForm({
       if (outcome.status === 'queued') {
         onQueued()
       } else {
-        onCreated(outcome.result)
+        setCreatedOrderId(outcome.result)
       }
     } catch {
       setError('Something went wrong. Try again.')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handlePhotoChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !createdOrderId) return
+
+    const validationError = validateDocumentFile(file)
+    if (validationError) {
+      setPhotoError(validationError)
+      return
+    }
+
+    setPhotoUploading(true)
+    setPhotoError(null)
+    try {
+      await uploadDocument({
+        ownerType: 'MAINTENANCE_ORDER',
+        ownerId: createdOrderId,
+        docType: 'OTHER',
+        file,
+        uploadedBy: currentUserId,
+      })
+      setPhotoAdded(true)
+    } catch {
+      setPhotoError('Could not upload this photo. Try again.')
+    } finally {
+      setPhotoUploading(false)
+    }
+  }
+
+  if (createdOrderId) {
+    return (
+      <div className="mx-auto flex max-w-sm flex-col items-center gap-4 p-6 text-center">
+        <p className="text-lg font-semibold text-slate-900">Saved</p>
+        <p className="text-sm text-slate-500">{fleetId}</p>
+
+        {!photoAdded && (
+          <>
+            <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChosen} className="hidden" />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoUploading}
+              className="rounded-2xl border border-slate-300 px-6 py-3 text-base font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+            >
+              {photoUploading ? 'Uploading…' : '+ Add a photo of the problem'}
+            </button>
+            {photoError && (
+              <p role="alert" className="text-sm text-red-600">
+                {photoError}
+              </p>
+            )}
+          </>
+        )}
+        {photoAdded && <p className="text-sm text-emerald-600">Photo added.</p>}
+
+        <button
+          type="button"
+          onClick={() => onCreated(createdOrderId)}
+          className="mt-2 rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white"
+        >
+          Continue
+        </button>
+      </div>
+    )
   }
 
   return (

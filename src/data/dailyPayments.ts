@@ -144,27 +144,39 @@ export interface RecordOtherPaymentInput {
 
 type RecordOtherPaymentPayload = RecordOtherPaymentInput & { clientRecordId: string }
 
-async function recordOtherPaymentLive(payload: RecordOtherPaymentPayload): Promise<void> {
-  const { error } = await supabase.from('ledger_entries').insert({
-    client_record_id: payload.clientRecordId,
-    direction: payload.direction,
-    amount_minor: payload.amountMinor,
-    category: payload.category,
-    applies_to_date: payload.applyDate,
-    entered_by_user_id: payload.currentUserId,
-    ...(payload.note ? { note: payload.note } : {}),
-  })
+/** Returns the new row's id — needed so a receipt photo can attach to it
+ *  afterward (ownerType='LEDGER_ENTRY', see src/lib/documents.ts). The
+ *  insert itself is unchanged; `.select('id').single()` only changes
+ *  what comes back, not what's written. */
+async function recordOtherPaymentLive(payload: RecordOtherPaymentPayload): Promise<string> {
+  const { data, error } = await supabase
+    .from('ledger_entries')
+    .insert({
+      client_record_id: payload.clientRecordId,
+      direction: payload.direction,
+      amount_minor: payload.amountMinor,
+      category: payload.category,
+      applies_to_date: payload.applyDate,
+      entered_by_user_id: payload.currentUserId,
+      ...(payload.note ? { note: payload.note } : {}),
+    })
+    .select('id')
+    .single()
   if (error) throw error
+  return data.id
 }
 
-/** Offline-queue-aware (Phase 9). */
-export async function recordOtherPayment(input: RecordOtherPaymentInput): Promise<WriteOutcome<void>> {
+/** Offline-queue-aware (Phase 9). Offline (queued), there's no id to
+ *  return yet — the caller can't offer a receipt-photo step until the
+ *  write actually lands, which is exactly the offline behaviour this
+ *  was scoped to (see docs/decisions — attach the photo later instead). */
+export async function recordOtherPayment(input: RecordOtherPaymentInput): Promise<WriteOutcome<string>> {
   const payload: RecordOtherPaymentPayload = { ...input, clientRecordId: crypto.randomUUID() }
   return withOfflineQueue('recordOtherPayment', payload.clientRecordId, payload, () => recordOtherPaymentLive(payload))
 }
 
 /** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
-export async function replayRecordOtherPayment(payload: unknown): Promise<void> {
+export async function replayRecordOtherPayment(payload: unknown): Promise<string> {
   return recordOtherPaymentLive(payload as RecordOtherPaymentPayload)
 }
 

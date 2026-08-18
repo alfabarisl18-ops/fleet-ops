@@ -11,6 +11,7 @@ import {
   ROADWORTHINESS_LABELS,
 } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
+import { DocumentPanel } from '@/screens/DocumentPanel'
 import type { AppRole } from '@/data/auth'
 import type {
   FilterAction,
@@ -196,6 +197,10 @@ export function MaintenanceOrderDetailScreen({
         <Field label="Vehicle condition" value={ROADWORTHINESS_LABELS[order.safetyStatus]} />
         <Field label="Grounded" value={order.isGrounded ? 'Yes' : 'No'} />
         <Field label="Notes" value={order.notes} />
+      </Card>
+
+      <Card title="Photos" className="mb-4">
+        <DocumentPanel ownerType="MAINTENANCE_ORDER" ownerId={order.id} currentUserId={currentUserId} allowedTypes={['OTHER']} />
       </Card>
 
       {isDesktopRole(currentUserRole) && (

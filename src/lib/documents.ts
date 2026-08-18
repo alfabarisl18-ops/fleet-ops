@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { compressImageFile } from '@/lib/compressImage'
 import type { Enums } from '@/types/db'
 
 // The first real Supabase Storage feature in the app (Phase 10). Scoped to
@@ -80,15 +81,20 @@ export function validateDocumentFile(file: File): string | null {
  * money or business state involved), not a two-phase commit.
  */
 export async function uploadDocument(input: UploadDocumentInput): Promise<string> {
-  const validationError = validateDocumentFile(input.file)
+  // Compress before validating: a large-but-compressible phone photo
+  // should get the chance to land under the 10 MB ceiling rather than
+  // being rejected on its original size.
+  const file = await compressImageFile(input.file)
+
+  const validationError = validateDocumentFile(file)
   if (validationError) throw new Error(validationError)
 
   const id = crypto.randomUUID()
-  const safeFilename = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const storageKey = `${input.ownerType}/${input.ownerId}/${id}-${safeFilename}`
 
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storageKey, input.file, {
-    contentType: input.file.type || 'application/octet-stream',
+  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storageKey, file, {
+    contentType: file.type || 'application/octet-stream',
     upsert: false,
   })
   if (uploadError) throw uploadError
@@ -100,9 +106,9 @@ export async function uploadDocument(input: UploadDocumentInput): Promise<string
     owner_id: input.ownerId,
     doc_type: input.docType,
     storage_key: storageKey,
-    filename: input.file.name,
-    mime_type: input.file.type || 'application/octet-stream',
-    size_bytes: input.file.size,
+    filename: file.name,
+    mime_type: file.type || 'application/octet-stream',
+    size_bytes: file.size,
     uploaded_by: input.uploadedBy,
   })
   if (insertError) throw insertError

@@ -281,6 +281,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
         {view.name === 'record-detail' && (
           <RecordDetailScreen
             recordId={view.recordId}
+            currentUserId={user.id}
             currentUserRole={user.role}
             onBack={() => setView({ name: 'records-list' })}
             onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}

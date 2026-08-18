@@ -22,6 +22,7 @@ import type { DriverPurchaseAgreement } from '@/data/driverPurchaseAgreements'
 import { fetchAgreementsForDriver } from '@/data/driverPurchaseAgreements'
 import type { RouteOption, VehicleListItem } from '@/data/vehicles'
 import { fetchRoutes, fetchVehicles } from '@/data/vehicles'
+import { DocumentPanel } from '@/screens/DocumentPanel'
 
 interface DriverProfileScreenProps {
   driverId: string
@@ -158,6 +159,15 @@ export function DriverProfileScreen({
         <Field label="ID document number" value={driver.idDocumentNumber} />
         <Field label="Licence number" value={driver.licenceNumber} />
         <Field label="Licence expiry" value={driver.licenceExpiry} />
+      </Card>
+
+      <Card title="Photos & ID documents" className="mb-4">
+        <DocumentPanel
+          ownerType="DRIVER"
+          ownerId={driver.id}
+          currentUserId={currentUserId}
+          allowedTypes={['DRIVER_PHOTO', 'DRIVER_ID', 'DRIVER_LICENCE', 'OTHER']}
+        />
       </Card>
 
       <Card title="Employment" className="mb-4">

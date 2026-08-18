@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { formatMinorUnits } from '@/lib/money'
 import type { LedgerSummary, TransactionListItem } from '@/data/accounting'
 import {
@@ -73,20 +75,23 @@ export function AccountingHome({
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Accounting</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <IconChip section="accounting" />
+          <h1 className="font-heading text-xl font-bold text-slate-900">Accounting</h1>
+        </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onOpenFlaggedDuplicates}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+            className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
           >
             Flagged duplicates
           </button>
           <button
             type="button"
             onClick={onOpenApprovals}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+            className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
           >
             Approvals
           </button>
@@ -100,34 +105,25 @@ export function AccountingHome({
       )}
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <button
-          type="button"
-          onClick={onOpenSprinterIncome}
-          className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
-        >
-          <span className="block text-lg font-semibold text-slate-900">Sprinter Income</span>
+        <Card onClick={onOpenSprinterIncome}>
+          <IconChip section="vehicles" className="mb-3" />
+          <span className="font-heading block text-base font-semibold text-slate-900">Sprinter Income</span>
           <span className="mt-1 block text-sm text-slate-500">Expected vs. collected, by vehicle</span>
-        </button>
+        </Card>
 
-        <button
-          type="button"
-          onClick={onOpenTruckIncome}
-          className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
-        >
-          <span className="block text-lg font-semibold text-slate-900">Truck Income</span>
+        <Card onClick={onOpenTruckIncome}>
+          <IconChip section="vehicles" className="mb-3" />
+          <span className="font-heading block text-base font-semibold text-slate-900">Truck Income</span>
           <span className="mt-1 block text-sm text-slate-500">Trips, revenue, and net</span>
-        </button>
+        </Card>
 
-        <button
-          type="button"
-          onClick={onOpenKnownExpenses}
-          className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
-        >
-          <span className="block text-lg font-semibold text-slate-900">Known Expenses</span>
+        <Card onClick={onOpenKnownExpenses}>
+          <IconChip section="accounting" className="mb-3" />
+          <span className="font-heading block text-base font-semibold text-slate-900">Known Expenses</span>
           <span className="mt-1 block text-sm text-slate-500">
             {knownExpensesTotal !== null ? formatMinorUnits(-knownExpensesTotal) : '…'} this month
           </span>
-        </button>
+        </Card>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -144,9 +140,7 @@ export function AccountingHome({
         <SummaryCard label="Backdated entries" value={backdated !== null ? String(backdated) : '…'} />
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Recent transactions</h2>
-
+      <Card title="Recent transactions">
         {transactions === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
         {transactions?.length === 0 && <p className="text-sm text-slate-500">No transactions yet.</p>}
 
@@ -166,15 +160,15 @@ export function AccountingHome({
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
     </div>
   )
 }
 
 function SummaryCard({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+    <div className="rounded-2xl bg-white p-3 shadow-sm">
+      <p className="text-xs font-medium tracking-wide text-slate-400 uppercase">{label}</p>
       <p className={`mt-1 text-lg font-semibold ${negative ? 'text-red-600' : 'text-slate-900'}`}>{value}</p>
     </div>
   )

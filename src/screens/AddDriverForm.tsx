@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import type { CreateDriverInput } from '@/data/drivers'
 import { assignDriverToVehicle, createDriver } from '@/data/drivers'
 
@@ -73,7 +74,10 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
         ← Back
       </button>
 
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Add Driver</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <IconChip section="drivers" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Add Driver</h1>
+      </div>
       {assignToVehicleId && <p className="mb-4 text-sm text-slate-500">Will be assigned to this vehicle once added.</p>}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -84,7 +88,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -94,7 +98,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="text"
             value={knownAs}
             onChange={(e) => setKnownAs(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -104,7 +108,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -114,7 +118,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="tel"
             value={phoneAlt}
             onChange={(e) => setPhoneAlt(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -124,7 +128,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             rows={2}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -134,7 +138,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="text"
             value={nextOfKinName}
             onChange={(e) => setNextOfKinName(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -144,7 +148,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="tel"
             value={nextOfKinPhone}
             onChange={(e) => setNextOfKinPhone(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -155,7 +159,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             value={idDocumentType}
             onChange={(e) => setIdDocumentType(e.target.value)}
             placeholder="e.g. National ID, Voter ID"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -165,7 +169,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="text"
             value={idDocumentNumber}
             onChange={(e) => setIdDocumentNumber(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -175,7 +179,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="text"
             value={licenceNumber}
             onChange={(e) => setLicenceNumber(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -185,7 +189,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="date"
             value={licenceExpiry}
             onChange={(e) => setLicenceExpiry(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -195,7 +199,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             type="date"
             value={startedOn}
             onChange={(e) => setStartedOn(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -205,7 +209,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -218,7 +222,7 @@ export function AddDriverForm({ assignToVehicleId, onCreated, onCancel }: AddDri
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+          className="mt-2 rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Adding…' : assignToVehicleId ? 'Add and assign driver' : 'Add driver'}
         </button>

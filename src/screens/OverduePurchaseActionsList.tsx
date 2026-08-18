@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { ALERT_TYPE_LABELS } from '@/constants/labels'
 import type { AlertListItem } from '@/data/alerts'
 import { reviewAlert } from '@/data/alerts'
@@ -47,7 +48,10 @@ export function OverduePurchaseActionsList({ currentUserId, onBack, onOpenAlert 
         ← Back
       </button>
 
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">Overdue purchase actions</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <IconChip section="future-purchases" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Overdue purchase actions</h1>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">

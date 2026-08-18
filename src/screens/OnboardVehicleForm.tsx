@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { VEHICLE_STATUS_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { DriverListItem } from '@/data/drivers'
@@ -106,7 +107,10 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
         ← Back
       </button>
 
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Onboard vehicle</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <IconChip section="vehicles" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Onboard vehicle</h1>
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         {goalName} — landed cost and acquisition history carry across automatically. Only operational details are needed here.
       </p>
@@ -120,18 +124,18 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
             value={fleetId}
             onChange={(e) => setFleetId(e.target.value)}
             placeholder="e.g. SPR-06"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Plate (optional)</span>
-          <input type="text" value={plate} onChange={(e) => setPlate(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+          <input type="text" value={plate} onChange={(e) => setPlate(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Assigned driver (optional)</span>
-          <select value={currentDriverId} onChange={(e) => setCurrentDriverId(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base">
+          <select value={currentDriverId} onChange={(e) => setCurrentDriverId(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
             <option value="">None yet</option>
             {drivers.map((d) => (
               <option key={d.id} value={d.id}>
@@ -143,7 +147,7 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Route (optional)</span>
-          <select value={routeId} onChange={(e) => setRouteId(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base">
+          <select value={routeId} onChange={(e) => setRouteId(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
             <option value="">None</option>
             {routes.map((r) => (
               <option key={r.id} value={r.id}>
@@ -162,7 +166,7 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
               value={expectedDailyAmount}
               onChange={(e) => setExpectedDailyAmount(e.target.value)}
               placeholder="0.00"
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
             {dailyMinor !== null && expectedDailyAmount.trim() !== '' && <span className="text-xs text-slate-500">{formatMinorUnits(dailyMinor)}</span>}
           </label>
@@ -174,7 +178,7 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
               value={yearlyTarget}
               onChange={(e) => setYearlyTarget(e.target.value)}
               placeholder="0.00"
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
             {yearlyMinor !== null && yearlyTarget.trim() !== '' && <span className="text-xs text-slate-500">{formatMinorUnits(yearlyMinor)}</span>}
           </label>
@@ -182,12 +186,12 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Service entry date (optional)</span>
-          <input type="date" value={enteredServiceOn} onChange={(e) => setEnteredServiceOn(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+          <input type="date" value={enteredServiceOn} onChange={(e) => setEnteredServiceOn(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Current status</span>
-          <select value={status} onChange={(e) => setStatus(e.target.value as VehicleStatus)} className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base">
+          <select value={status} onChange={(e) => setStatus(e.target.value as VehicleStatus)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {VEHICLE_STATUS_LABELS[s]}
@@ -202,7 +206,7 @@ export function OnboardVehicleForm({ plannedVehicleId, goalName, onOnboarded, on
           </p>
         )}
 
-        <button type="submit" disabled={submitting} className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50">
+        <button type="submit" disabled={submitting} className="mt-2 rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50">
           {submitting ? 'Onboarding…' : 'Onboard vehicle'}
         </button>
       </form>

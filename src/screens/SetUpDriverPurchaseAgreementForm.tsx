@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { PAYMENT_FREQUENCY_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { DriverListItem } from '@/data/drivers'
@@ -167,7 +168,10 @@ export function SetUpDriverPurchaseAgreementForm({
         ← Back
       </button>
 
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Set up driver-purchase agreement</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <IconChip section="vehicles" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Set up driver-purchase agreement</h1>
+      </div>
       <p className="mb-4 text-sm text-slate-500">{vehicle.fleetId}</p>
 
       {alreadyExists ? (
@@ -181,7 +185,7 @@ export function SetUpDriverPurchaseAgreementForm({
             <select
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -200,7 +204,7 @@ export function SetUpDriverPurchaseAgreementForm({
               value={agreementAmount}
               onChange={(e) => setAgreementAmount(e.target.value)}
               placeholder="0.00"
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
             {agreementAmountMinor !== null && agreementAmount.trim() !== '' && (
               <span className="text-xs text-slate-500">{formatMinorUnits(agreementAmountMinor)}</span>
@@ -216,7 +220,7 @@ export function SetUpDriverPurchaseAgreementForm({
               value={regularPayment}
               onChange={(e) => setRegularPayment(e.target.value)}
               placeholder="0.00"
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
             {regularPaymentMinor !== null && regularPayment.trim() !== '' && (
               <span className="text-xs text-slate-500">{formatMinorUnits(regularPaymentMinor)}</span>
@@ -228,7 +232,7 @@ export function SetUpDriverPurchaseAgreementForm({
             <select
               value={paymentFrequency}
               onChange={(e) => setPaymentFrequency(e.target.value as PaymentFrequency)}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               {FREQUENCIES.map((f) => (
                 <option key={f} value={f}>
@@ -245,12 +249,12 @@ export function SetUpDriverPurchaseAgreementForm({
               required
               value={startedOn}
               onChange={(e) => setStartedOn(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
 
           {regularPaymentMinor !== null && regularPaymentMinor > 0 && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+            <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm">
               {(() => {
                 const daily = computeDailyEquivalentMinor(regularPaymentMinor, paymentFrequency, startedOn)
                 if (daily === null) {
@@ -276,7 +280,7 @@ export function SetUpDriverPurchaseAgreementForm({
               type="date"
               value={expectedCompletionOn}
               onChange={(e) => setExpectedCompletionOn(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
 
@@ -289,7 +293,7 @@ export function SetUpDriverPurchaseAgreementForm({
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+            className="mt-2 rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Saving…' : 'Set up agreement'}
           </button>

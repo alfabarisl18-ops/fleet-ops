@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { RouteOption, VehicleType } from '@/data/vehicles'
@@ -101,7 +102,10 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
         ← Back
       </button>
 
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">Add Vehicle</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <IconChip section="vehicles" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Add Vehicle</h1>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
@@ -112,7 +116,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             value={fleetId}
             onChange={(e) => setFleetId(e.target.value)}
             placeholder="e.g. SPR-06"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -121,7 +125,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
           <select
             value={type}
             onChange={(e) => setType(e.target.value as VehicleType)}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
           >
             {VEHICLE_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -140,7 +144,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
                 required
                 value={customType}
                 onChange={(e) => setCustomType(e.target.value)}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -149,7 +153,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
                 value={customDescription}
                 onChange={(e) => setCustomDescription(e.target.value)}
                 rows={2}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
           </>
@@ -160,7 +164,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
           <select
             value={routeId}
             onChange={(e) => setRouteId(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
           >
             <option value="">None</option>
             {routes.map((r) => (
@@ -177,7 +181,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             type="text"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -187,7 +191,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             type="text"
             value={plate}
             onChange={(e) => setPlate(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -197,7 +201,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             value={distinguishingMarks}
             onChange={(e) => setDistinguishingMarks(e.target.value)}
             rows={2}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -207,7 +211,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             type="date"
             value={purchasedOn}
             onChange={(e) => setPurchasedOn(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -219,7 +223,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             value={purchasePrice}
             onChange={(e) => setPurchasePrice(e.target.value)}
             placeholder="0.00"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
           {priceMinor !== null && purchasePrice.trim() !== '' && (
             <span className="text-xs text-slate-500">{formatMinorUnits(priceMinor)}</span>
@@ -232,7 +236,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             type="date"
             value={enteredServiceOn}
             onChange={(e) => setEnteredServiceOn(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -245,7 +249,7 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+          className="mt-2 rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Adding…' : 'Add vehicle'}
         </button>

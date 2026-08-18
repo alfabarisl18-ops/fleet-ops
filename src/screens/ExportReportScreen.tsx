@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { supabase } from '@/lib/supabase'
 import { buildTransactionsCsv, downloadCsv, fetchTransactionsForExport } from '@/data/export'
 
@@ -73,17 +74,20 @@ export function ExportReportScreen({ onBack }: ExportReportScreenProps) {
         ← Back
       </button>
 
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Export report</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <IconChip section="export" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Export report</h1>
+      </div>
       <p className="mb-4 text-sm text-slate-500">Every income and expense entry in the range, as a CSV you can open in Excel or hand to a bookkeeper.</p>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">From</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">To</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
         </label>
       </div>
 
@@ -99,7 +103,7 @@ export function ExportReportScreen({ onBack }: ExportReportScreenProps) {
         type="button"
         onClick={handleDownload}
         disabled={downloading || from === '' || to === ''}
-        className="rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+        className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
       >
         {downloading ? 'Preparing…' : 'Download CSV'}
       </button>

@@ -262,7 +262,7 @@ function OrderDetailsForm({
                 autoFocus
                 value={serviceArea}
                 onChange={(e) => setServiceArea(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
               >
                 <option value="" disabled>
                   Choose one
@@ -280,7 +280,7 @@ function OrderDetailsForm({
                   value={customArea}
                   onChange={(e) => setCustomArea(e.target.value)}
                   placeholder="Describe the area"
-                  className="mt-1 rounded-lg border border-slate-300 px-4 py-3 text-base"
+                  className="mt-1 rounded-xl border border-slate-300 px-4 py-3 text-base"
                 />
               )}
             </label>
@@ -292,7 +292,7 @@ function OrderDetailsForm({
               <select
                 value={problemDescriptor ?? ''}
                 onChange={(e) => setProblemDescriptor(e.target.value as ProblemDescriptor)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
               >
                 <option value="" disabled>
                   Choose one
@@ -315,7 +315,7 @@ function OrderDetailsForm({
                 value={workAction}
                 onChange={(e) => setWorkAction(e.target.value)}
                 rows={2}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
           )}
@@ -325,7 +325,7 @@ function OrderDetailsForm({
             <select
               value={handledBy}
               onChange={(e) => setHandledBy(e.target.value as MaintenanceHandledBy | '')}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               <option value="">Not set</option>
               {HANDLED_BY_OPTIONS.map((h) => (
@@ -341,7 +341,7 @@ function OrderDetailsForm({
             <select
               value={safetyStatus}
               onChange={(e) => setSafetyStatus(e.target.value as Roadworthiness)}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               {SAFETY_OPTIONS.map((s) => (
                 <option key={s} value={s}>
@@ -357,7 +357,7 @@ function OrderDetailsForm({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
 
@@ -371,7 +371,7 @@ function OrderDetailsForm({
             type="button"
             onClick={submit}
             disabled={submitting}
-            className="rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Saving…' : 'Save'}
           </button>

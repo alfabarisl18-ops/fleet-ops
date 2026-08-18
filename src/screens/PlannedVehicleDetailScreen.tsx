@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import {
   ACQUISITION_COST_CATEGORY_LABELS,
   ACQUISITION_PAYMENT_TYPE_LABELS,
@@ -102,15 +104,18 @@ export function PlannedVehicleDetailScreen({ plannedVehicleId, currentUserId, on
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold text-slate-900">
-          {vehicle.goalName} — Candidate #{vehicle.sequence}
-        </h1>
-        <p className="text-sm text-slate-500">{VEHICLE_TYPE_LABELS[vehicle.goalVehicleType]}</p>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="future-purchases" />
+        <div>
+          <h1 className="font-heading text-xl font-bold text-slate-900">
+            {vehicle.goalName} — Candidate #{vehicle.sequence}
+          </h1>
+          <p className="text-sm text-slate-500">{VEHICLE_TYPE_LABELS[vehicle.goalVehicleType]}</p>
+        </div>
       </div>
 
       {error && (
@@ -119,7 +124,7 @@ export function PlannedVehicleDetailScreen({ plannedVehicleId, currentUserId, on
         </p>
       )}
 
-      <Section title="Stage">
+      <Card title="Stage" className="mb-4">
         <StageControl
           plannedVehicleId={plannedVehicleId}
           stage={vehicle.stage}
@@ -129,7 +134,7 @@ export function PlannedVehicleDetailScreen({ plannedVehicleId, currentUserId, on
           <button
             type="button"
             onClick={() => onOnboard(plannedVehicleId, vehicle.goalName)}
-            className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white active:bg-emerald-700"
+            className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white active:bg-emerald-700"
           >
             Onboard vehicle
           </button>
@@ -137,9 +142,9 @@ export function PlannedVehicleDetailScreen({ plannedVehicleId, currentUserId, on
         {vehicle.onboardedVehicleId && (
           <p className="mt-2 text-sm text-emerald-700">Onboarded into the active fleet.</p>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Landed cost">
+      <Card title="Landed cost" className="mb-4">
         <div className="mb-3 flex gap-6 text-sm">
           <span className="text-slate-500">
             Estimated: <span className="font-medium text-slate-900">{formatMinorUnits(estimatedTotal)}</span>
@@ -154,9 +159,9 @@ export function PlannedVehicleDetailScreen({ plannedVehicleId, currentUserId, on
           )}
         </div>
         <CostLinesTable plannedVehicleId={plannedVehicleId} lines={costLines} onChanged={() => setReloadKey((k) => k + 1)} />
-      </Section>
+      </Card>
 
-      <Section title="Payments">
+      <Card title="Payments" className="mb-4">
         <ul className="mb-3 flex flex-col gap-1">
           {payments.map((p) => (
             <li key={p.id} className="flex items-center justify-between border-b border-slate-100 py-1.5 text-sm last:border-b-0">
@@ -170,27 +175,18 @@ export function PlannedVehicleDetailScreen({ plannedVehicleId, currentUserId, on
           {payments.length === 0 && <p className="text-sm text-slate-500">No payments recorded yet.</p>}
         </ul>
         <AddPaymentForm plannedVehicleId={plannedVehicleId} onAdded={() => setReloadKey((k) => k + 1)} />
-      </Section>
+      </Card>
 
       {showTransit && (
-        <Section title="Transit">
+        <Card title="Transit" className="mb-4">
           <TransitForm plannedVehicleId={plannedVehicleId} transit={transit} onSaved={() => setReloadKey((k) => k + 1)} />
-        </Section>
+        </Card>
       )}
 
-      <Section title="Documents">
+      <Card title="Documents">
         <DocumentPanel ownerType="PLANNED_VEHICLE" ownerId={plannedVehicleId} currentUserId={currentUserId} />
-      </Section>
+      </Card>
     </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {children}
-    </section>
   )
 }
 
@@ -234,13 +230,13 @@ function StageControl({ plannedVehicleId, stage, onChanged }: { plannedVehicleId
             type="button"
             onClick={() => move(next)}
             disabled={submitting}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Saving…' : `Advance to ${PURCHASE_STAGE_LABELS[next]}`}
           </button>
         )}
         {stage !== 'CANCELLED' && (
-          <button type="button" onClick={() => setShowAll((v) => !v)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+          <button type="button" onClick={() => setShowAll((v) => !v)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
             Move to a different stage
           </button>
         )}
@@ -254,7 +250,7 @@ function StageControl({ plannedVehicleId, stage, onChanged }: { plannedVehicleId
               type="button"
               onClick={() => move(s)}
               disabled={submitting}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 active:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm text-slate-700 active:bg-slate-50"
             >
               {PURCHASE_STAGE_LABELS[s]}
             </button>
@@ -277,7 +273,7 @@ function CostLinesTable({ plannedVehicleId, lines, onChanged }: { plannedVehicle
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
+          <tr className="border-b border-slate-200 text-left text-xs tracking-wide text-slate-400 uppercase">
             <th className="py-1.5 pr-2">Category</th>
             <th className="py-1.5 pr-2">Estimated</th>
             <th className="py-1.5 pr-2">Actual</th>
@@ -335,7 +331,7 @@ function CostLineRow({
         <td className="py-1.5 pr-2 text-slate-500">{line?.estimatedMinor != null ? formatMinorUnits(line.estimatedMinor) : '—'}</td>
         <td className="py-1.5 pr-2 text-slate-900">
           {line?.actualMinor != null ? formatMinorUnits(line.actualMinor) : '—'}{' '}
-          <button type="button" onClick={() => setEditing(true)} className="text-xs text-slate-400 underline decoration-slate-300">
+          <button type="button" onClick={() => setEditing(true)} className="text-xs text-primary-600 underline decoration-primary-200">
             Edit
           </button>
         </td>
@@ -347,12 +343,12 @@ function CostLineRow({
     <tr className="border-b border-slate-100">
       <td className="py-1.5 pr-2 text-slate-700">{ACQUISITION_COST_CATEGORY_LABELS[category]}</td>
       <td className="py-1.5 pr-2">
-        <input type="text" inputMode="decimal" value={estimated} onChange={(e) => setEstimated(e.target.value)} className="w-24 rounded border border-slate-300 px-2 py-1 text-sm" />
+        <input type="text" inputMode="decimal" value={estimated} onChange={(e) => setEstimated(e.target.value)} className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm" />
       </td>
       <td className="py-1.5 pr-2">
         <div className="flex items-center gap-1">
-          <input type="text" inputMode="decimal" value={actual} onChange={(e) => setActual(e.target.value)} className="w-24 rounded border border-slate-300 px-2 py-1 text-sm" />
-          <button type="button" onClick={save} disabled={saving} className="text-xs text-slate-900 underline decoration-slate-300 disabled:opacity-50">
+          <input type="text" inputMode="decimal" value={actual} onChange={(e) => setActual(e.target.value)} className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm" />
+          <button type="button" onClick={save} disabled={saving} className="text-xs text-primary-600 underline decoration-primary-200 disabled:opacity-50">
             {saving ? '…' : 'Save'}
           </button>
           <button type="button" onClick={() => setEditing(false)} className="text-xs text-slate-400">
@@ -377,7 +373,7 @@ function AddPaymentForm({ plannedVehicleId, onAdded }: { plannedVehicleId: strin
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50">
+      <button type="button" onClick={() => setOpen(true)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50">
         + Record a payment
       </button>
     )
@@ -420,20 +416,20 @@ function AddPaymentForm({ plannedVehicleId, onAdded }: { plannedVehicleId: strin
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       <div className="grid grid-cols-2 gap-2">
-        <select value={paymentType} onChange={(e) => setPaymentType(e.target.value as AcquisitionPaymentType)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+        <select value={paymentType} onChange={(e) => setPaymentType(e.target.value as AcquisitionPaymentType)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
           {PAYMENT_TYPES.map((t) => (
             <option key={t} value={t}>
               {ACQUISITION_PAYMENT_TYPE_LABELS[t]}
             </option>
           ))}
         </select>
-        <input type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="date" value={nextDueOn} onChange={(e) => setNextDueOn(e.target.value)} placeholder="Next due (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" value={method} onChange={(e) => setMethod(e.target.value)} placeholder="Method (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} placeholder="Recipient (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="date" value={nextDueOn} onChange={(e) => setNextDueOn(e.target.value)} placeholder="Next due (optional)" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={method} onChange={(e) => setMethod(e.target.value)} placeholder="Method (optional)" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} placeholder="Recipient (optional)" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
       </div>
       {error && (
         <p role="alert" className="text-sm text-red-600">
@@ -441,10 +437,10 @@ function AddPaymentForm({ plannedVehicleId, onAdded }: { plannedVehicleId: strin
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" onClick={submit} disabled={submitting} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+        <button type="button" onClick={submit} disabled={submitting} className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {submitting ? 'Recording…' : 'Record payment'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+        <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
           Cancel
         </button>
       </div>
@@ -491,31 +487,31 @@ function TransitForm({ plannedVehicleId, transit, onSaved }: { plannedVehicleId:
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-2">
-        <input type="text" value={vin} onChange={(e) => setVin(e.target.value)} placeholder="VIN" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} placeholder="Engine number" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" value={shippingCompany} onChange={(e) => setShippingCompany(e.target.value)} placeholder="Shipping company" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" value={billOfLading} onChange={(e) => setBillOfLading(e.target.value)} placeholder="Bill of lading" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={vin} onChange={(e) => setVin(e.target.value)} placeholder="VIN" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} placeholder="Engine number" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={shippingCompany} onChange={(e) => setShippingCompany(e.target.value)} placeholder="Shipping company" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={billOfLading} onChange={(e) => setBillOfLading(e.target.value)} placeholder="Bill of lading" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
         <label className="flex flex-col gap-1 text-xs text-slate-500">
           Shipped on
-          <input type="date" value={shippedOn} onChange={(e) => setShippedOn(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
+          <input type="date" value={shippedOn} onChange={(e) => setShippedOn(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-slate-500">
           Expected arrival
-          <input type="date" value={expectedArrival} onChange={(e) => setExpectedArrival(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
+          <input type="date" value={expectedArrival} onChange={(e) => setExpectedArrival(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-slate-500">
           Actual arrival
-          <input type="date" value={actualArrival} onChange={(e) => setActualArrival(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
+          <input type="date" value={actualArrival} onChange={(e) => setActualArrival(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900" />
         </label>
-        <input type="text" value={currentLocation} onChange={(e) => setCurrentLocation(e.target.value)} placeholder="Current location" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" value={clearingAgent} onChange={(e) => setClearingAgent(e.target.value)} placeholder="Clearing agent" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={currentLocation} onChange={(e) => setCurrentLocation(e.target.value)} placeholder="Current location" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" value={clearingAgent} onChange={(e) => setClearingAgent(e.target.value)} placeholder="Clearing agent" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
       </div>
       {error && (
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
       )}
-      <button type="button" onClick={save} disabled={submitting} className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+      <button type="button" onClick={save} disabled={submitting} className="self-start rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
         {submitting ? 'Saving…' : 'Save transit details'}
       </button>
     </div>

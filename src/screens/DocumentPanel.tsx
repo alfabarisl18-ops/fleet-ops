@@ -79,9 +79,9 @@ export function DocumentPanel({ ownerType, ownerId, currentUserId }: DocumentPan
             <button
               type="button"
               onClick={() => handleOpen(doc)}
-              className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm active:bg-slate-50"
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-left text-sm active:bg-slate-50"
             >
-              <span className="text-slate-900 underline decoration-slate-300">{doc.filename}</span>
+              <span className="text-primary-700 underline decoration-primary-200">{doc.filename}</span>
               <span className="text-slate-500">{DOCUMENT_TYPE_LABELS[doc.docType]}</span>
             </button>
           </li>
@@ -98,7 +98,7 @@ export function DocumentPanel({ ownerType, ownerId, currentUserId }: DocumentPan
         <select
           value={docType}
           onChange={(e) => setDocType(e.target.value as DocumentType)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
         >
           {DOC_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -111,7 +111,7 @@ export function DocumentPanel({ ownerType, ownerId, currentUserId }: DocumentPan
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
         >
           {uploading ? 'Uploading…' : '+ Attach a document'}
         </button>

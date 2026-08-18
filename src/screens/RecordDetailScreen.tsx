@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import { recordTypeLabel } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
@@ -120,19 +122,24 @@ export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVe
 
   return (
     <div className="mx-auto max-w-xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <p className="mb-1 text-sm text-slate-500">{recordTypeLabel(record.recordType)}</p>
-      <h1 className="mb-6 text-xl font-semibold text-slate-900">{record.summaryText}</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="records" />
+        <div>
+          <p className="text-sm text-slate-500">{recordTypeLabel(record.recordType)}</p>
+          <h1 className="font-heading text-xl font-bold text-slate-900">{record.summaryText}</h1>
+        </div>
+      </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <Card>
         {record.vehicleId && (
           <Field
             label="Vehicle"
             value={
-              <button type="button" onClick={() => onOpenVehicle(record.vehicleId as string)} className="underline decoration-slate-300">
+              <button type="button" onClick={() => onOpenVehicle(record.vehicleId as string)} className="text-primary-700 underline decoration-primary-200">
                 {vehicleFleetId ?? '…'}
               </button>
             }
@@ -142,7 +149,7 @@ export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVe
           <Field
             label="Driver"
             value={
-              <button type="button" onClick={() => onOpenDriver(record.driverId as string)} className="underline decoration-slate-300">
+              <button type="button" onClick={() => onOpenDriver(record.driverId as string)} className="text-primary-700 underline decoration-primary-200">
                 {driverName ?? '…'}
               </button>
             }
@@ -157,7 +164,7 @@ export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVe
         <Field label="Applies to" value={record.appliesToDate ?? '—'} />
         <Field label="Entered" value={record.enteredAt.slice(0, 10)} />
         <Field label="Entered by" value={enteredByName ?? '…'} />
-      </div>
+      </Card>
 
       {dailyPayment &&
         (currentUserRole === 'OWNER_ADMIN' || currentUserRole === 'FLEET_MANAGER') &&
@@ -167,7 +174,7 @@ export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVe
         )}
 
       {dailyPayment?.shortfallTreatmentOverride && (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm text-amber-800">
             Converted to driver debt on review: {dailyPayment.shortfallTreatmentOverrideReason}
           </p>
@@ -211,7 +218,7 @@ function ShortfallReviewPanel({ dailyPaymentId, onDone }: { dailyPaymentId: stri
       <button
         type="button"
         onClick={() => setReviewing(true)}
-        className="mt-4 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+        className="mt-4 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         Convert to driver debt
       </button>
@@ -219,14 +226,14 @@ function ShortfallReviewPanel({ dailyPaymentId, onDone }: { dailyPaymentId: stri
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="mt-4 flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Reason</span>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={2}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
 
@@ -241,7 +248,7 @@ function ShortfallReviewPanel({ dailyPaymentId, onDone }: { dailyPaymentId: stri
           type="button"
           onClick={confirm}
           disabled={submitting}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Confirm'}
         </button>
@@ -251,7 +258,7 @@ function ShortfallReviewPanel({ dailyPaymentId, onDone }: { dailyPaymentId: stri
             setReviewing(false)
             setError(null)
           }}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+          className="rounded-xl px-4 py-2 text-sm font-medium text-slate-500"
         >
           Cancel
         </button>

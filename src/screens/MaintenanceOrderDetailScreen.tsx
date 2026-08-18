@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import {
   FILTER_ACTION_LABELS,
   MAINTENANCE_HANDLED_BY_LABELS,
@@ -65,6 +67,12 @@ function isDesktopRole(role: AppRole): boolean {
  * both is_desktop() and is_maintenance() callers per RLS. The one
  * desktop-only action, old_parts_returned, is gated on currentUserRole
  * the same way DriverProfileScreen gates its delete action.
+ *
+ * Restyled with the same token/component vocabulary as every other
+ * desktop screen (so it doesn't look foreign inside DesktopShell) but
+ * deliberately kept single-column and width-unopinionated — no grid,
+ * no assumption of a wide pane — since MaintenanceWorkspace renders this
+ * on a phone with none of DesktopShell's surrounding chrome.
  */
 export function MaintenanceOrderDetailScreen({
   orderId,
@@ -133,24 +141,29 @@ export function MaintenanceOrderDetailScreen({
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <p className="mb-1 text-sm text-slate-500">{MAINTENANCE_RECORD_TYPE_LABELS[order.recordType]}</p>
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">
-        {onOpenVehicle ? (
-          <button type="button" onClick={() => onOpenVehicle(order.vehicleId)} className="underline decoration-slate-300">
-            {order.vehicleFleetId}
-          </button>
-        ) : (
-          order.vehicleFleetId
-        )}
-        <span className="ml-2 font-normal text-slate-500">
-          {order.serviceArea === 'OIL_CHANGE' ? 'Oil Change' : order.serviceArea}
-        </span>
-      </h1>
-      <p className="mb-4 text-sm text-slate-500">Identified {order.identifiedOn}</p>
+      <div className="mb-6 flex items-center gap-3">
+        <IconChip section="maintenance" />
+        <div>
+          <p className="text-sm text-slate-500">{MAINTENANCE_RECORD_TYPE_LABELS[order.recordType]}</p>
+          <h1 className="font-heading text-xl font-bold text-slate-900">
+            {onOpenVehicle ? (
+              <button type="button" onClick={() => onOpenVehicle(order.vehicleId)} className="text-primary-700 underline decoration-primary-200">
+                {order.vehicleFleetId}
+              </button>
+            ) : (
+              order.vehicleFleetId
+            )}
+            <span className="ml-2 font-normal text-slate-500">
+              {order.serviceArea === 'OIL_CHANGE' ? 'Oil Change' : order.serviceArea}
+            </span>
+          </h1>
+          <p className="text-sm text-slate-500">Identified {order.identifiedOn}</p>
+        </div>
+      </div>
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-600">
@@ -158,11 +171,11 @@ export function MaintenanceOrderDetailScreen({
         </p>
       )}
 
-      <Section title="Status">
+      <Card title="Status" className="mb-4">
         <StatusControl order={order} currentUserId={currentUserId} onChanged={reload} />
         {history.length > 0 && (
           <div className="mt-3">
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">History</h3>
+            <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">History</h3>
             <ul className="flex flex-col gap-1">
               {history.map((h) => (
                 <li key={h.id} className="text-sm">
@@ -174,24 +187,24 @@ export function MaintenanceOrderDetailScreen({
             </ul>
           </div>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Details">
+      <Card title="Details" className="mb-4">
         <Field label="Work action" value={order.workAction === 'OIL_CHANGE' ? 'Oil Change' : order.workAction} />
         <Field label="Problem" value={order.problemDescriptor ? PROBLEM_DESCRIPTOR_LABELS[order.problemDescriptor] : null} />
         <Field label="Handled by" value={order.handledBy ? MAINTENANCE_HANDLED_BY_LABELS[order.handledBy] : null} />
         <Field label="Vehicle condition" value={ROADWORTHINESS_LABELS[order.safetyStatus]} />
         <Field label="Grounded" value={order.isGrounded ? 'Yes' : 'No'} />
         <Field label="Notes" value={order.notes} />
-      </Section>
+      </Card>
 
       {isDesktopRole(currentUserRole) && (
-        <Section title="Reminder">
+        <Card title="Reminder" className="mb-4">
           <ReminderPanel order={order} onSaved={reload} />
-        </Section>
+        </Card>
       )}
 
-      <Section title="Parts">
+      <Card title="Parts" className="mb-4">
         {parts.length > 0 && (
           <ul className="mb-3 flex flex-col gap-1">
             {parts.map((p) => (
@@ -228,9 +241,9 @@ export function MaintenanceOrderDetailScreen({
             Old parts returned
           </label>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Notes">
+      <Card title="Notes">
         {notes.length > 0 && (
           <ul className="mb-3 flex flex-col gap-2">
             {notes.map((n) => (
@@ -242,17 +255,8 @@ export function MaintenanceOrderDetailScreen({
           </ul>
         )}
         <AddNotePanel orderId={order.id} currentUserId={currentUserId} onAdded={reload} />
-      </Section>
+      </Card>
     </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {children}
-    </section>
   )
 }
 
@@ -309,7 +313,7 @@ function StatusControl({
               key={s}
               type="button"
               onClick={() => setTarget(s)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
             >
               {MAINTENANCE_STATUS_LABELS[s]}
             </button>
@@ -318,7 +322,7 @@ function StatusControl({
       )}
 
       {target && (
-        <div className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
           <p className="text-sm text-slate-700">
             Change status to <span className="font-medium">{MAINTENANCE_STATUS_LABELS[target]}</span>
           </p>
@@ -327,7 +331,7 @@ function StatusControl({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional)"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
           />
           {error && (
             <p role="alert" className="text-sm text-red-600">
@@ -339,7 +343,7 @@ function StatusControl({
               type="button"
               onClick={confirm}
               disabled={submitting}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Confirm'}
             </button>
@@ -349,7 +353,7 @@ function StatusControl({
                 setTarget(null)
                 setError(null)
               }}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
             >
               Cancel
             </button>
@@ -409,7 +413,7 @@ function ReminderPanel({ order, onSaved }: { order: MaintenanceOrderDetail; onSa
           type="date"
           value={reminderDate}
           onChange={(e) => setReminderDate(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -418,7 +422,7 @@ function ReminderPanel({ order, onSaved }: { order: MaintenanceOrderDetail; onSa
           type="date"
           value={expectedCompletionOn}
           onChange={(e) => setExpectedCompletionOn(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -428,7 +432,7 @@ function ReminderPanel({ order, onSaved }: { order: MaintenanceOrderDetail; onSa
           min={0}
           value={estimatedGroundedDays}
           onChange={(e) => setEstimatedGroundedDays(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
 
@@ -443,7 +447,7 @@ function ReminderPanel({ order, onSaved }: { order: MaintenanceOrderDetail; onSa
         type="button"
         onClick={save}
         disabled={submitting}
-        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="self-start rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {submitting ? 'Saving…' : 'Save'}
       </button>
@@ -506,7 +510,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         + Add part
       </button>
@@ -514,7 +518,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Part name</span>
         <input
@@ -522,7 +526,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
           autoFocus
           value={partName}
           onChange={(e) => setPartName(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>
 
@@ -531,7 +535,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
         <select
           value={partSource}
           onChange={(e) => setPartSource(e.target.value as PartSource)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
         >
           {PART_SOURCES.map((s) => (
             <option key={s} value={s}>
@@ -546,7 +550,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
         <select
           value={filterAction}
           onChange={(e) => setFilterAction(e.target.value as FilterAction)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
         >
           {FILTER_ACTIONS.map((f) => (
             <option key={f} value={f}>
@@ -564,7 +568,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
             min={1}
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
           />
         </label>
         <label className="flex flex-1 flex-col gap-1">
@@ -575,7 +579,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
             placeholder="0.00"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
           />
         </label>
       </div>
@@ -591,7 +595,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
           type="button"
           onClick={submit}
           disabled={submitting}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Add'}
         </button>
@@ -601,7 +605,7 @@ function AddPartPanel({ orderId, onAdded }: { orderId: string; onAdded: () => vo
             setOpen(false)
             setError(null)
           }}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+          className="rounded-xl px-4 py-2 text-sm font-medium text-slate-500"
         >
           Cancel
         </button>
@@ -640,7 +644,7 @@ function AddNotePanel({ orderId, currentUserId, onAdded }: { orderId: string; cu
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
+        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         + Add note
       </button>
@@ -648,13 +652,13 @@ function AddNotePanel({ orderId, currentUserId, onAdded }: { orderId: string; cu
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       <textarea
         autoFocus
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={3}
-        className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
       />
       {error && (
         <p role="alert" className="text-sm text-red-600">
@@ -666,7 +670,7 @@ function AddNotePanel({ orderId, currentUserId, onAdded }: { orderId: string; cu
           type="button"
           onClick={submit}
           disabled={submitting}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Add'}
         </button>
@@ -676,7 +680,7 @@ function AddNotePanel({ orderId, currentUserId, onAdded }: { orderId: string; cu
             setOpen(false)
             setError(null)
           }}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500"
+          className="rounded-xl px-4 py-2 text-sm font-medium text-slate-500"
         >
           Cancel
         </button>

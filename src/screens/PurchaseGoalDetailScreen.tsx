@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/Card'
+import { IconChip } from '@/components/IconChip'
 import {
   FUEL_TYPE_LABELS,
   PURCHASE_GOAL_STATUS_LABELS,
@@ -121,17 +123,20 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
+      <button type="button" onClick={onBack} className="mb-4 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">{goal.name}</h1>
-          <p className="text-sm text-slate-500">
-            {VEHICLE_TYPE_LABELS[goal.vehicleType]}
-            {goal.vehicleType === 'OTHER' && goal.customType ? ` — ${goal.customType}` : ''} · {goal.vehiclesRequired} required
-          </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <IconChip section="future-purchases" />
+          <div>
+            <h1 className="font-heading text-xl font-bold text-slate-900">{goal.name}</h1>
+            <p className="text-sm text-slate-500">
+              {VEHICLE_TYPE_LABELS[goal.vehicleType]}
+              {goal.vehicleType === 'OTHER' && goal.customType ? ` — ${goal.customType}` : ''} · {goal.vehiclesRequired} required
+            </p>
+          </div>
         </div>
         <StatusPicker
           status={goal.status}
@@ -148,7 +153,7 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
         </p>
       )}
 
-      <Section title="Details">
+      <Card title="Details" className="mb-4">
         <Field label="Priority" value={PURCHASE_PRIORITY_LABELS[goal.priority]} />
         <Field label="Condition" value={goal.condition ? VEHICLE_CONDITION_LABELS[goal.condition] : null} />
         <Field label="Make / model" value={[goal.make, goal.model].filter(Boolean).join(' ') || null} />
@@ -161,11 +166,11 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
         <Field label="Target purchase date" value={goal.targetPurchaseDate} />
         <Field label="Expected arrival" value={goal.expectedArrivalDate} />
         {goal.notes && (
-          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{goal.notes}</p>
+          <p className="mt-2 text-sm whitespace-pre-wrap text-slate-700">{goal.notes}</p>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Funding">
+      <Card title="Funding" className="mb-4">
         {target ? (
           <>
             <div className="mb-2 h-2 overflow-hidden rounded-full bg-slate-200">
@@ -191,9 +196,9 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
           <SavingsTargetForm goalId={goalId} onSaved={() => setReloadKey((k) => k + 1)} />
         )}
         {target && <SavingsTargetEditToggle goalId={goalId} target={target} onSaved={() => setReloadKey((k) => k + 1)} />}
-      </Section>
+      </Card>
 
-      <Section title="Cash reserved">
+      <Card title="Cash reserved" className="mb-4">
         {isOwner ? (
           <ReservationPanel goalId={goalId} currentUserId={currentUserId} onChanged={() => setReloadKey((k) => k + 1)} />
         ) : (
@@ -211,10 +216,10 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
           ))}
           {reservations?.length === 0 && <p className="text-sm text-slate-500">No cash reserved yet.</p>}
         </ul>
-      </Section>
+      </Card>
 
       {forecast && (
-        <Section title="Forecast">
+        <Card title="Forecast" className="mb-4">
           <p className="text-sm text-slate-700">
             Average monthly profit over the last 3 months: {formatMinorUnits(forecast.avgMonthlyProfitMinor)}
             {forecast.outstandingBalancesMinor > 0 && ` (plus ${formatMinorUnits(forecast.outstandingBalancesMinor)} still owed to the business)`}.
@@ -226,10 +231,10 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
           ) : (
             <p className="mt-1 text-sm text-slate-500">Set a savings target and a monthly amount to see a projected funded date.</p>
           )}
-        </Section>
+        </Card>
       )}
 
-      <Section title="Candidate vehicles">
+      <Card title="Candidate vehicles" className="mb-4">
         <p className="mb-3 text-sm text-slate-500">
           Compare candidates side by side — nothing here is auto-selected. Advance one to Deposit paid or later once you've decided.
         </p>
@@ -239,19 +244,14 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
             const estimatedTotal = lines.reduce((sum, l) => sum + (l.estimatedMinor ?? 0), 0)
             const actualTotal = lines.reduce((sum, l) => sum + (l.actualMinor ?? 0), 0)
             return (
-              <button
-                key={pv.id}
-                type="button"
-                onClick={() => onOpenPlannedVehicle(pv.id)}
-                className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm active:bg-slate-50"
-              >
+              <Card key={pv.id} onClick={() => onOpenPlannedVehicle(pv.id)}>
                 <span className="block font-medium text-slate-900">Candidate #{pv.sequence}</span>
                 <span className="block text-sm text-slate-500">{PURCHASE_STAGE_LABELS[pv.stage]}</span>
                 <span className="mt-2 block text-sm text-slate-700">
                   Est. landed cost: {estimatedTotal > 0 ? formatMinorUnits(estimatedTotal) : '—'}
                 </span>
                 {actualTotal > 0 && <span className="block text-sm text-slate-700">Actual so far: {formatMinorUnits(actualTotal)}</span>}
-              </button>
+              </Card>
             )
           })}
         </div>
@@ -260,15 +260,15 @@ export function PurchaseGoalDetailScreen({ goalId, currentUserId, currentUserRol
           type="button"
           onClick={handleAddCandidate}
           disabled={addingCandidate}
-          className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+          className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
         >
           {addingCandidate ? 'Adding…' : '+ Add a candidate vehicle'}
         </button>
-      </Section>
+      </Card>
 
-      <Section title="Supporting documents">
+      <Card title="Supporting documents">
         <DocumentPanel ownerType="PURCHASE_GOAL" ownerId={goalId} currentUserId={currentUserId} />
-      </Section>
+      </Card>
     </div>
   )
 }
@@ -278,15 +278,6 @@ function progressColor(percent: number | null): string {
   if (percent >= 90) return 'bg-emerald-500'
   if (percent >= 50) return 'bg-amber-500'
   return 'bg-red-500'
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {children}
-    </section>
-  )
 }
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
@@ -313,7 +304,7 @@ function StatusPicker({ status, onChange }: { status: PurchaseGoalStatus; onChan
           setSaving(false)
         }
       }}
-      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
     >
       {GOAL_STATUSES.map((s) => (
         <option key={s} value={s}>
@@ -359,9 +350,9 @@ function SavingsTargetForm({ goalId, onSaved }: { goalId: string; onSaved: () =>
           value={budget}
           onChange={(e) => setBudget(e.target.value)}
           placeholder="Total budget"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
-        <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
       </div>
       {error && (
         <p role="alert" className="text-sm text-red-600">
@@ -372,7 +363,7 @@ function SavingsTargetForm({ goalId, onSaved }: { goalId: string; onSaved: () =>
         type="button"
         onClick={save}
         disabled={submitting}
-        className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="self-start rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {submitting ? 'Saving…' : 'Set savings target'}
       </button>
@@ -391,7 +382,7 @@ function SavingsTargetEditToggle({ goalId, target, onSaved }: { goalId: string; 
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="mt-2 text-sm text-slate-500 underline decoration-slate-300">
+      <button type="button" onClick={() => setOpen(true)} className="mt-2 text-sm text-primary-600 underline decoration-primary-200">
         Edit savings target
       </button>
     )
@@ -425,12 +416,12 @@ function SavingsTargetEditToggle({ goalId, target, onSaved }: { goalId: string; 
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
       <div className="grid grid-cols-2 gap-2">
-        <input type="text" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Total budget" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" inputMode="decimal" value={weekly} onChange={(e) => setWeekly(e.target.value)} placeholder="Weekly target" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <input type="text" inputMode="decimal" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="Monthly target" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Total budget" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" inputMode="decimal" value={weekly} onChange={(e) => setWeekly(e.target.value)} placeholder="Weekly target" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <input type="text" inputMode="decimal" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="Monthly target" className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
       </div>
       {error && (
         <p role="alert" className="text-sm text-red-600">
@@ -438,10 +429,10 @@ function SavingsTargetEditToggle({ goalId, target, onSaved }: { goalId: string; 
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" onClick={save} disabled={submitting} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+        <button type="button" onClick={save} disabled={submitting} className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {submitting ? 'Saving…' : 'Save'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+        <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
           Cancel
         </button>
       </div>
@@ -487,10 +478,10 @@ function ReservationPanel({ goalId, currentUserId, onChanged }: { goalId: string
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Amount to reserve"
-          className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-40 rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
-        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <button type="button" onClick={reserve} disabled={submitting} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        <button type="button" onClick={reserve} disabled={submitting} className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {submitting ? 'Reserving…' : 'Reserve cash'}
         </button>
       </div>
@@ -529,7 +520,7 @@ function ReleasablePanel({ goalId, currentUserId, onChanged }: { goalId: string;
             await releaseCash(r.id, currentUserId)
             onChanged()
           }}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 active:bg-slate-50"
+          className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-600 active:bg-slate-50"
         >
           Release {formatMinorUnits(r.amountMinor)}
         </button>

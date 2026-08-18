@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/Card'
 import type { SectionKey } from '@/components/IconChip'
-import { IconChip, SECTION_LABELS, SECTION_ORDER } from '@/components/IconChip'
-import { recordTypeLabel } from '@/constants/labels'
+import { IconChip, SECTION_LABELS, SECTION_ORDER, SectionGlyph } from '@/components/IconChip'
+import { recordTypeLabel, VEHICLE_STATUS_LABELS } from '@/constants/labels'
 import type { ActivityRecord } from '@/data/activityRecords'
 import { fetchActivityRecords } from '@/data/activityRecords'
 import type { VehicleListItem, VehicleStatus } from '@/data/vehicles'
@@ -10,6 +10,7 @@ import { fetchVehicles, summarizeVehicles } from '@/data/vehicles'
 
 interface DesktopHomeProps {
   onOpenVehicles: () => void
+  onOpenVehicle: (vehicleId: string) => void
   onOpenDrivers: () => void
   onOpenRecords: () => void
   onOpenMaintenance: () => void
@@ -30,13 +31,15 @@ const SECTION_SUBTITLES: Record<SectionKey, string> = {
   settings: 'People, roles, PINs, and permissions',
 }
 
-// Same dots VehicleList.tsx already uses — colour is never the only
-// channel, each pairs with the status word right next to it.
-const STATUS_DOT_CLASS: Record<VehicleStatus, string> = {
-  ACTIVE: 'bg-emerald-500',
-  GROUNDED: 'bg-red-500',
-  IN_MAINTENANCE: 'bg-amber-500',
-  ARCHIVED: 'bg-slate-400',
+// The "Your vehicles" grid's per-status icon treatment. ARCHIVED never
+// actually renders here — fetchVehicles() already excludes archived
+// vehicles — but the map stays exhaustive over VehicleStatus so a future
+// status value fails typecheck here instead of rendering unstyled.
+const VEHICLE_ICON_STYLES: Record<VehicleStatus, { bg: string; fg: string }> = {
+  ACTIVE: { bg: 'bg-primary-50', fg: 'text-primary-600' },
+  GROUNDED: { bg: 'bg-red-50', fg: 'text-red-600' },
+  IN_MAINTENANCE: { bg: 'bg-amber-50', fg: 'text-amber-600' },
+  ARCHIVED: { bg: 'bg-slate-100', fg: 'text-slate-400' },
 }
 
 /**
@@ -56,6 +59,7 @@ const STATUS_DOT_CLASS: Record<VehicleStatus, string> = {
  */
 export function DesktopHome({
   onOpenVehicles,
+  onOpenVehicle,
   onOpenDrivers,
   onOpenRecords,
   onOpenMaintenance,
@@ -141,14 +145,34 @@ export function DesktopHome({
           </div>
           {vehicles === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
           {vehicles?.length === 0 && <p className="text-sm text-slate-500">No vehicles yet.</p>}
-          <ul className="flex flex-col divide-y divide-slate-100">
-            {vehicles?.slice(0, 6).map((v) => (
-              <li key={v.id} className="flex items-center gap-2 py-2 text-sm">
-                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_CLASS[v.status]}`} />
-                <span className="min-w-0 flex-1 truncate font-medium text-slate-900">{v.fleetId}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {vehicles?.map((v) => {
+              const style = VEHICLE_ICON_STYLES[v.status]
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => onOpenVehicle(v.id)}
+                  aria-label={`${v.fleetId}, ${VEHICLE_STATUS_LABELS[v.status]}`}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl ${style.bg} px-2 py-3 transition-colors hover:brightness-95`}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.7}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className={`h-7 w-7 ${style.fg}`}
+                  >
+                    <SectionGlyph section="vehicles" />
+                  </svg>
+                  <span className="max-w-full truncate text-xs font-medium text-slate-700">{v.fleetId}</span>
+                </button>
+              )
+            })}
+          </div>
         </Card>
 
         <Card>

@@ -197,6 +197,7 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
         {view.name === 'home' && (
           <DesktopHome
             onOpenVehicles={() => setView({ name: 'vehicle-list' })}
+            onOpenVehicle={(vehicleId) => setView({ name: 'vehicle-profile', vehicleId })}
             onOpenDrivers={() => setView({ name: 'driver-list' })}
             onOpenRecords={() => setView({ name: 'records-list' })}
             onOpenMaintenance={() => setView({ name: 'maintenance-list' })}

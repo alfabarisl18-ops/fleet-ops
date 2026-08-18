@@ -138,7 +138,7 @@ function VehiclePicker({
           required
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+          className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
         />
         <span className="text-xs text-slate-400">Not used for a box truck — trip entry has its own dates.</span>
       </label>
@@ -160,7 +160,7 @@ function VehiclePicker({
                   type="button"
                   disabled={!isDayOutcomeEligible(v.type) ? false : date === ''}
                   onClick={() => onChoose(v.id, v.fleetId, v.type, date, bundle)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50 disabled:opacity-50"
+                  className="w-full rounded-2xl bg-white px-4 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50 disabled:opacity-50"
                 >
                   {v.fleetId}
                   {v.plate ? <span className="ml-2 text-sm font-normal text-slate-500">{v.plate}</span> : null}
@@ -279,7 +279,7 @@ function DayOutcomeForm({
                 key={o}
                 type="button"
                 onClick={() => choose(o)}
-                className="rounded-xl border border-slate-300 bg-white px-5 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
+                className="rounded-2xl bg-white px-5 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
               >
                 {DAY_OUTCOME_LABELS[o]}
               </button>
@@ -293,7 +293,7 @@ function DayOutcomeForm({
           <p className="text-base font-medium text-slate-700">{DAY_OUTCOME_LABELS[outcome]}</p>
 
           {underActiveAgreement && (outcome === 'HALF_DAY' || outcome === 'BREAKDOWN' || outcome === 'DID_NOT_WORK') && (
-            <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            <p className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
               This vehicle is being purchased by its driver on installment. Any amount short of{' '}
               {formatMinorUnits(expectedAmountMinor)} today becomes driver debt, regardless of what happened.
             </p>
@@ -305,7 +305,7 @@ function DayOutcomeForm({
               <select
                 value={cause ?? ''}
                 onChange={(e) => setCause(e.target.value as ShortfallCause)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
               >
                 <option value="" disabled>
                   Choose a cause
@@ -338,7 +338,7 @@ function DayOutcomeForm({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
               {amountMinor !== null && amount.trim() !== '' && (
                 <span className="text-xs text-slate-500">{formatMinorUnits(amountMinor)}</span>
@@ -352,7 +352,7 @@ function DayOutcomeForm({
               <select
                 value={overpaymentReason ?? ''}
                 onChange={(e) => setOverpaymentReason(e.target.value as OverpaymentReason)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
               >
                 <option value="" disabled>
                   Choose a reason
@@ -373,7 +373,7 @@ function DayOutcomeForm({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
           )}
@@ -388,7 +388,7 @@ function DayOutcomeForm({
             type="button"
             onClick={submit}
             disabled={submitting}
-            className="rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+            className="rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
           >
             {submitting ? 'Saving…' : 'Done'}
           </button>
@@ -472,7 +472,7 @@ function BundledPaymentForm({
             <button
               type="button"
               onClick={() => setDays((d) => Math.max(1, d - 1))}
-              className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-300 text-xl font-medium text-slate-700 active:bg-slate-100"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-300 text-xl font-medium text-slate-700 active:bg-slate-100"
               aria-label="Fewer days"
             >
               −
@@ -481,7 +481,7 @@ function BundledPaymentForm({
             <button
               type="button"
               onClick={() => setDays((d) => Math.min(366, d + 1))}
-              className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-300 text-xl font-medium text-slate-700 active:bg-slate-100"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-300 text-xl font-medium text-slate-700 active:bg-slate-100"
               aria-label="More days"
             >
               +
@@ -501,7 +501,7 @@ function BundledPaymentForm({
             value={total}
             onChange={(e) => setTotal(e.target.value)}
             placeholder={formatMinorUnits(suggestedTotal).replace('SLE ', '')}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
           {totalMinor !== null && total.trim() !== '' && (
             <span className="text-xs text-slate-500">{formatMinorUnits(totalMinor)}</span>
@@ -516,7 +516,7 @@ function BundledPaymentForm({
             onChange={(e) => setNote(e.target.value)}
             rows={2}
             placeholder="e.g. older dates paid late"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 

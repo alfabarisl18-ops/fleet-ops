@@ -88,7 +88,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
         <button
           type="button"
           onClick={onDone}
-          className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white"
+          className="mt-2 rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white"
         >
           Done
         </button>
@@ -101,12 +101,12 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
       <h1 className="mb-4 text-lg font-semibold text-slate-900">Other Payment</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex rounded-lg border border-slate-300 p-1">
+        <div className="flex rounded-2xl border border-slate-300 p-1">
           <button
             type="button"
             onClick={() => switchDirection('INCOME')}
-            className={`flex-1 rounded-md py-3 text-base font-medium ${
-              direction === 'INCOME' ? 'bg-slate-900 text-white' : 'text-slate-700'
+            className={`flex-1 rounded-xl py-3 text-base font-medium ${
+              direction === 'INCOME' ? 'bg-primary-600 text-white' : 'text-slate-700'
             }`}
           >
             Income
@@ -114,8 +114,8 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
           <button
             type="button"
             onClick={() => switchDirection('EXPENSE')}
-            className={`flex-1 rounded-md py-3 text-base font-medium ${
-              direction === 'EXPENSE' ? 'bg-slate-900 text-white' : 'text-slate-700'
+            className={`flex-1 rounded-xl py-3 text-base font-medium ${
+              direction === 'EXPENSE' ? 'bg-primary-600 text-white' : 'text-slate-700'
             }`}
           >
             Business Expense
@@ -130,7 +130,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
           {amountMinor !== null && amount.trim() !== '' && (
             <span className="text-xs text-slate-500">{formatMinorUnits(amountMinor)}</span>
@@ -142,7 +142,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as LedgerCategory)}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
           >
             {categories.map((c) => (
               <option key={c} value={c}>
@@ -159,7 +159,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
             required
             value={applyDate}
             onChange={(e) => setApplyDate(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -169,7 +169,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -182,7 +182,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+          className="mt-2 rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Done'}
         </button>

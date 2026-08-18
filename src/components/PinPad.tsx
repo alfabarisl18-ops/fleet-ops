@@ -46,8 +46,8 @@ export function PinPad({ value, onChange, onSubmit, disabled }: PinPadProps) {
         {[0, 1, 2, 3].map((i) => (
           <span
             key={i}
-            className={`h-4 w-4 rounded-full border-2 border-slate-400 ${
-              i < value.length ? 'bg-slate-700' : 'bg-transparent'
+            className={`h-4 w-4 rounded-full border-2 border-primary-300 ${
+              i < value.length ? 'bg-primary-600' : 'bg-transparent'
             }`}
           />
         ))}
@@ -64,7 +64,7 @@ export function PinPad({ value, onChange, onSubmit, disabled }: PinPadProps) {
               disabled={disabled}
               onClick={() => press(key)}
               aria-label={key === 'back' ? 'Backspace' : `Digit ${key}`}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-2xl font-medium text-slate-800 active:bg-slate-200 disabled:opacity-50"
+              className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-2xl font-medium text-slate-800 active:bg-slate-200 disabled:opacity-50"
             >
               {key === 'back' ? '⌫' : key}
             </button>

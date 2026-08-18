@@ -81,7 +81,7 @@ export function VehicleStatusScreen({ currentUserId, onDone }: VehicleStatusScre
                 <button
                   type="button"
                   onClick={() => setVehicleId(v.id)}
-                  className="flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-4 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
+                  className="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
                 >
                   <span>
                     {v.fleetId}
@@ -150,7 +150,7 @@ function StatusForm({
               key={s}
               type="button"
               onClick={() => setTarget(s)}
-              className="rounded-xl border border-slate-300 bg-white px-5 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
+              className="rounded-2xl bg-white px-5 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
             >
               Move to {VEHICLE_STATUS_LABELS[s]}
             </button>
@@ -169,7 +169,7 @@ function StatusForm({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
           {error && (
             <p role="alert" className="text-sm text-red-600">
@@ -181,7 +181,7 @@ function StatusForm({
               type="button"
               onClick={confirm}
               disabled={submitting}
-              className="rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+              className="rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Confirm'}
             </button>
@@ -191,7 +191,7 @@ function StatusForm({
                 setTarget(null)
                 setError(null)
               }}
-              className="rounded-lg border border-slate-300 px-6 py-3 text-base font-medium text-slate-700"
+              className="rounded-2xl border border-slate-300 px-6 py-3 text-base font-medium text-slate-700"
             >
               Cancel
             </button>

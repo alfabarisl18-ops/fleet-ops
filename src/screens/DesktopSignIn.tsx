@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AuthShell } from '@/components/AuthShell'
 import { signInWithPassword } from '@/data/auth'
 
 interface DesktopSignInProps {
@@ -32,12 +33,12 @@ export function DesktopSignIn({ onSignedIn, onBack }: DesktopSignInProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center gap-4 p-6">
-      <button type="button" onClick={onBack} className="mb-2 self-start text-sm text-slate-500">
+    <AuthShell>
+      <button type="button" onClick={onBack} className="mb-3 text-sm font-medium text-slate-500">
         ← Back
       </button>
 
-      <h1 className="text-lg font-semibold text-slate-900">Owner/Admin or Fleet Manager</h1>
+      <h1 className="font-heading mb-4 text-lg font-bold text-slate-900">Owner/Admin or Fleet Manager</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1">
@@ -48,7 +49,7 @@ export function DesktopSignIn({ onSignedIn, onBack }: DesktopSignInProps) {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -60,7 +61,7 @@ export function DesktopSignIn({ onSignedIn, onBack }: DesktopSignInProps) {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -73,11 +74,11 @@ export function DesktopSignIn({ onSignedIn, onBack }: DesktopSignInProps) {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+          className="mt-2 rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-    </div>
+    </AuthShell>
   )
 }

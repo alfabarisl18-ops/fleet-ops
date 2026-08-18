@@ -35,11 +35,44 @@ const SECTION_SUBTITLES: Record<SectionKey, string> = {
 // actually renders here — fetchVehicles() already excludes archived
 // vehicles — but the map stays exhaustive over VehicleStatus so a future
 // status value fails typecheck here instead of rendering unstyled.
+// Matches VehicleList.tsx's existing status colors (and PeopleList.tsx's
+// identical emerald-for-active convention for user accounts) so "Active"
+// reads the same color everywhere in the app, not just on this screen.
 const VEHICLE_ICON_STYLES: Record<VehicleStatus, { bg: string; fg: string }> = {
-  ACTIVE: { bg: 'bg-primary-50', fg: 'text-primary-600' },
+  ACTIVE: { bg: 'bg-emerald-50', fg: 'text-emerald-600' },
   GROUNDED: { bg: 'bg-red-50', fg: 'text-red-600' },
   IN_MAINTENANCE: { bg: 'bg-amber-50', fg: 'text-amber-600' },
   ARCHIVED: { bg: 'bg-slate-100', fg: 'text-slate-400' },
+}
+
+/** One segment of the top summary card — a colored vehicle icon, the
+ *  count, and the status word (colour is never the only channel). Shares
+ *  VEHICLE_ICON_STYLES with the "Your vehicles" grid below it so the two
+ *  cards agree on what each status color means. */
+function StatusStat({ status, count }: { status: VehicleStatus; count: number }) {
+  const style = VEHICLE_ICON_STYLES[status]
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.bg}`}>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.7}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className={`h-6 w-6 ${style.fg}`}
+        >
+          <SectionGlyph section="vehicles" />
+        </svg>
+      </div>
+      <div>
+        <p className="font-heading text-2xl font-bold text-slate-900">{count}</p>
+        <p className="text-sm text-slate-500">{VEHICLE_STATUS_LABELS[status]}</p>
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -115,12 +148,10 @@ export function DesktopHome({
       )}
 
       {summary && (
-        <Card className="mt-6 inline-flex items-center gap-4 sm:w-64">
-          <IconChip section="vehicles" size={44} />
-          <div>
-            <p className="font-heading text-2xl font-bold text-slate-900">{summary.total}</p>
-            <p className="text-sm text-slate-500">Vehicles</p>
-          </div>
+        <Card className="mt-6 inline-flex flex-wrap items-center gap-6">
+          <StatusStat status="ACTIVE" count={summary.active} />
+          <StatusStat status="GROUNDED" count={summary.grounded} />
+          <StatusStat status="IN_MAINTENANCE" count={summary.inMaintenance} />
         </Card>
       )}
 

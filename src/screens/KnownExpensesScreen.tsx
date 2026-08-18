@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { LEDGER_CATEGORY_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { KnownExpenseRow, TransactionListItem } from '@/data/accounting'
@@ -43,7 +44,10 @@ export function KnownExpensesScreen({ onBack }: KnownExpensesScreenProps) {
       <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
         ← Back
       </button>
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Known Expenses</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <IconChip section="accounting" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Known Expenses</h1>
+      </div>
       <p className="mb-4 text-sm text-slate-500">This month, by category</p>
 
       {error && (
@@ -55,7 +59,7 @@ export function KnownExpensesScreen({ onBack }: KnownExpensesScreenProps) {
 
       <div className="mb-6 flex flex-col gap-1">
         {categories?.map((c) => (
-          <div key={c.category} className="rounded-lg border border-slate-200 bg-white p-3">
+          <div key={c.category} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="mb-1 flex justify-between text-sm">
               <span className="font-medium text-slate-900">{LEDGER_CATEGORY_LABELS[c.category]}</span>
               <span className="text-slate-700">{formatMinorUnits(-c.totalMinor)}</span>

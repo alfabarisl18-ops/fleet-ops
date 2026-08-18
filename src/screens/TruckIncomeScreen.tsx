@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { TRIP_STATUS_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { TripListItem } from '@/data/accounting'
@@ -39,7 +40,10 @@ export function TruckIncomeScreen({ onBack }: TruckIncomeScreenProps) {
       <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
         ← Back
       </button>
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Truck Income</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <IconChip section="vehicles" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Truck Income</h1>
+      </div>
       <p className="mb-4 text-sm text-slate-500">Every trip's net — revenue minus linked costs</p>
 
       {error && (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import {
   FUEL_TYPE_LABELS,
   PURCHASE_PRIORITY_LABELS,
@@ -130,7 +131,10 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
         ← Back
       </button>
 
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">New purchase goal</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <IconChip section="future-purchases" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">New purchase goal</h1>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
@@ -141,7 +145,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Fourth Sprinter"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -151,7 +155,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
             <select
               value={vehicleType}
               onChange={(e) => setVehicleType(e.target.value as VehicleType)}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               {VEHICLE_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -168,7 +172,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
               step={1}
               value={vehiclesRequired}
               onChange={(e) => setVehiclesRequired(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
@@ -181,7 +185,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
               required
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         )}
@@ -192,7 +196,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
             <select
               value={condition}
               onChange={(e) => setCondition(e.target.value as VehicleCondition | '')}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               <option value="">Not decided</option>
               {CONDITIONS.map((c) => (
@@ -207,7 +211,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as PurchasePriority)}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
@@ -221,11 +225,11 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Make (optional)</span>
-            <input type="text" value={make} onChange={(e) => setMake(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+            <input type="text" value={make} onChange={(e) => setMake(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Model (optional)</span>
-            <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+            <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
           </label>
         </div>
 
@@ -238,12 +242,12 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
               max={2100}
               value={modelYear}
               onChange={(e) => setModelYear(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Color (optional)</span>
-            <input type="text" value={color} onChange={(e) => setColor(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+            <input type="text" value={color} onChange={(e) => setColor(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
           </label>
         </div>
 
@@ -253,7 +257,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
             <select
               value={fuelType}
               onChange={(e) => setFuelType(e.target.value as FuelType | '')}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               <option value="">Not decided</option>
               {FUEL_TYPES.map((f) => (
@@ -268,7 +272,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
             <select
               value={transmission}
               onChange={(e) => setTransmission(e.target.value as TransmissionType | '')}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
             >
               <option value="">Not decided</option>
               {TRANSMISSIONS.map((t) => (
@@ -287,12 +291,12 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
               type="text"
               value={marketCountry}
               onChange={(e) => setMarketCountry(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Seller (optional)</span>
-            <input type="text" value={seller} onChange={(e) => setSeller(e.target.value)} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+            <input type="text" value={seller} onChange={(e) => setSeller(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
           </label>
         </div>
 
@@ -303,7 +307,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
               type="date"
               value={targetPurchaseDate}
               onChange={(e) => setTargetPurchaseDate(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -312,14 +316,14 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
               type="date"
               value={expectedArrivalDate}
               onChange={(e) => setExpectedArrivalDate(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Notes (optional)</span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="rounded-lg border border-slate-300 px-4 py-3 text-base" />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="rounded-xl border border-slate-300 px-4 py-3 text-base" />
         </label>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -333,7 +337,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 placeholder="0.00"
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
               />
               {budgetMinor !== null && budget.trim() !== '' && <span className="text-xs text-slate-500">{formatMinorUnits(budgetMinor)}</span>}
             </label>
@@ -343,7 +347,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
                 type="date"
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
               />
             </label>
           </div>
@@ -359,7 +363,7 @@ export function AddPurchaseGoalForm({ currentUserId, onCreated, onCancel }: AddP
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+          className="mt-2 rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Creating…' : 'Create goal'}
         </button>

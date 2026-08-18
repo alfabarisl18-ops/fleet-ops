@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { IconChip } from '@/components/IconChip'
 import { ROLE_LABELS } from '@/constants/labels'
 import type { MobileRole } from '@/data/users'
 import { createMobilePerson, provisionMobilePerson } from '@/data/users'
@@ -73,7 +74,10 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
         ← Back
       </button>
 
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">Add person</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <IconChip section="settings" />
+        <h1 className="font-heading text-xl font-bold text-slate-900">Add person</h1>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
@@ -83,13 +87,13 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
             required
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Role</span>
-          <select value={role} onChange={(e) => setRole(e.target.value as MobileRole)} className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base">
+          <select value={role} onChange={(e) => setRole(e.target.value as MobileRole)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
             {MOBILE_ROLE_OPTIONS.map((r) => (
               <option key={r} value={r}>
                 {ROLE_LABELS[r]}
@@ -107,7 +111,7 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
               maxLength={4}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -118,7 +122,7 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
               maxLength={4}
               value={confirmPin}
               onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
@@ -130,7 +134,7 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
           </p>
         )}
 
-        <button type="submit" disabled={submitting} className="mt-2 rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50">
+        <button type="submit" disabled={submitting} className="mt-2 rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50">
           {submitting ? 'Adding…' : 'Add person'}
         </button>
       </form>

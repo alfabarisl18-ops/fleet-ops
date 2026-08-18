@@ -152,7 +152,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
             value={driverId}
             onChange={(e) => setDriverId(e.target.value)}
             disabled={drivers === null}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
           >
             <option value="">Not set</option>
             {drivers?.map((d) => (
@@ -169,7 +169,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
             type="text"
             value={helperName}
             onChange={(e) => setHelperName(e.target.value)}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -180,7 +180,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
               type="text"
               value={pickupLocation}
               onChange={(e) => setPickupLocation(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1">
@@ -189,7 +189,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
               type="text"
               value={destinationLocation}
               onChange={(e) => setDestinationLocation(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
@@ -202,7 +202,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
               required
               value={departedOn}
               onChange={(e) => setDepartedOn(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1">
@@ -211,7 +211,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
               type="date"
               value={returnedOn}
               onChange={(e) => setReturnedOn(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
@@ -225,7 +225,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
               min={0}
               value={loadQuantity}
               onChange={(e) => setLoadQuantity(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1">
@@ -235,7 +235,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
               inputMode="decimal"
               value={loadWeight}
               onChange={(e) => setLoadWeight(e.target.value)}
-              className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -243,7 +243,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
             <select
               value={loadWeightUnit}
               onChange={(e) => setLoadWeightUnit(e.target.value as WeightUnit)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-3 text-base"
+              className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-base"
             >
               {WEIGHT_UNITS.map((u) => (
                 <option key={u} value={u}>
@@ -262,7 +262,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
             value={revenue}
             onChange={(e) => setRevenue(e.target.value)}
             placeholder="0.00"
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
           {revenue.trim() !== '' && parseMinorUnits(revenue) !== null && (
             <span className="text-xs text-slate-500">{formatMinorUnits(parseMinorUnits(revenue) as number)}</span>
@@ -279,7 +279,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
                 inputMode="decimal"
                 value={checkpointCost}
                 onChange={(e) => setCheckpointCost(e.target.value)}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -289,7 +289,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
                 inputMode="decimal"
                 value={driverPay}
                 onChange={(e) => setDriverPay(e.target.value)}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -299,7 +299,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
                 inputMode="decimal"
                 value={helperPay}
                 onChange={(e) => setHelperPay(e.target.value)}
-                className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
           </div>
@@ -311,7 +311,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            className="rounded-lg border border-slate-300 px-4 py-3 text-base"
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
@@ -325,7 +325,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
           type="button"
           onClick={submit}
           disabled={submitting}
-          className="rounded-lg bg-slate-900 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
+          className="rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Done'}
         </button>

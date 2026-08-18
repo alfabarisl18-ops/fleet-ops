@@ -73,7 +73,7 @@ export function PendingSyncBadge() {
       {open && (
         <>
           <button type="button" aria-label="Close pending sync" onClick={() => setOpen(false)} className="fixed inset-0 z-10 cursor-default" />
-          <div className="absolute right-0 z-20 mt-2 w-72 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="absolute right-0 z-20 mt-2 w-72 max-w-[90vw] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             <div className="mb-1 flex items-center justify-between px-2 py-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pending sync</p>
               <button type="button" onClick={() => flushOfflineQueue()} className="text-xs font-medium text-slate-700">
@@ -86,7 +86,7 @@ export function PendingSyncBadge() {
 
             <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
               {items?.map((item) => (
-                <li key={item.id} className="flex items-start justify-between gap-2 rounded-lg px-2 py-2">
+                <li key={item.id} className="flex items-start justify-between gap-2 rounded-xl px-2 py-2">
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-slate-900">{KIND_LABELS[item.kind]}</span>
                     <span className="block text-xs text-slate-500">

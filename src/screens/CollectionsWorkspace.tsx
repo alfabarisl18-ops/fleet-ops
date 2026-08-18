@@ -47,7 +47,7 @@ export function CollectionsWorkspace({ user, onSignedOut }: CollectionsWorkspace
             <button
               type="button"
               onClick={() => setView({ name: 'vehicle-payment' })}
-              className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+              className="rounded-2xl bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">Vehicle Payment</span>
               <span className="mt-1 block text-sm text-slate-500">Record what a vehicle brought in today</span>
@@ -56,7 +56,7 @@ export function CollectionsWorkspace({ user, onSignedOut }: CollectionsWorkspace
             <button
               type="button"
               onClick={() => setView({ name: 'other-payment' })}
-              className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+              className="rounded-2xl bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">Other Payment</span>
               <span className="mt-1 block text-sm text-slate-500">Income or an expense not tied to a vehicle's day</span>

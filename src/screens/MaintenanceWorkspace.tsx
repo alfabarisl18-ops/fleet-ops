@@ -58,7 +58,7 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
         {view.name === 'home' && (
           <div className="mx-auto flex max-w-sm flex-col gap-4 p-4 sm:p-6">
             {queuedMessage && (
-              <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p role="status" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 {queuedMessage}
               </p>
             )}
@@ -68,7 +68,7 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
                 setQueuedMessage(null)
                 setView({ name: 'add-order' })
               }}
-              className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+              className="rounded-2xl bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">New maintenance record</span>
               <span className="mt-1 block text-sm text-slate-500">A problem, a regular service, or a repair</span>
@@ -80,7 +80,7 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
                 setQueuedMessage(null)
                 setView({ name: 'open-orders' })
               }}
-              className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+              className="rounded-2xl bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">Open records</span>
               <span className="mt-1 block text-sm text-slate-500">Add a status update, a part, or a note</span>
@@ -89,7 +89,7 @@ export function MaintenanceWorkspace({ user, onSignedOut }: MaintenanceWorkspace
             <button
               type="button"
               onClick={() => setView({ name: 'vehicle-status' })}
-              className="rounded-xl border border-slate-300 bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
+              className="rounded-2xl bg-white px-6 py-6 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-lg font-semibold text-slate-900">Vehicle status</span>
               <span className="mt-1 block text-sm text-slate-500">Change whether a vehicle is active or grounded</span>
@@ -154,7 +154,7 @@ function OpenOrdersList({ onOpenOrder }: { onOpenOrder: (orderId: string) => voi
       {orders === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
 
       {orders?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           No open records right now.
         </p>
       )}
@@ -165,7 +165,7 @@ function OpenOrdersList({ onOpenOrder }: { onOpenOrder: (orderId: string) => voi
             <button
               type="button"
               onClick={() => onOpenOrder(order.id)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-left shadow-sm active:bg-slate-50"
+              className="w-full rounded-2xl bg-white px-4 py-4 text-left shadow-sm active:bg-slate-50"
             >
               <span className="block text-base font-medium text-slate-900">
                 {order.vehicleFleetId}

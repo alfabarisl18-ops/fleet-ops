@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { EXPENSE_LEDGER_CATEGORIES, INCOME_LEDGER_CATEGORIES, LEDGER_CATEGORY_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
+import { uploadDocument, validateDocumentFile } from '@/lib/documents'
 import type { LedgerCategory } from '@/data/dailyPayments'
 import { fetchFreetownToday, recordOtherPayment } from '@/data/dailyPayments'
 
@@ -23,6 +24,17 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+
+  // Set only on a live (online) save — the id a receipt photo attaches
+  // to. When the write went through the offline queue instead there's no
+  // id yet, so the photo step is skipped with a message rather than
+  // blocking the save on a connection the person doesn't have.
+  const [savedLedgerEntryId, setSavedLedgerEntryId] = useState<string | null>(null)
+  const [wasQueued, setWasQueued] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoAdded, setPhotoAdded] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   const categories = direction === 'INCOME' ? INCOME_LEDGER_CATEGORIES : EXPENSE_LEDGER_CATEGORIES
   const amountMinor = parseMinorUnits(amount)
@@ -61,7 +73,7 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
 
     setSubmitting(true)
     try {
-      await recordOtherPayment({
+      const outcome = await recordOtherPayment({
         direction,
         amountMinor,
         category,
@@ -69,11 +81,45 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
         ...(note.trim() !== '' ? { note: note.trim() } : {}),
         currentUserId,
       })
+      if (outcome.status === 'saved') {
+        setSavedLedgerEntryId(outcome.result)
+      } else {
+        setWasQueued(true)
+      }
       setDone(true)
     } catch {
       setError('Something went wrong. Try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handlePhotoChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !savedLedgerEntryId) return
+
+    const validationError = validateDocumentFile(file)
+    if (validationError) {
+      setPhotoError(validationError)
+      return
+    }
+
+    setPhotoUploading(true)
+    setPhotoError(null)
+    try {
+      await uploadDocument({
+        ownerType: 'LEDGER_ENTRY',
+        ownerId: savedLedgerEntryId,
+        docType: 'RECEIPT',
+        file,
+        uploadedBy: currentUserId,
+      })
+      setPhotoAdded(true)
+    } catch {
+      setPhotoError('Could not upload this photo. Try again.')
+    } finally {
+      setPhotoUploading(false)
     }
   }
 
@@ -85,6 +131,32 @@ export function OtherPaymentForm({ currentUserId, onDone }: OtherPaymentFormProp
           {direction === 'EXPENSE' ? '−' : ''}
           {formatMinorUnits(amountMinor ?? 0).replace('−', '')} · {LEDGER_CATEGORY_LABELS[category]}
         </p>
+
+        {savedLedgerEntryId && !photoAdded && (
+          <>
+            <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChosen} className="hidden" />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoUploading}
+              className="rounded-2xl border border-slate-300 px-6 py-3 text-base font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+            >
+              {photoUploading ? 'Uploading…' : '+ Add a photo of the receipt'}
+            </button>
+            {photoError && (
+              <p role="alert" className="text-sm text-red-600">
+                {photoError}
+              </p>
+            )}
+          </>
+        )}
+        {photoAdded && <p className="text-sm text-emerald-600">Receipt photo added.</p>}
+        {wasQueued && (
+          <p className="text-sm text-slate-500">
+            Saved without a receipt photo (no connection). It can still be attached later from the desktop Records screen.
+          </p>
+        )}
+
         <button
           type="button"
           onClick={onDone}

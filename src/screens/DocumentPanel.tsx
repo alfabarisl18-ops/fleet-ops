@@ -16,10 +16,14 @@ interface DocumentPanelProps {
 
 const ALL_DOC_TYPES = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
 
-/** Shared across every desktop screen that attaches documents — Future
- *  Purchases (Phase 10), plus vehicle/driver/agreement profiles. Real
- *  upload to the private "documents" Storage bucket (decision 0015) —
- *  desktop only. */
+/** Shared by every screen that attaches documents — Future Purchases
+ *  (Phase 10), vehicle/driver/agreement profiles (desktop only), and now
+ *  a receipt/problem-photo step on two mobile flows (Other Payment,
+ *  Maintenance order) plus their desktop-reachable detail screens. Real
+ *  upload to the private "documents" Storage bucket; the mobile role
+ *  bucket policies that make this work for Collections & Finance /
+ *  Maintenance & Repairs were added alongside this mobile usage — see
+ *  the migration adding documents_bucket_*_mobile policies. */
 export function DocumentPanel({ ownerType, ownerId, currentUserId, allowedTypes }: DocumentPanelProps) {
   const docTypes = allowedTypes && allowedTypes.length > 0 ? allowedTypes : ALL_DOC_TYPES
   const [documents, setDocuments] = useState<DocumentItem[] | null>(null)

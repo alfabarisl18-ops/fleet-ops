@@ -9,9 +9,11 @@ import { fetchActivityRecord } from '@/data/activityRecords'
 import type { DailyPaymentRecord } from '@/data/dailyPayments'
 import { fetchDailyPaymentRecord, overrideShortfallTreatment } from '@/data/dailyPayments'
 import { supabase } from '@/lib/supabase'
+import { DocumentPanel } from '@/screens/DocumentPanel'
 
 interface RecordDetailScreenProps {
   recordId: string
+  currentUserId: string
   currentUserRole: AppRole
   onBack: () => void
   onOpenVehicle: (vehicleId: string) => void
@@ -26,7 +28,14 @@ interface RecordDetailScreenProps {
  * labour, and trip information are also on SPEC's list but don't apply to
  * any record type this phase writes — Phase 5/6's job, not faked here.
  */
-export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVehicle, onOpenDriver }: RecordDetailScreenProps) {
+export function RecordDetailScreen({
+  recordId,
+  currentUserId,
+  currentUserRole,
+  onBack,
+  onOpenVehicle,
+  onOpenDriver,
+}: RecordDetailScreenProps) {
   const [record, setRecord] = useState<ActivityRecord | null>(null)
   const [vehicleFleetId, setVehicleFleetId] = useState<string | null>(null)
   const [driverName, setDriverName] = useState<string | null>(null)
@@ -165,6 +174,12 @@ export function RecordDetailScreen({ recordId, currentUserRole, onBack, onOpenVe
         <Field label="Entered" value={record.enteredAt.slice(0, 10)} />
         <Field label="Entered by" value={enteredByName ?? '…'} />
       </Card>
+
+      {record.targetType === 'LEDGER_ENTRY' && (
+        <Card title="Receipt" className="mt-4">
+          <DocumentPanel ownerType="LEDGER_ENTRY" ownerId={record.targetId} currentUserId={currentUserId} allowedTypes={['RECEIPT', 'OTHER']} />
+        </Card>
+      )}
 
       {dailyPayment &&
         (currentUserRole === 'OWNER_ADMIN' || currentUserRole === 'FLEET_MANAGER') &&

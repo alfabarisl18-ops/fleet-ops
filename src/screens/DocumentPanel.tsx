@@ -7,16 +7,26 @@ interface DocumentPanelProps {
   ownerType: DocumentOwnerType
   ownerId: string
   currentUserId: string
+  /** Restricts the type dropdown to what's relevant on this screen — e.g. a
+   *  vehicle profile has no business offering "Bill of lading." Falls back
+   *  to every document_type value when omitted, so the two original call
+   *  sites (Future Purchases) keep their existing behaviour unchanged. */
+  allowedTypes?: DocumentType[]
 }
 
-const DOC_TYPES = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
+const ALL_DOC_TYPES = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
 
-/** Shared between PurchaseGoalDetailScreen and PlannedVehicleDetailScreen —
- *  SPEC calls for document attachment on both. Real upload to the private
- *  "documents" Storage bucket (Phase 10, decision 0015) — desktop only. */
-export function DocumentPanel({ ownerType, ownerId, currentUserId }: DocumentPanelProps) {
+/** Shared across every desktop screen that attaches documents — Future
+ *  Purchases (Phase 10), plus vehicle/driver/agreement profiles. Real
+ *  upload to the private "documents" Storage bucket (decision 0015) —
+ *  desktop only. */
+export function DocumentPanel({ ownerType, ownerId, currentUserId, allowedTypes }: DocumentPanelProps) {
+  const docTypes = allowedTypes && allowedTypes.length > 0 ? allowedTypes : ALL_DOC_TYPES
   const [documents, setDocuments] = useState<DocumentItem[] | null>(null)
-  const [docType, setDocType] = useState<DocumentType>('OTHER')
+  // Unscoped callers (the original two Future Purchases screens) keep their
+  // original 'OTHER' default exactly; a scoped caller defaults to whichever
+  // type it lists first.
+  const [docType, setDocType] = useState<DocumentType>(allowedTypes?.[0] ?? 'OTHER')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -100,7 +110,7 @@ export function DocumentPanel({ ownerType, ownerId, currentUserId }: DocumentPan
           onChange={(e) => setDocType(e.target.value as DocumentType)}
           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
         >
-          {DOC_TYPES.map((t) => (
+          {docTypes.map((t) => (
             <option key={t} value={t}>
               {DOCUMENT_TYPE_LABELS[t]}
             </option>

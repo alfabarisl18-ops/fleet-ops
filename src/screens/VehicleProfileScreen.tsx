@@ -14,6 +14,7 @@ import { cancelAgreement, completeAgreement, fetchAgreementProgress, fetchOpenAg
 import { updateVehicleTarget } from '@/data/accounting'
 import type { RouteOption, VehicleDetail, VehicleStatus } from '@/data/vehicles'
 import { changeVehicleStatus, fetchRoutes, fetchVehicle, updateExpectedDailyAmount } from '@/data/vehicles'
+import { DocumentPanel } from '@/screens/DocumentPanel'
 
 function isDesktopRole(role: AppRole): boolean {
   return role === 'OWNER_ADMIN' || role === 'FLEET_MANAGER'
@@ -153,6 +154,15 @@ export function VehicleProfileScreen({
         />
       </Card>
 
+      <Card title="Photos & documents" className="mb-4">
+        <DocumentPanel
+          ownerType="VEHICLE"
+          ownerId={vehicle.id}
+          currentUserId={currentUserId}
+          allowedTypes={['VEHICLE_PHOTO', 'REGISTRATION', 'INSURANCE', 'ROADWORTHINESS_CERTIFICATE', 'OTHER']}
+        />
+      </Card>
+
       <Card title="Status" className="mb-4">
         <StatusControl vehicle={vehicle} currentUserId={currentUserId} onChanged={() => setReloadKey((k) => k + 1)} />
       </Card>
@@ -223,6 +233,15 @@ export function VehicleProfileScreen({
             {isDesktopRole(currentUserRole) && (
               <AgreementActionsPanel agreementId={agreement.id} onChanged={() => setReloadKey((k) => k + 1)} />
             )}
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">Signed agreement</p>
+              <DocumentPanel
+                ownerType="DRIVER_PURCHASE_AGREEMENT"
+                ownerId={agreement.id}
+                currentUserId={currentUserId}
+                allowedTypes={['PURCHASE_AGREEMENT', 'OTHER']}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-start gap-2">

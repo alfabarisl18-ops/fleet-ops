@@ -18,6 +18,22 @@ function isDesktopRole(role: SignedInUser['role']): boolean {
 type View = { name: 'loading' } | { name: 'chooser' } | { name: 'desktop' } | { name: 'mobile'; role: MobileRole }
 
 /**
+ * Bookmarkable shortcuts past the role picker — ?desktop, ?collections,
+ * ?maintenance — so e.g. a collector's phone can open straight to the PIN
+ * screen for their own role instead of the chooser every time. Only
+ * consulted when no signed-in session is found (see the fetchCurrentUser
+ * effect below); a returning signed-in user always goes straight to their
+ * workspace regardless of what's in the URL.
+ */
+function initialUnauthedView(): View {
+  const params = new URLSearchParams(location.search)
+  if (params.has('desktop')) return { name: 'desktop' }
+  if (params.has('collections')) return { name: 'mobile', role: 'COLLECTIONS_FINANCE' }
+  if (params.has('maintenance')) return { name: 'mobile', role: 'MAINTENANCE_REPAIRS' }
+  return { name: 'chooser' }
+}
+
+/**
  * Phase 2 has exactly one job: sign in as each of the four roles and
  * confirm it landed with the right identity and role. There is no routing,
  * no navigation beyond back buttons, and no screen this doesn't need —
@@ -48,10 +64,26 @@ export function App() {
       .then((u) => {
         if (cancelled) return
         setUser(u)
-        setView({ name: 'chooser' })
+        if (u) {
+          setView({ name: 'chooser' }) // irrelevant once a user is set — the render below ignores `view` entirely
+          return
+        }
+        // No signed-in session — fetchCurrentUser() resolves null here
+        // rather than rejecting, so this (not .catch) is the real
+        // "signed out" branch a shortcut link needs to land in.
+        const shortcut = initialUnauthedView()
+        if (shortcut.name !== 'chooser' && location.search !== '') {
+          // Picked up the flag — drop it from the URL bar so it doesn't
+          // linger once someone's signed in or hits back.
+          history.replaceState(null, '', location.pathname)
+        }
+        setView(shortcut)
       })
       .catch(() => {
-        if (!cancelled) setView({ name: 'chooser' })
+        // A genuine failure (e.g. getSession() itself throwing) — same
+        // shortcut handling as the null case above.
+        if (cancelled) return
+        setView(initialUnauthedView())
       })
     return () => {
       cancelled = true

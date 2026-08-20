@@ -135,7 +135,7 @@ export function AlertsBell({ currentUserId, onOpenAlert }: AlertsBellProps) {
                         {alert.vehicleId && vehicleLabels[alert.vehicleId] ? ` — ${vehicleLabels[alert.vehicleId]}` : ''}
                       </span>
                       <span className="block text-xs text-slate-500">
-                        {!alert.reviewedAt && <span className="font-medium text-slate-700">New · </span>}
+                        <span className="font-medium text-slate-700">New · </span>
                         {alert.dueOn ?? alert.createdAt.slice(0, 10)}
                       </span>
                     </span>

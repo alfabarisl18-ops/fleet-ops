@@ -70,13 +70,20 @@ export async function fetchOpenAlertCount(): Promise<number> {
   return count ?? 0
 }
 
-/** Every open alert (reviewed or not — the panel shows all of them, only
- *  the badge counts unreviewed ones), most urgent first. */
+/** Every open, unreviewed alert — same filter as fetchOpenAlertCount(), so
+ *  the panel's contents always match the badge number. Opening an alert
+ *  (AlertsBell's handleOpenAlert) reviews it, which is what removes it from
+ *  here — whether or not the underlying condition is resolved yet. This is
+ *  also what makes SHIPPING_DEPARTURE-style alerts (no auto-resolve rule by
+ *  design) actually clearable: reviewing was always meant to be enough for
+ *  those, but nothing removed them from this list until now. Most urgent
+ *  first. */
 export async function fetchOpenAlerts(): Promise<AlertListItem[]> {
   const { data, error } = await supabase
     .from('alerts')
     .select(ALERT_COLUMNS)
     .is('resolved_at', null)
+    .is('reviewed_at', null)
     .order('severity', { ascending: false })
     .order('due_on', { ascending: true, nullsFirst: false })
     .limit(50)

@@ -30,7 +30,11 @@ interface VehicleProfileScreenProps {
   onSetUpAgreement: (vehicleId: string) => void
 }
 
-const STATUS_ORDER: VehicleStatus[] = ['ACTIVE', 'GROUNDED', 'IN_MAINTENANCE']
+// SPEC.md: "Removed vehicles are archived, never deleted." ARCHIVED sits
+// last — it's the one target here that removes the vehicle from every
+// list in the app (fetchVehicles() excludes it), not just a change in
+// operational state like the other three.
+const STATUS_ORDER: VehicleStatus[] = ['ACTIVE', 'GROUNDED', 'IN_MAINTENANCE', 'ARCHIVED']
 
 export function VehicleProfileScreen({
   vehicleId,
@@ -637,10 +641,17 @@ function StatusControl({
       )}
 
       {target && (
-        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
-          <p className="text-sm text-slate-700">
-            Change status to <span className="font-medium">{VEHICLE_STATUS_LABELS[target]}</span>
-          </p>
+        <div className={`flex flex-col gap-2 rounded-xl border p-3 ${target === 'ARCHIVED' ? 'border-red-200 bg-red-50' : 'border-slate-200'}`}>
+          {target === 'ARCHIVED' ? (
+            <p className="text-sm text-red-800">
+              Archiving removes this vehicle from every list in the app. Use this only for a vehicle that's being
+              retired or was added in error.
+            </p>
+          ) : (
+            <p className="text-sm text-slate-700">
+              Change status to <span className="font-medium">{VEHICLE_STATUS_LABELS[target]}</span>
+            </p>
+          )}
           <input
             type="text"
             value={reason}

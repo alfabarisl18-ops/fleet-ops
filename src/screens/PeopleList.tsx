@@ -114,6 +114,13 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   const [resetting, setResetting] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
   const [rowNotice, setRowNotice] = useState<string | null>(null)
+  // Only promotion to Owner/Admin gets a confirm step — the same-category
+  // swaps (Fleet Manager, or either mobile role) stay a single click, same
+  // as before. Owner/Admin is the one role with no ceiling on what it can
+  // do, and the plain <select> below fires on change with nothing to
+  // catch a stray click — exactly how this happened live during this
+  // session's own verification.
+  const [pendingRole, setPendingRole] = useState<AppRole | null>(null)
 
   async function changeStatus(status: UserStatus) {
     setBusy(true)
@@ -139,6 +146,22 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
     } finally {
       setBusy(false)
     }
+  }
+
+  function selectRole(newRole: AppRole) {
+    setRowError(null)
+    if (newRole === 'OWNER_ADMIN') {
+      setPendingRole(newRole)
+      return
+    }
+    changeRole(newRole)
+  }
+
+  function confirmPendingRole() {
+    if (!pendingRole) return
+    const newRole = pendingRole
+    setPendingRole(null)
+    changeRole(newRole)
   }
 
   async function finishSetup() {
@@ -192,7 +215,7 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
           <p className="mt-2 text-sm text-amber-700">Not yet able to sign in.</p>
         )}
 
-        {editable && (
+        {editable && !pendingRole && (
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
             <select
               value={person.status}
@@ -210,7 +233,7 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
             <select
               value={person.role}
               disabled={busy}
-              onChange={(e) => changeRole(e.target.value as AppRole)}
+              onChange={(e) => selectRole(e.target.value as AppRole)}
               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:opacity-50"
             >
               {rolesInSameCategory(person.role).map((r) => (
@@ -267,6 +290,34 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
                   {busy ? 'Finishing…' : 'Finish setup'}
                 </button>
               ))}
+          </div>
+        )}
+
+        {pendingRole && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-sm text-red-800">
+              Make {person.displayName} an Owner/Admin? That's full access — people, roles, PINs, permissions,
+              vehicles, targets, settings, and approving corrections. This can be undone the same way, but only by
+              another Owner/Admin.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={confirmPendingRole}
+                disabled={busy}
+                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {busy ? 'Working…' : 'Confirm'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingRole(null)}
+                disabled={busy}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 

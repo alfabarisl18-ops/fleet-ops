@@ -24,14 +24,12 @@ function isMobileRole(role: AppRole): role is 'COLLECTIONS_FINANCE' | 'MAINTENAN
  * on PeopleList, settable later via Reset PIN.
  *
  * Fleet Manager (added later, see docs/decisions/0016's own "revisit this
- * when…" note) is a different shape: no PIN, a real email, and instead of
- * setting anything ourselves, the result is a one-time setup link — the
- * new Fleet Manager sets their own password when they open it. Nothing in
- * this app ever sees or stores that password (CLAUDE.md: never print
- * credentials in the UI). The link itself isn't a credential the same way
- * a password is, but it's still one-time and personal, so it's shown once,
- * meant to be copied and handed directly to the person, not left sitting
- * on screen.
+ * when…" note) is a different shape: no PIN, a real email — an invite
+ * email goes out directly (this project's SMTP is configured), and the
+ * new Fleet Manager sets their own password when they open it, on a
+ * screen this app gates entry on (SetPasswordScreen). Nothing in this app
+ * ever sees or stores that password (CLAUDE.md: never print credentials
+ * in the UI).
  */
 export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
   const [displayName, setDisplayName] = useState('')
@@ -41,7 +39,7 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [inviteSent, setInviteSent] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -96,8 +94,8 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
     setSubmitting(true)
     try {
       const userId = await createDesktopPerson(displayName.trim(), email.trim())
-      const link = await provisionDesktopPerson(userId)
-      setInviteLink(link)
+      await provisionDesktopPerson(userId)
+      setInviteSent(true)
     } catch {
       setError('Something went wrong. Try again.')
     } finally {
@@ -105,7 +103,7 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
     }
   }
 
-  if (inviteLink) {
+  if (inviteSent) {
     return (
       <div className="mx-auto max-w-xl p-4 sm:p-6">
         <div className="mb-4 flex items-center gap-3">
@@ -113,21 +111,10 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
           <h1 className="font-heading text-xl font-bold text-slate-900">Fleet Manager added</h1>
         </div>
 
-        <p className="mb-3 text-sm text-slate-600">
-          Send this link to {displayName.trim()} yourself (text, WhatsApp, in person) — it lets them set their own
-          password. Nobody else, including this app, ever sees it.
+        <p className="mb-4 text-sm text-slate-600">
+          An email was sent to {email.trim()} with a link to set their own password — nobody else, including this
+          app, ever sees it. Ask them to check their inbox (and spam folder).
         </p>
-
-        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="break-all text-sm text-slate-800">{inviteLink}</p>
-          <button
-            type="button"
-            onClick={() => navigator.clipboard.writeText(inviteLink)}
-            className="self-start rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
-          >
-            Copy link
-          </button>
-        </div>
 
         <button type="button" onClick={onCreated} className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white">
           Done
@@ -208,7 +195,7 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
-            <span className="text-xs text-slate-500">They'll get a one-time link from you to set their own password — never typed here.</span>
+            <span className="text-xs text-slate-500">They'll get an email with a one-time link to set their own password — never typed here.</span>
           </label>
         )}
 

@@ -113,8 +113,7 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   const [busy, setBusy] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
-  const [desktopInviteLink, setDesktopInviteLink] = useState<string | null>(null)
-  const [desktopResetLink, setDesktopResetLink] = useState<string | null>(null)
+  const [rowNotice, setRowNotice] = useState<string | null>(null)
 
   async function changeStatus(status: UserStatus) {
     setBusy(true)
@@ -145,17 +144,13 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   async function finishSetup() {
     setBusy(true)
     setRowError(null)
+    setRowNotice(null)
     try {
       if (isMobileRole(person.role)) {
         await provisionMobilePerson(person.id)
       } else {
-        // Fleet Manager — the link is shown once, right here, since
-        // there's nowhere else this screen navigates to. onChanged()
-        // still refreshes the row so "provisioned" flips to true; the
-        // link stays visible until dismissed rather than disappearing
-        // with the reload.
-        const link = await provisionDesktopPerson(person.id)
-        setDesktopInviteLink(link)
+        await provisionDesktopPerson(person.id)
+        setRowNotice(`Invite email sent to ${person.displayName}.`)
       }
       onChanged()
     } catch {
@@ -168,9 +163,10 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   async function resetPassword() {
     setBusy(true)
     setRowError(null)
+    setRowNotice(null)
     try {
-      const link = await resetDesktopPassword(person.id)
-      setDesktopResetLink(link)
+      await resetDesktopPassword(person.id)
+      setRowNotice(`Password-reset email sent to ${person.displayName}.`)
     } catch {
       setRowError('Could not reset the password. Try again.')
     } finally {
@@ -274,55 +270,7 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
           </div>
         )}
 
-        {desktopInviteLink && (
-          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-medium text-slate-600">
-              Send this link to {person.displayName} yourself — it lets them set their own password.
-            </p>
-            <p className="break-all text-sm text-slate-800">{desktopInviteLink}</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(desktopInviteLink)}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
-              >
-                Copy link
-              </button>
-              <button
-                type="button"
-                onClick={() => setDesktopInviteLink(null)}
-                className="rounded-xl px-3 py-2 text-sm font-medium text-slate-500"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
-
-        {desktopResetLink && (
-          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-medium text-slate-600">
-              Send this link to {person.displayName} yourself — it lets them set a new password.
-            </p>
-            <p className="break-all text-sm text-slate-800">{desktopResetLink}</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(desktopResetLink)}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
-              >
-                Copy link
-              </button>
-              <button
-                type="button"
-                onClick={() => setDesktopResetLink(null)}
-                className="rounded-xl px-3 py-2 text-sm font-medium text-slate-500"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
+        {rowNotice && <p className="mt-2 text-sm text-emerald-700">{rowNotice}</p>}
 
         {rowError && (
           <p role="alert" className="mt-2 text-sm text-red-600">

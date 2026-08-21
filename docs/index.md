@@ -11,6 +11,7 @@ specification; these pages record how it was built and why.
 | [log.md](log.md) | Chronological record of significant changes. One entry per change. |
 | [open-questions.md](open-questions.md) | SPEC section 10, plus what Phase 1 assumed where SPEC was silent. Read before Phase 2. |
 | [qa-accounts.md](qa-accounts.md) | The three non-personal accounts reserved for agent/manual verification, and the rules for using them. Read before signing in to verify anything. |
+| [deployment.md](deployment.md) | One-time Cloudflare Pages setup (this repo has no deploy config of its own), and the three role-shortcut links (`?desktop`, `?collections`, `?maintenance`) that skip the role picker. |
 
 ## Decisions
 

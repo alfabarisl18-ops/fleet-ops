@@ -79,16 +79,24 @@ export interface RequestCorrectionInput {
   afterJson: Record<string, string | number | null>
 }
 
-export async function requestCorrection(input: RequestCorrectionInput): Promise<void> {
-  const { error } = await supabase.from('corrections').insert({
-    client_record_id: crypto.randomUUID(),
-    target_table: input.targetTable,
-    target_id: input.targetId,
-    reason: input.reason,
-    requested_by: input.requestedBy,
-    after_json: input.afterJson,
-  })
+/** Returns the new correction's id — Owner/Admin's own request applies it
+ *  immediately afterward (CorrectionPanel), since they're always the one
+ *  who'd otherwise approve it a moment later anyway. */
+export async function requestCorrection(input: RequestCorrectionInput): Promise<string> {
+  const { data, error } = await supabase
+    .from('corrections')
+    .insert({
+      client_record_id: crypto.randomUUID(),
+      target_table: input.targetTable,
+      target_id: input.targetId,
+      reason: input.reason,
+      requested_by: input.requestedBy,
+      after_json: input.afterJson,
+    })
+    .select('id')
+    .single()
   if (error) throw error
+  return data.id
 }
 
 /** Owner/Admin only — enforced inside public.apply_correction(); this just

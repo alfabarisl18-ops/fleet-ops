@@ -10,24 +10,47 @@ interface CorrectionPanelProps {
   pending: Correction | null
   onChanged: () => void
   /** The target-specific request form, given a callback to call once
-   *  submitted — a render prop rather than children, so this shared panel
-   *  can close the form and trigger a reload without reaching into
-   *  opaque JSX. */
-  renderRequestForm: (onDone: () => void) => React.ReactNode
+   *  submitted, passed the new correction's id — a render prop rather than
+   *  children, so this shared panel can close the form and trigger a
+   *  reload without reaching into opaque JSX. */
+  renderRequestForm: (onDone: (newCorrectionId: string) => void) => React.ReactNode
 }
 
 /**
  * Shared between VehicleProfileScreen and DriverProfileScreen — the
  * pending-correction display and Approve/Reject actions are identical
- * regardless of target table; only the request form's fields differ. Same
- * "one action, real consequence" pattern as VehicleProfileScreen's
- * StatusControl: Approve/Reject are Owner/Admin only, enforced again
- * server-side inside apply_correction/reject_correction.
+ * regardless of target table; only the request form's fields differ.
+ *
+ * For Owner/Admin, requesting and approving are the same person, so
+ * there's no real decision behind a second click — submitting applies the
+ * correction immediately (server-side apply_correction() already does
+ * approve+apply in one call, per decision 0009; this just stops making
+ * Owner/Admin click twice for it). The button reads "Edit," not "Request
+ * a correction," for them. Any other desktop role genuinely can't
+ * self-approve (apply_correction/reject_correction are Owner/Admin-only
+ * server-side) — unchanged: request, then wait for an Owner/Admin to
+ * review it on this same screen.
  */
 export function CorrectionPanel({ currentUserRole, pending, onChanged, renderRequestForm }: CorrectionPanelProps) {
+  const isOwner = currentUserRole === 'OWNER_ADMIN'
   const [requesting, setRequesting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  async function handleRequested(newCorrectionId: string) {
+    setRequesting(false)
+    if (!isOwner) {
+      onChanged()
+      return
+    }
+    try {
+      await applyCorrection(newCorrectionId)
+    } catch {
+      // The request itself already landed — it just sits pending like a
+      // normal Fleet Manager request would, rather than losing the edit.
+    }
+    onChanged()
+  }
 
   async function handleApprove() {
     if (!pending) return
@@ -99,17 +122,10 @@ export function CorrectionPanel({ currentUserRole, pending, onChanged, renderReq
         onClick={() => setRequesting(true)}
         className="mt-3 text-sm font-medium text-slate-600 underline decoration-slate-300"
       >
-        Request a correction
+        {isOwner ? 'Edit' : 'Request a correction'}
       </button>
     )
   }
 
-  return (
-    <div className="mt-3">
-      {renderRequestForm(() => {
-        setRequesting(false)
-        onChanged()
-      })}
-    </div>
-  )
+  return <div className="mt-3">{renderRequestForm(handleRequested)}</div>
 }

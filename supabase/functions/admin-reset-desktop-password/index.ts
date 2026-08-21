@@ -1,16 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
-import { adminTableRequest } from '../_shared/mobile-auth.ts'
+import { adminTableRequest, setPasswordRedirectUrl } from '../_shared/mobile-auth.ts'
 
-// Owner/Admin only: generates a one-time password-recovery link for an
-// already-signed-in-capable Fleet Manager account, mirroring
-// admin-provision-desktop-account's shape almost exactly — same
-// caller-verification pattern, same reason for using generateLink() over
-// anything that sends email itself (this project's SMTP status is
-// unconfirmed; delivering the link stays the Owner's own job, same as
-// onboarding). The only real difference is the target must ALREADY be
-// provisioned (auth_user_id not null) — the opposite precondition from
-// provisioning a brand-new account — and the link type is 'recovery', not
-// 'invite'.
+// Owner/Admin only: sends a password-recovery email to an already-
+// provisioned Fleet Manager, mirroring admin-provision-desktop-account's
+// shape almost exactly — same caller-verification pattern. The only real
+// differences: the target must ALREADY be provisioned (auth_user_id not
+// null) — the opposite precondition from provisioning a brand-new account
+// — and this calls the self-service resetPasswordForEmail() (through the
+// caller's own client, not the admin one — it needs no service-role
+// privilege) rather than an admin.* method, since that's the exact method
+// meant for "send this person a reset email." redirectTo points at the
+// app's own password-setup gate — see that helper's comment for why
+// that's mandatory, not cosmetic.
+//
+// (Originally used generateLink({type:'recovery'}), which never sends
+// anything on its own — switched once SMTP was confirmed working.)
 //
 // Deliberately does not cover OWNER_ADMIN targets, for the same reason
 // admin-provision-desktop-account doesn't create them: this only ever
@@ -91,10 +95,6 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'forbidden' }, 403)
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-
   const targetResp = await adminTableRequest(
     supabaseUrl,
     serviceRoleKey,
@@ -120,15 +120,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'missing_email' }, 400)
   }
 
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'recovery',
-    email: target.email,
+  const { error: resetError } = await caller.auth.resetPasswordForEmail(target.email, {
+    redirectTo: setPasswordRedirectUrl(),
   })
 
-  if (linkError || !linkData?.properties?.action_link) {
-    console.error('admin-reset-desktop-password: generateLink failed', linkError)
+  if (resetError) {
+    console.error('admin-reset-desktop-password: resetPasswordForEmail failed', resetError)
     return json({ error: 'server_error' }, 500)
   }
 
-  return json({ ok: true, action_link: linkData.properties.action_link })
+  return json({ ok: true })
 })

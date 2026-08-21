@@ -21,6 +21,27 @@ export function syntheticMobileEmail(publicUserId: string): string {
 }
 
 /**
+ * The deployed app's own URL — not a secret, just config, so a plain
+ * constant rather than an env var. Used as the redirectTo for invite and
+ * password-recovery links: Supabase's documented platform behaviour
+ * (github.com/supabase/supabase/issues/45210) signs the browser into a
+ * real session the moment either link is clicked, *before* a password
+ * exists, so every such link must land somewhere in the app that gates
+ * entry on setting one — see src/screens/SetPasswordScreen.tsx and the
+ * ?set-password flag it's keyed on in src/App.tsx. Update this (and
+ * redeploy admin-provision-desktop-account / admin-reset-desktop-password)
+ * if the production domain ever changes. Also must be registered in the
+ * Supabase dashboard's Authentication → URL Configuration → Redirect URLs
+ * allowlist — otherwise Supabase silently ignores redirectTo and falls
+ * back to the project's default Site URL instead.
+ */
+export const SITE_URL = 'https://fleet-ops-56j.pages.dev'
+
+export function setPasswordRedirectUrl(): string {
+  return `${SITE_URL}/?set-password=1`
+}
+
+/**
  * A PostgREST table-level call using a service-role/secret key, sent on the
  * `apikey` header only.
  *

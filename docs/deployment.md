@@ -30,6 +30,38 @@ automatically on every push after this, with nothing to run by hand.
    gets its own separate preview URL automatically, with no further
    config.
 
+## Required: Supabase Auth URL configuration
+
+Fleet Manager invites and password resets (Settings → People) email a
+one-time link via `admin.auth.admin.inviteUserByEmail()` /
+`resetPasswordForEmail()`, both pointing `redirectTo` at
+`<SITE_URL>/?set-password=1` — the flag `src/App.tsx` uses to gate entry
+into the app on `SetPasswordScreen`. This is not optional polish:
+Supabase's own documented behaviour
+([supabase/supabase#45210](https://github.com/supabase/supabase/issues/45210))
+signs the browser into a real session the instant either link is opened,
+*before* a password exists — without this gate, a new Fleet Manager (or
+anyone resetting their password) would be left signed in for that one
+moment with no password ever set, and no way to sign in again.
+
+For this to actually work, `<SITE_URL>` — currently
+`https://fleet-ops-56j.pages.dev` (`supabase/functions/_shared/mobile-auth.ts`'s
+`SITE_URL` constant) — must be registered in the Supabase dashboard:
+
+1. Supabase dashboard → **Authentication** → **URL Configuration**.
+2. **Site URL**: set to `https://fleet-ops-56j.pages.dev`.
+3. **Redirect URLs**: add `https://fleet-ops-56j.pages.dev/**` (the
+   wildcard covers the `?set-password=1` query string).
+
+Without step 3, Supabase silently ignores `redirectTo` and falls back to
+the Site URL instead — the link would still work, but land the person on
+the plain sign-in page with no password set and no way back in.
+
+If the production domain ever changes, update `SITE_URL` in
+`supabase/functions/_shared/mobile-auth.ts`, redeploy
+`admin-provision-desktop-account` and `admin-reset-desktop-password`, and
+update the Redirect URLs entry above to match.
+
 ## Role-shortcut links
 
 The app has no router — one build, one URL; which workspace shows is

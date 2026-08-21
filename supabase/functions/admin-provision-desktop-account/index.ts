@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
-import { adminTableRequest } from '../_shared/mobile-auth.ts'
+import { adminTableRequest, setPasswordRedirectUrl } from '../_shared/mobile-auth.ts'
 
 // Owner/Admin only: creates the auth.users row a Fleet Manager account
-// needs before it can ever sign in, and returns a one-time setup link for
-// the Owner to hand the person themselves (text/WhatsApp/in person) — no
-// password is ever generated, shown, or stored by this app or this
-// function (CLAUDE.md: never print credentials in the UI). See
+// needs before it can ever sign in, and emails them a one-time setup
+// link directly (via this project's now-configured SMTP) — no password
+// is ever generated, shown, or stored by this app or this function
+// (CLAUDE.md: never print credentials in the UI). See
 // docs/decisions/0016-settings-scope-and-export-format.md's "Revisit this
 // when a real desktop-account self-service flow is explicitly requested"
-// note — this is that flow, using admin.generateLink() as suggested there.
+// note — this is that flow.
 //
 // Deliberately scoped to FLEET_MANAGER only, not OWNER_ADMIN — creating a
 // second full-owner account is a materially bigger decision than adding a
@@ -23,7 +23,15 @@ import { adminTableRequest } from '../_shared/mobile-auth.ts'
 // Authorization header for table requests specifically — see that helper's
 // comment in _shared/mobile-auth.ts). Differs where it has to: a desktop
 // account has a real email and no PIN, so this calls
-// admin.auth.admin.generateLink() instead of setting a synthetic email.
+// admin.auth.admin.inviteUserByEmail() instead of setting a synthetic
+// email — Supabase's admin method that both creates the account and sends
+// the invite itself, through whatever SMTP is configured on this project.
+// (Originally used generateLink(), which never sends anything on its own —
+// switched once SMTP was confirmed working; see git history if that ever
+// needs to be reverted.) redirectTo points at the app's own password-setup
+// gate — see that helper's comment for why this is mandatory, not
+// cosmetic: Supabase signs the browser in the instant the link is opened,
+// before any password exists.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -128,18 +136,16 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'missing_email' }, 400)
   }
 
-  // generateLink() creates the auth.users row for a brand-new email itself
-  // (it doesn't require createUser() first) and returns a one-time link —
-  // it does NOT send anything on its own; delivering the link is this
-  // function's caller's job, by design, so nothing here depends on this
-  // project's SMTP being configured.
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'invite',
-    email: target.email,
+  // Creates the auth.users row for a brand-new email AND sends the invite
+  // email itself, through whatever SMTP is configured on this project —
+  // unlike generateLink(), which only ever returns a link and never sends
+  // anything on its own.
+  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(target.email, {
+    redirectTo: setPasswordRedirectUrl(),
   })
 
-  if (linkError || !linkData?.user || !linkData.properties?.action_link) {
-    console.error('admin-provision-desktop-account: generateLink failed', linkError)
+  if (inviteError || !inviteData?.user) {
+    console.error('admin-provision-desktop-account: inviteUserByEmail failed', inviteError)
     return json({ error: 'server_error' }, 500)
   }
 
@@ -147,7 +153,7 @@ Deno.serve(async (req: Request) => {
     supabaseUrl,
     serviceRoleKey,
     `users?id=eq.${encodeURIComponent(targetUserId)}`,
-    { method: 'PATCH', body: JSON.stringify({ auth_user_id: linkData.user.id }) },
+    { method: 'PATCH', body: JSON.stringify({ auth_user_id: inviteData.user.id }) },
   )
 
   if (!linkResp.ok) {
@@ -155,5 +161,5 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'server_error' }, 500)
   }
 
-  return json({ ok: true, user_id: targetUserId, auth_user_id: linkData.user.id, action_link: linkData.properties.action_link })
+  return json({ ok: true, user_id: targetUserId, auth_user_id: inviteData.user.id })
 })

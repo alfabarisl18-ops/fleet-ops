@@ -10,6 +10,11 @@ import type { Enums } from '@/types/db'
 // account Edge Function) was built in Phase 2 specifically so a later phase
 // could "build the mechanism, not necessarily a UI for it yet" (that RPC's
 // own comment) — this file is the first thing to call either.
+//
+// admin-provision-desktop-account (added later) follows the same shape for
+// Fleet Manager accounts — a real email + an invite link, not a PIN. A
+// second Owner/Admin account still stays a manual Supabase Dashboard step;
+// see decision 0016.
 
 export type AppRole = Enums<'user_role'>
 export type UserStatus = Enums<'user_status'>
@@ -53,15 +58,33 @@ export async function fetchPeople(): Promise<PersonListItem[]> {
 }
 
 /** Owner/Admin only via users_insert_owner. Creates the profile row only —
- *  not yet sign-in-capable until provisionMobilePerson runs. Desktop
- *  accounts are deliberately not created here — see decision 0016: the
- *  first Owner/Admin, and every one since, is created once via the
- *  Supabase Dashboard, documented in README.md, not a form this app
- *  builds. */
+ *  not yet sign-in-capable until provisionMobilePerson runs. */
 export async function createMobilePerson(displayName: string, role: MobileRole): Promise<string> {
   const { data, error } = await supabase
     .from('users')
     .insert({ client_record_id: crypto.randomUUID(), display_name: displayName, role, status: 'ACTIVE' })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
+/** Owner/Admin only via users_insert_owner. Fleet Manager only — a second
+ *  Owner/Admin account stays a manual Supabase Dashboard step (decision
+ *  0007, unchanged); adding a Fleet Manager is now a real in-app flow (see
+ *  provisionDesktopPerson) per decision 0016's own "revisit this when a
+ *  real desktop-account self-service flow is explicitly requested" note.
+ *  users_email_matches_role requires a non-null email for this role. */
+export async function createDesktopPerson(displayName: string, email: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      client_record_id: crypto.randomUUID(),
+      display_name: displayName,
+      role: 'FLEET_MANAGER',
+      status: 'ACTIVE',
+      email,
+    })
     .select('id')
     .single()
   if (error) throw error
@@ -85,6 +108,29 @@ export async function provisionMobilePerson(userId: string, pin?: string): Promi
   if (error || !data || data.error) {
     throw new Error(data?.error ?? 'server_error')
   }
+}
+
+interface ProvisionDesktopResponse {
+  ok?: boolean
+  error?: string
+  action_link?: string
+}
+
+/** Calls admin-provision-desktop-account — creates the auth.users row a new
+ *  Fleet Manager needs before they can sign in, and returns a one-time
+ *  setup link for the Owner to hand them directly. Nothing here ever sees
+ *  or stores a password — the recipient sets their own when they open the
+ *  link (CLAUDE.md: never print credentials in the UI; a one-time invite
+ *  link isn't a credential in that sense — see the Edge Function's own
+ *  comment for why generateLink() was chosen over a generated password). */
+export async function provisionDesktopPerson(userId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke<ProvisionDesktopResponse>('admin-provision-desktop-account', {
+    body: { user_id: userId },
+  })
+  if (error || !data || data.error || !data.action_link) {
+    throw new Error(data?.error ?? 'server_error')
+  }
+  return data.action_link
 }
 
 /** Calls the existing public.admin_reset_pin RPC (Phase 2) directly — sets

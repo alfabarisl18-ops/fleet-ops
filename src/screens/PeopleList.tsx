@@ -4,7 +4,16 @@ import { IconChip } from '@/components/IconChip'
 import { ROLE_LABELS, USER_STATUS_LABELS } from '@/constants/labels'
 import type { AppRole } from '@/data/auth'
 import type { MobileRole, PersonListItem, UserStatus } from '@/data/users'
-import { MOBILE_ROLES, fetchPeople, provisionMobilePerson, resetMobilePin, rolesInSameCategory, updatePersonRole, updatePersonStatus } from '@/data/users'
+import {
+  MOBILE_ROLES,
+  fetchPeople,
+  provisionDesktopPerson,
+  provisionMobilePerson,
+  resetMobilePin,
+  rolesInSameCategory,
+  updatePersonRole,
+  updatePersonStatus,
+} from '@/data/users'
 
 interface PeopleListProps {
   currentUserId: string
@@ -103,6 +112,7 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   const [busy, setBusy] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
+  const [desktopInviteLink, setDesktopInviteLink] = useState<string | null>(null)
 
   async function changeStatus(status: UserStatus) {
     setBusy(true)
@@ -134,7 +144,17 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
     setBusy(true)
     setRowError(null)
     try {
-      await provisionMobilePerson(person.id)
+      if (isMobileRole(person.role)) {
+        await provisionMobilePerson(person.id)
+      } else {
+        // Fleet Manager — the link is shown once, right here, since
+        // there's nowhere else this screen navigates to. onChanged()
+        // still refreshes the row so "provisioned" flips to true; the
+        // link stays visible until dismissed rather than disappearing
+        // with the reload.
+        const link = await provisionDesktopPerson(person.id)
+        setDesktopInviteLink(link)
+      }
       onChanged()
     } catch {
       setRowError('Could not finish setup. Try again.')
@@ -157,7 +177,7 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
           </span>
         </div>
 
-        {isMobileRole(person.role) && !person.provisioned && (
+        {!person.provisioned && (isMobileRole(person.role) || person.role === 'FLEET_MANAGER') && (
           <p className="mt-2 text-sm text-amber-700">Not yet able to sign in.</p>
         )}
 
@@ -209,6 +229,46 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
                   {busy ? 'Finishing…' : 'Finish setup'}
                 </button>
               ))}
+
+            {/* Fleet Manager has no PIN and no in-app password reset — decision
+             *  0016: "neither has a recovery path in this app." The only
+             *  action here is finishing a provisioning attempt that failed
+             *  partway (profile row created, auth account not yet linked). */}
+            {person.role === 'FLEET_MANAGER' && !person.provisioned && (
+              <button
+                type="button"
+                onClick={finishSetup}
+                disabled={busy}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+              >
+                {busy ? 'Finishing…' : 'Finish setup'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {desktopInviteLink && (
+          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-medium text-slate-600">
+              Send this link to {person.displayName} yourself — it lets them set their own password.
+            </p>
+            <p className="break-all text-sm text-slate-800">{desktopInviteLink}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(desktopInviteLink)}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
+              >
+                Copy link
+              </button>
+              <button
+                type="button"
+                onClick={() => setDesktopInviteLink(null)}
+                className="rounded-xl px-3 py-2 text-sm font-medium text-slate-500"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
 

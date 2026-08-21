@@ -521,7 +521,7 @@ function RequestDriverCorrectionForm({
 }: {
   driver: DriverDetail
   currentUserId: string
-  onRequested: () => void
+  onRequested: (newCorrectionId: string) => void
 }) {
   const [fullName, setFullName] = useState(driver.fullName)
   const [knownAs, setKnownAs] = useState(driver.knownAs ?? '')
@@ -555,7 +555,7 @@ function RequestDriverCorrectionForm({
 
     setSubmitting(true)
     try {
-      await requestCorrection({
+      const newCorrectionId = await requestCorrection({
         targetTable: 'DRIVER',
         targetId: driver.id,
         reason: reason.trim(),
@@ -576,7 +576,7 @@ function RequestDriverCorrectionForm({
           notes: notes.trim() === '' ? null : notes.trim(),
         },
       })
-      onRequested()
+      onRequested(newCorrectionId)
     } catch {
       setError('Something went wrong. Try again.')
     } finally {

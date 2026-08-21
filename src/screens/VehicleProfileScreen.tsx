@@ -198,6 +198,14 @@ export function VehicleProfileScreen({
         />
         <Field label="Entered service on" value={vehicle.enteredServiceOn} />
         <Field label="Expected retirement" value={vehicle.expectedRetirementOn} />
+        <CorrectionPanel
+          currentUserRole={currentUserRole}
+          pending={pendingCorrection}
+          onChanged={() => setReloadKey((k) => k + 1)}
+          renderRequestForm={(onDone) => (
+            <RequestVehicleCorrectionForm vehicle={vehicle} currentUserId={currentUserId} onRequested={onDone} />
+          )}
+        />
         {isDesktopRole(currentUserRole) ? (
           <TargetPanel vehicleId={vehicle.id} yearlyTargetMinor={vehicle.yearlyTargetMinor} onSaved={() => setReloadKey((k) => k + 1)} />
         ) : (
@@ -850,7 +858,7 @@ function RequestVehicleCorrectionForm({
 }: {
   vehicle: VehicleDetail
   currentUserId: string
-  onRequested: () => void
+  onRequested: (newCorrectionId: string) => void
 }) {
   const [fleetId, setFleetId] = useState(vehicle.fleetId)
   const [plate, setPlate] = useState(vehicle.plate ?? '')
@@ -886,7 +894,7 @@ function RequestVehicleCorrectionForm({
 
     setSubmitting(true)
     try {
-      await requestCorrection({
+      const newCorrectionId = await requestCorrection({
         targetTable: 'VEHICLE',
         targetId: vehicle.id,
         reason: reason.trim(),
@@ -904,7 +912,7 @@ function RequestVehicleCorrectionForm({
           expected_retirement_on: expectedRetirementOn === '' ? null : expectedRetirementOn,
         },
       })
-      onRequested()
+      onRequested(newCorrectionId)
     } catch {
       setError('Something went wrong. Try again.')
     } finally {

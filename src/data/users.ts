@@ -133,6 +133,29 @@ export async function provisionDesktopPerson(userId: string): Promise<string> {
   return data.action_link
 }
 
+interface ResetDesktopPasswordResponse {
+  ok?: boolean
+  error?: string
+  action_link?: string
+}
+
+/** Calls admin-reset-desktop-password — generates a one-time password-
+ *  recovery link for an already-provisioned Fleet Manager, for the Owner
+ *  to hand them directly. Same non-credential-in-the-UI reasoning as
+ *  provisionDesktopPerson; separate function, mirroring how admin_reset_pin
+ *  is its own call rather than folded into mobile provisioning. Does not
+ *  cover Owner/Admin accounts — see the Edge Function's own comment for
+ *  why (nobody else could trigger this for a locked-out Owner anyway). */
+export async function resetDesktopPassword(userId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke<ResetDesktopPasswordResponse>('admin-reset-desktop-password', {
+    body: { user_id: userId },
+  })
+  if (error || !data || data.error || !data.action_link) {
+    throw new Error(data?.error ?? 'server_error')
+  }
+  return data.action_link
+}
+
 /** Calls the existing public.admin_reset_pin RPC (Phase 2) directly — sets
  *  or replaces a mobile role's PIN and revokes their current sessions.
  *  Owner/Admin only, enforced inside the function itself. The PIN is never

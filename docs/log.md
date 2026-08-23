@@ -1190,3 +1190,21 @@ redundancy isn't actually a problem. See decision 0019.
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass
 (no source files touched, docs-only change; re-run to confirm nothing
 else drifted).
+
+## [2026-08-23] feature | Staging environment, part 1: SITE_URL becomes an Edge Function secret
+
+Code change only — the actual second Supabase project and second
+Cloudflare Pages site come next, once this is on `main`. `SITE_URL` in
+`supabase/functions/_shared/mobile-auth.ts` was a hardcoded constant
+pointing at production; a staging deployment sharing the same function
+code would have sent staging's invite/reset emails back to production's
+domain. Now reads a `SITE_URL` Edge Function secret first, falling back
+to production's current value so production needs no action. See
+decision 0020.
+
+`docs/deployment.md` gained a "Staging environment" section (URL left as
+a placeholder until the Cloudflare Pages project exists) covering what's
+intentionally different from production: no SMTP, separate accounts, and
+the manual `SITE_URL` secret staging must set for itself.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

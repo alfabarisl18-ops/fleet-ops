@@ -81,3 +81,49 @@ workspace regardless of what's in the URL — the flag only affects the
 very first screen a signed-out visitor sees. Worth bookmarking the
 matching link on each person's own device so they never see the role
 picker at all.
+
+## Staging environment
+
+A second, fully separate deployment for real hands-on testing — same code,
+different database — so testing never risks production's real vehicles,
+drivers, and payments. See
+[decision 0020](decisions/0020-site-url-becomes-an-edge-function-secret.md)
+for why this needed a code change first.
+
+**What it is:** a second Supabase project (`fleet-ops-staging`, same org,
+`eu-central-1`, free tier — $0/month) running the same 32 migrations and the
+same 4 Edge Functions as production, seeded with the same placeholder
+`supabase/seed.sql` data. A second Cloudflare Pages project, connected to the
+*same* GitHub repo and the *same* `main` branch as production (staging always
+mirrors whatever's live in production's codebase — there's no separate git
+branch to maintain), but pointed at the staging Supabase project via its own
+`VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` environment variables
+instead of production's.
+
+**Staging URL:** `<fill in once the Cloudflare Pages project exists>`
+
+**Intentionally different from production:**
+
+- **SMTP is not configured on staging.** Inviting a Fleet Manager or
+  resetting a password will show an error there — everything else works.
+  Set up later (Supabase dashboard → staging project → Auth → SMTP Settings)
+  if staging ever needs to test the email flow itself, mirroring whatever
+  provider production uses.
+- **Accounts are entirely separate.** A staging-only Owner/Admin (never
+  production's real Owner credentials) plus the three QA people — M. Sesay,
+  F. Kamara, I. Turay — recreated with fresh PINs. See
+  [qa-accounts.md](qa-accounts.md).
+- **The `SITE_URL` Edge Function secret must be set manually** on the
+  staging project (dashboard → Edge Functions → Secrets) to the staging
+  URL above — the code's fallback only covers production. Skipping this
+  step doesn't break anything visibly; it silently sends staging's
+  invite/reset emails to the *production* domain instead, which is exactly
+  the bug decision 0020 exists to describe.
+- Staging's own **Authentication → URL Configuration**: Site URL and
+  Redirect URLs set to the staging URL above, same requirement and same
+  silent-fallback risk as production's own section above if skipped.
+
+**Data isolation is the whole point** — nothing entered on staging (test
+vehicles, test drivers, test payments) ever appears on production, and vice
+versa. Verified once at setup by creating a throwaway vehicle on staging and
+confirming it does not appear on production.

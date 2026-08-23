@@ -11,7 +11,7 @@ specification; these pages record how it was built and why.
 | [log.md](log.md) | Chronological record of significant changes. One entry per change. |
 | [open-questions.md](open-questions.md) | SPEC section 10, plus what Phase 1 assumed where SPEC was silent. Read before Phase 2. |
 | [qa-accounts.md](qa-accounts.md) | The three non-personal accounts reserved for agent/manual verification, and the rules for using them. Read before signing in to verify anything. |
-| [deployment.md](deployment.md) | One-time Cloudflare Pages setup (this repo has no deploy config of its own), and the three role-shortcut links (`?desktop`, `?collections`, `?maintenance`) that skip the role picker. |
+| [deployment.md](deployment.md) | One-time Cloudflare Pages setup (this repo has no deploy config of its own), the three role-shortcut links (`?desktop`, `?collections`, `?maintenance`) that skip the role picker, and the staging environment (a second, fully separate deployment for testing). |
 
 ## Decisions
 
@@ -39,6 +39,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0017](decisions/0017-debt-forgiveness-owner-only-reason-required.md) | Debt forgiveness: Owner/Admin only, reason required, forgiven amount stays visible as an OTHER_EXPENSE; three field-reported bugs (invisible dates, maintenance area dropdown) |
 | [0018](decisions/0018-rent-to-own-installment-is-the-daily-target.md) | Rent-to-own: the installment becomes the vehicle's daily target, every shortfall is debt while an agreement is active, payoff retires the vehicle; a real RLS gap found only by testing live as the mobile role |
 | [0019](decisions/0019-breakdown-and-half-day-stay-separate.md) | Breakdown and Half Day stay separate, unchanged — SPEC's last open question, closed with no code change |
+| [0020](decisions/0020-site-url-becomes-an-edge-function-secret.md) | `SITE_URL` becomes an Edge Function secret with a production fallback, so the same code can deploy to a staging project without redirecting its emails back to production |
 
 ## Build order
 

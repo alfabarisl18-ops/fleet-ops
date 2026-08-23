@@ -21,21 +21,28 @@ export function syntheticMobileEmail(publicUserId: string): string {
 }
 
 /**
- * The deployed app's own URL — not a secret, just config, so a plain
- * constant rather than an env var. Used as the redirectTo for invite and
+ * The deployed app's own URL. Used as the redirectTo for invite and
  * password-recovery links: Supabase's documented platform behaviour
  * (github.com/supabase/supabase/issues/45210) signs the browser into a
  * real session the moment either link is clicked, *before* a password
  * exists, so every such link must land somewhere in the app that gates
  * entry on setting one — see src/screens/SetPasswordScreen.tsx and the
- * ?set-password flag it's keyed on in src/App.tsx. Update this (and
- * redeploy admin-provision-desktop-account / admin-reset-desktop-password)
- * if the production domain ever changes. Also must be registered in the
- * Supabase dashboard's Authentication → URL Configuration → Redirect URLs
- * allowlist — otherwise Supabase silently ignores redirectTo and falls
- * back to the project's default Site URL instead.
+ * ?set-password flag it's keyed on in src/App.tsx. Must be registered in
+ * the Supabase dashboard's Authentication → URL Configuration → Redirect
+ * URLs allowlist for the *same project this function is deployed to* —
+ * otherwise Supabase silently ignores redirectTo and falls back to that
+ * project's own Site URL instead.
+ *
+ * Reads the SITE_URL Edge Function secret first (Supabase dashboard →
+ * Edge Functions → Secrets — no MCP tool sets this, dashboard-only, same
+ * as SMTP), falling back to production's own URL so production keeps
+ * working with zero action needed. This exists because a second Supabase
+ * project (docs/deployment.md's "Staging environment") deploys this exact
+ * same file — without a way to override per project, staging's invite/
+ * reset links would silently redirect back to production. See
+ * docs/decisions/0020-site-url-becomes-an-edge-function-secret.md.
  */
-export const SITE_URL = 'https://fleet-ops-56j.pages.dev'
+export const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://fleet-ops-56j.pages.dev'
 
 export function setPasswordRedirectUrl(): string {
   return `${SITE_URL}/?set-password=1`

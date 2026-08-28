@@ -13,7 +13,7 @@ import type { AgreementProgress, DriverPurchaseAgreement } from '@/data/driverPu
 import { cancelAgreement, completeAgreement, fetchAgreementProgress, fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
 import { updateVehicleTarget } from '@/data/accounting'
 import type { RouteOption, VehicleDetail, VehicleStatus } from '@/data/vehicles'
-import { changeVehicleStatus, fetchRoutes, fetchVehicle, updateExpectedDailyAmount } from '@/data/vehicles'
+import { changeVehicleStatus, fetchRoutes, fetchVehicle, findOrCreateRoute, updateExpectedDailyAmount } from '@/data/vehicles'
 import { DocumentPanel } from '@/screens/DocumentPanel'
 
 function isDesktopRole(role: AppRole): boolean {
@@ -868,10 +868,12 @@ function RequestVehicleCorrectionForm({
   const [customDescription, setCustomDescription] = useState(vehicle.customDescription ?? '')
   // apply_correction() has allow-listed route_id since Phase 4
   // (20260811030000_records_spine.sql) -- this form just never had a field
-  // for it. Same fetchRoutes()/RouteOption pattern as AssignDriverPanel's
-  // own Route select, further down this file.
-  const [routes, setRoutes] = useState<RouteOption[]>([])
-  const [routeId, setRouteId] = useState(vehicle.routeId ?? '')
+  // for it. Free text, not AssignDriverPanel's dropdown further down this
+  // file: the seed routes are placeholders, not what a real fleet actually
+  // runs, so typing a name that doesn't exist yet has to work, not just
+  // picking from a fixed list. findOrCreateRoute() resolves it to an id on
+  // submit.
+  const [routeName, setRouteName] = useState(vehicle.routeName ?? '')
   const [purchasedOn, setPurchasedOn] = useState(vehicle.purchasedOn ?? '')
   const [purchasePrice, setPurchasePrice] = useState(
     vehicle.purchasePriceMinor !== null ? formatMinorUnits(vehicle.purchasePriceMinor).replace('SLE ', '').replace(/,/g, '') : '',
@@ -884,21 +886,6 @@ function RequestVehicleCorrectionForm({
 
   const priceMinor = purchasePrice.trim() === '' ? null : parseMinorUnits(purchasePrice)
   const priceInvalid = purchasePrice.trim() !== '' && priceMinor === null
-
-  useEffect(() => {
-    let cancelled = false
-    fetchRoutes()
-      .then((r) => {
-        if (!cancelled) setRoutes(r)
-      })
-      .catch(() => {
-        // Non-critical -- the select just shows "None" plus whatever route
-        // was already selected below, without an options list to change to.
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -915,6 +902,7 @@ function RequestVehicleCorrectionForm({
 
     setSubmitting(true)
     try {
+      const routeId = routeName.trim() === '' ? null : await findOrCreateRoute(routeName)
       const newCorrectionId = await requestCorrection({
         targetTable: 'VEHICLE',
         targetId: vehicle.id,
@@ -927,7 +915,7 @@ function RequestVehicleCorrectionForm({
           distinguishing_marks: distinguishingMarks.trim() === '' ? null : distinguishingMarks.trim(),
           custom_type: customType.trim() === '' ? null : customType.trim(),
           custom_description: customDescription.trim() === '' ? null : customDescription.trim(),
-          route_id: routeId === '' ? null : routeId,
+          route_id: routeId,
           purchased_on: purchasedOn === '' ? null : purchasedOn,
           purchase_price_minor: priceMinor,
           entered_service_on: enteredServiceOn === '' ? null : enteredServiceOn,
@@ -982,18 +970,13 @@ function RequestVehicleCorrectionForm({
       </label>
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Route</span>
-        <select
-          value={routeId}
-          onChange={(e) => setRouteId(e.target.value)}
-          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
-        >
-          <option value="">None</option>
-          {routes.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+        <input
+          type="text"
+          value={routeName}
+          onChange={(e) => setRouteName(e.target.value)}
+          placeholder="Leave blank for none"
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        />
       </label>
       {vehicle.type === 'OTHER' && (
         <>

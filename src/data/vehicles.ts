@@ -147,6 +147,38 @@ export async function fetchRoutes(): Promise<RouteOption[]> {
 }
 
 /**
+ * Resolves a typed route name to a route_id — reuses an existing route
+ * (case-insensitive exact match) or creates a new one. The vehicle
+ * correction form takes free text rather than a picker (the placeholder
+ * seed routes aren't the real ones any given fleet actually runs), so
+ * typing a name that doesn't exist yet has to be a real, first-class way
+ * to add a route, not a dead end. routes.name is unique — a race against
+ * another submission creating the same name is caught and resolved by
+ * re-querying rather than failing the correction.
+ */
+export async function findOrCreateRoute(name: string): Promise<string> {
+  const trimmed = name.trim()
+
+  const { data: existing } = await supabase.from('routes').select('id').ilike('name', trimmed).maybeSingle()
+  if (existing) return existing.id
+
+  const { data: created, error } = await supabase
+    .from('routes')
+    .insert({ client_record_id: crypto.randomUUID(), name: trimmed })
+    .select('id')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') {
+      const { data: retry } = await supabase.from('routes').select('id').ilike('name', trimmed).maybeSingle()
+      if (retry) return retry.id
+    }
+    throw error
+  }
+  return created.id
+}
+
+/**
  * A vehicle's daily target had no edit path anywhere in the app before the
  * rent-to-own redesign — set once at onboarding (onboard_vehicle), then
  * immutable. set_up_driver_purchase_agreement now sets it as a side

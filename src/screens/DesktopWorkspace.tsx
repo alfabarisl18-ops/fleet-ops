@@ -159,6 +159,8 @@ async function resolveAlertView(alert: AlertListItem): Promise<DesktopView> {
         : { name: 'home' }
     case 'VEHICLE':
       return { name: 'vehicle-profile', vehicleId: alert.subjectId }
+    case 'DRIVER':
+      return { name: 'driver-profile', driverId: alert.subjectId }
     case 'LEDGER_ENTRY':
       return { name: 'approvals-list' }
     case 'PURCHASE_GOAL':

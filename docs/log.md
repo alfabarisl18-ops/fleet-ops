@@ -1231,3 +1231,28 @@ themselves. See decision 0021.
 Both functions redeployed to production; staging redeployed to match
 so it doesn't inherit a dead end SMTP was never going to solve there
 either.
+
+## [2026-08-28] feature | CORRECTION_REQUESTED alert type
+
+User asked why no bell alert fired for a test correction request --
+correctly: alerts only ever covered a fixed list of 21 situations
+(decision 0012), and a correction request was never one of them, so
+it only ever showed on the Records page. Once a real Fleet Manager
+(Zainab) starts using the app, a pending correction only the
+Owner/Admin can approve or reject could otherwise sit unnoticed.
+
+Two new migrations (split because ALTER TYPE ... ADD VALUE can't be
+used in the same transaction that also uses the new value):
+20260828193040_correction_alert_type.sql (the enum value),
+20260828193105_correction_alerts.sql (raise on insert, resolve on
+status change -- same event-driven shape as VEHICLE_GROUNDED/
+BALANCE_OUTSTANDING/VEHICLE_BELOW_TARGET, no cron). Visible to
+Owner/Admin only; Owner/Admin's own self-applied edits are excluded
+entirely since they're never genuinely pending. See decision 0022.
+
+DesktopWorkspace.tsx's resolveAlertView() gained a DRIVER case
+(VEHICLE already existed via VEHICLE_BELOW_TARGET); labels.ts gained
+the display label; src/types/database.ts regenerated from production
+after both migrations landed there and on staging.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/Card'
 import { CorrectionPanel } from '@/components/CorrectionPanel'
 import { IconChip } from '@/components/IconChip'
-import { OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_STATUS_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
+import { CORRECTION_FIELD_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_STATUS_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
 import type { Correction } from '@/data/corrections'
@@ -13,7 +13,7 @@ import type { AgreementProgress, DriverPurchaseAgreement } from '@/data/driverPu
 import { cancelAgreement, completeAgreement, fetchAgreementProgress, fetchOpenAgreementForVehicle } from '@/data/driverPurchaseAgreements'
 import { updateVehicleTarget } from '@/data/accounting'
 import type { RouteOption, VehicleDetail, VehicleStatus } from '@/data/vehicles'
-import { changeVehicleStatus, fetchRoutes, fetchVehicle, findOrCreateRoute, updateExpectedDailyAmount } from '@/data/vehicles'
+import { changeVehicleStatus, fetchRoutes, fetchRouteNamesByIds, fetchVehicle, findOrCreateRoute, updateExpectedDailyAmount } from '@/data/vehicles'
 import { DocumentPanel } from '@/screens/DocumentPanel'
 
 function isDesktopRole(role: AppRole): boolean {
@@ -51,6 +51,7 @@ export function VehicleProfileScreen({
   const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const [routeNameById, setRouteNameById] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -69,6 +70,39 @@ export function VehicleProfileScreen({
       cancelled = true
     }
   }, [vehicleId, reloadKey])
+
+  // Resolves route_id values in the pending correction's before/after JSON
+  // to real names, so the changed-fields diff below can show "Route:
+  // Kissy – PZ → Waterloo – Town" instead of two uuids.
+  useEffect(() => {
+    if (!pendingCorrection) return
+    const ids = [pendingCorrection.beforeJson?.route_id, pendingCorrection.afterJson?.route_id].filter(
+      (id): id is string => typeof id === 'string',
+    )
+    if (ids.length === 0) return
+    let cancelled = false
+    fetchRouteNamesByIds(ids)
+      .then((names) => {
+        if (!cancelled) setRouteNameById(names)
+      })
+      .catch(() => {
+        // Non-critical -- the diff falls back to showing the raw id.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [pendingCorrection])
+
+  function formatCorrectionValue(key: string, value: string | number | null): string {
+    if (key === 'purchase_price_minor') {
+      return value === null ? '—' : formatMinorUnits(Number(value))
+    }
+    if (key === 'route_id') {
+      if (value === null) return '—'
+      return routeNameById[String(value)] ?? String(value)
+    }
+    return value === null || value === '' ? '—' : String(value)
+  }
 
   // Amount paid/remaining is derived from ledger entries, not stored on the
   // agreement — fetched separately, keyed on the agreement so it refetches
@@ -152,6 +186,8 @@ export function VehicleProfileScreen({
           currentUserRole={currentUserRole}
           pending={pendingCorrection}
           onChanged={() => setReloadKey((k) => k + 1)}
+          fieldLabels={CORRECTION_FIELD_LABELS}
+          formatFieldValue={formatCorrectionValue}
           renderRequestForm={(onDone) => (
             <RequestVehicleCorrectionForm vehicle={vehicle} currentUserId={currentUserId} onRequested={onDone} />
           )}
@@ -202,6 +238,8 @@ export function VehicleProfileScreen({
           currentUserRole={currentUserRole}
           pending={pendingCorrection}
           onChanged={() => setReloadKey((k) => k + 1)}
+          fieldLabels={CORRECTION_FIELD_LABELS}
+          formatFieldValue={formatCorrectionValue}
           renderRequestForm={(onDone) => (
             <RequestVehicleCorrectionForm vehicle={vehicle} currentUserId={currentUserId} onRequested={onDone} />
           )}

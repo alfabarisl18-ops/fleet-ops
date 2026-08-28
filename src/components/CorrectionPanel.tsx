@@ -14,6 +14,42 @@ interface CorrectionPanelProps {
    *  children, so this shared panel can close the form and trigger a
    *  reload without reaching into opaque JSX. */
   renderRequestForm: (onDone: (newCorrectionId: string) => void) => React.ReactNode
+  /** Human labels for the raw snake_case keys before_json/after_json carry
+   *  — every caller needs one, matching whichever correctable fields its
+   *  own request form actually sends. */
+  fieldLabels: Record<string, string>
+  /** Per-field formatting for the changed-fields list below — falls back
+   *  to String(value), or '—' for null/empty, when omitted or when a key
+   *  isn't handled. Callers use this for the few fields a plain string
+   *  isn't enough for (e.g. money in minor units, an id that needs
+   *  resolving to a name). */
+  formatFieldValue?: (key: string, value: string | number | null) => string
+}
+
+type JsonRecord = Record<string, string | number | null>
+
+function defaultFormat(value: string | number | null): string {
+  if (value === null || value === '') return '—'
+  return String(value)
+}
+
+/** Keys present in after_json whose value actually differs from the
+ *  matching before_json key — a correction's after_json carries every
+ *  field its request form has, not just the ones that changed, so this is
+ *  what actually separates signal from noise for a reviewer. A key
+ *  missing from before_json (shouldn't happen in practice — every
+ *  correctable field already exists on the row before_json snapshots) is
+ *  treated as null rather than skipped, so it still surfaces as a change
+ *  if after_json sets it. */
+function changedFields(before: JsonRecord | null, after: JsonRecord | null): Array<[string, string | number | null, string | number | null]> {
+  if (!after) return []
+  const rows: Array<[string, string | number | null, string | number | null]> = []
+  for (const key of Object.keys(after)) {
+    const beforeValue = before?.[key] ?? null
+    const afterValue = after[key] ?? null
+    if (beforeValue !== afterValue) rows.push([key, beforeValue, afterValue])
+  }
+  return rows
 }
 
 /**
@@ -31,7 +67,14 @@ interface CorrectionPanelProps {
  * server-side) — unchanged: request, then wait for an Owner/Admin to
  * review it on this same screen.
  */
-export function CorrectionPanel({ currentUserRole, pending, onChanged, renderRequestForm }: CorrectionPanelProps) {
+export function CorrectionPanel({
+  currentUserRole,
+  pending,
+  onChanged,
+  renderRequestForm,
+  fieldLabels,
+  formatFieldValue,
+}: CorrectionPanelProps) {
   const isOwner = currentUserRole === 'OWNER_ADMIN'
   const [requesting, setRequesting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -81,9 +124,26 @@ export function CorrectionPanel({ currentUserRole, pending, onChanged, renderReq
   }
 
   if (pending) {
+    const changes = changedFields(pending.beforeJson, pending.afterJson)
+
     return (
       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
         <p className="text-sm text-amber-800">Correction pending: {pending.reason}</p>
+
+        {changes.length > 0 && (
+          <dl className="mt-2 flex flex-col gap-1 border-t border-amber-200 pt-2">
+            {changes.map(([key, before, after]) => (
+              <div key={key} className="text-sm">
+                <dt className="inline font-medium text-amber-900">{fieldLabels[key] ?? key}: </dt>
+                <dd className="inline text-amber-800">
+                  {formatFieldValue ? formatFieldValue(key, before) : defaultFormat(before)}
+                  {' → '}
+                  {formatFieldValue ? formatFieldValue(key, after) : defaultFormat(after)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
 
         {error && (
           <p role="alert" className="mt-1 text-sm text-red-600">

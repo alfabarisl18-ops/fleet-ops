@@ -146,6 +146,16 @@ export async function fetchRoutes(): Promise<RouteOption[]> {
   return data ?? []
 }
 
+/** Resolves a set of route ids to their names — used to show a readable
+ *  route name (not a raw uuid) in a pending correction's before/after
+ *  diff, since correction JSON stores route_id, not route_name. */
+export async function fetchRouteNamesByIds(ids: string[]): Promise<Record<string, string>> {
+  if (ids.length === 0) return {}
+  const { data, error } = await supabase.from('routes').select('id, name').in('id', ids)
+  if (error) throw error
+  return Object.fromEntries((data ?? []).map((r) => [r.id, r.name]))
+}
+
 /**
  * Resolves a typed route name to a route_id — reuses an existing route
  * (case-insensitive exact match) or creates a new one. The vehicle

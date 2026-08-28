@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/Card'
 import { CorrectionPanel } from '@/components/CorrectionPanel'
 import { IconChip } from '@/components/IconChip'
-import { BALANCE_STATUS_LABELS, DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
+import { BALANCE_STATUS_LABELS, CORRECTION_FIELD_LABELS, DRIVER_STATUS_LABELS, OWNERSHIP_TRANSFER_STATUS_LABELS, PAYMENT_FREQUENCY_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
 import type { Correction } from '@/data/corrections'
@@ -148,6 +148,7 @@ export function DriverProfileScreen({
           currentUserRole={currentUserRole}
           pending={pendingCorrection}
           onChanged={() => setReloadKey((k) => k + 1)}
+          fieldLabels={CORRECTION_FIELD_LABELS}
           renderRequestForm={(onDone) => (
             <RequestDriverCorrectionForm driver={driver} currentUserId={currentUserId} onRequested={onDone} />
           )}

@@ -261,6 +261,43 @@ export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
   VEHICLE_READY_FOR_ONBOARDING: 'Vehicle ready for onboarding',
 }
 
+/**
+ * Labels for the raw snake_case keys a correction's before_json/after_json
+ * carry — CorrectionPanel uses this to show what actually changed, not
+ * just the requester's typed reason. Vehicle's 11 correctable fields
+ * (RequestVehicleCorrectionForm) and driver's 13 (RequestDriverCorrectionForm)
+ * share no key names, so one map covers both screens' CorrectionPanel
+ * instances.
+ */
+export const CORRECTION_FIELD_LABELS: Record<string, string> = {
+  // Vehicle
+  fleet_id: 'Fleet ID',
+  plate: 'Plate',
+  color: 'Color',
+  distinguishing_marks: 'Distinguishing marks',
+  custom_type: 'Type description',
+  custom_description: 'Description',
+  route_id: 'Route',
+  purchased_on: 'Purchased on',
+  purchase_price_minor: 'Purchase price',
+  entered_service_on: 'Entered service on',
+  expected_retirement_on: 'Expected retirement',
+  // Driver
+  full_name: 'Full name',
+  known_as: 'Known as',
+  phone: 'Phone',
+  phone_alt: 'Alternate phone',
+  address: 'Address',
+  next_of_kin_name: 'Next of kin name',
+  next_of_kin_phone: 'Next of kin phone',
+  id_document_type: 'ID document type',
+  id_document_number: 'ID document number',
+  licence_number: 'Licence number',
+  licence_expiry: 'Licence expiry',
+  started_on: 'Started on',
+  notes: 'Notes',
+}
+
 export const PROBLEM_DESCRIPTOR_LABELS: Record<ProblemDescriptor, string> = {
   NOT_WORKING: 'Not working',
   WORN: 'Worn',

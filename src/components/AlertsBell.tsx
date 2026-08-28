@@ -104,7 +104,14 @@ export function AlertsBell({ currentUserId, onOpenAlert }: AlertsBellProps) {
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-10 cursor-default"
           />
-          <div className="absolute right-0 z-20 mt-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+          {/* Anchored to the bell's own small wrapper, not the TopBar's true
+           *  right edge -- the avatar circle sits further right of it
+           *  (TopBar.tsx), so a fixed w-80 doesn't account for that offset
+           *  and overflows off the left edge on a narrow phone. Clamp to
+           *  whatever's actually available instead of assuming the panel
+           *  starts flush against the screen edge -- found live, on a real
+           *  mid-range Android width, not assumed. */}
+          <div className="absolute right-0 z-20 mt-2 w-[min(20rem,calc(100vw-5rem))] rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
             <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Alerts</p>
 
             {error && (

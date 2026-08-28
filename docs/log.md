@@ -1208,3 +1208,26 @@ intentionally different from production: no SMTP, separate accounts, and
 the manual `SITE_URL` secret staging must set for itself.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+## [2026-08-28] fix | Desktop invite/reset reverts to a shown link
+
+Real onboarding failure, not a hypothetical: inviting Zainab Barrie
+(Fleet Manager) failed live with `AuthRetryableFetchError: Error
+sending invite email`, confirmed from the Edge Function's own server
+logs. Root cause, confirmed against Resend's own docs: their shared
+`onboarding@resend.dev` address only reaches the account owner's own
+inbox — sending to anyone else needs a verified domain this project
+doesn't have, and the user doesn't want to buy/configure one right
+now.
+
+`admin-provision-desktop-account` and `admin-reset-desktop-password`
+revert from `inviteUserByEmail()` / `resetPasswordForEmail()` back to
+`generateLink()` — a one-time link returned to the app instead of an
+email sent automatically. `AddPersonForm.tsx` and `PeopleList.tsx`
+show the link with a copy button for the Owner/Admin to deliver
+themselves. See decision 0021.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+Both functions redeployed to production; staging redeployed to match
+so it doesn't inherit a dead end SMTP was never going to solve there
+either.

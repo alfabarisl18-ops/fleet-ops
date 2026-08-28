@@ -32,9 +32,11 @@ automatically on every push after this, with nothing to run by hand.
 
 ## Required: Supabase Auth URL configuration
 
-Fleet Manager invites and password resets (Settings → People) email a
-one-time link via `admin.auth.admin.inviteUserByEmail()` /
-`resetPasswordForEmail()`, both pointing `redirectTo` at
+Fleet Manager invites and password resets (Settings → People) generate a
+one-time link via `admin.auth.admin.generateLink()` — shown in the app for
+the Owner/Admin to copy and send themselves, not emailed automatically (see
+[decision 0021](decisions/0021-desktop-invite-reset-reverts-to-a-shown-link.md)
+for why auto-send was tried and reverted). Both calls point `redirectTo` at
 `<SITE_URL>/?set-password=1` — the flag `src/App.tsx` uses to gate entry
 into the app on `SetPasswordScreen`. This is not optional polish:
 Supabase's own documented behaviour
@@ -104,11 +106,6 @@ instead of production's.
 
 **Intentionally different from production:**
 
-- **SMTP is not configured on staging.** Inviting a Fleet Manager or
-  resetting a password will show an error there — everything else works.
-  Set up later (Supabase dashboard → staging project → Auth → SMTP Settings)
-  if staging ever needs to test the email flow itself, mirroring whatever
-  provider production uses.
 - **Accounts are entirely separate.** A staging-only Owner/Admin (never
   production's real Owner credentials) plus the three QA people — M. Sesay,
   F. Kamara, I. Turay — recreated with fresh PINs. See

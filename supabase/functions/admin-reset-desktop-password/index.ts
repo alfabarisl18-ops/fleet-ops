@@ -1,20 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 import { adminTableRequest, setPasswordRedirectUrl } from '../_shared/mobile-auth.ts'
 
-// Owner/Admin only: sends a password-recovery email to an already-
+// Owner/Admin only: generates a password-recovery link for an already-
 // provisioned Fleet Manager, mirroring admin-provision-desktop-account's
-// shape almost exactly — same caller-verification pattern. The only real
-// differences: the target must ALREADY be provisioned (auth_user_id not
-// null) — the opposite precondition from provisioning a brand-new account
-// — and this calls the self-service resetPasswordForEmail() (through the
-// caller's own client, not the admin one — it needs no service-role
-// privilege) rather than an admin.* method, since that's the exact method
-// meant for "send this person a reset email." redirectTo points at the
-// app's own password-setup gate — see that helper's comment for why
-// that's mandatory, not cosmetic.
+// shape almost exactly — same caller-verification pattern, same
+// generateLink() mechanism, same reason (see that function's comment and
+// decision 0021: Resend's shared address can't reach anyone but the
+// account owner without a verified domain this project doesn't have, so
+// this returns a link for the Owner/Admin to copy and deliver themselves
+// rather than sending anything itself). The only real difference from
+// provisioning: the target must ALREADY be provisioned (auth_user_id not
+// null) — the opposite precondition from creating a brand-new account.
+// redirectTo points at the app's own password-setup gate — see that
+// helper's comment for why that's mandatory, not cosmetic.
 //
-// (Originally used generateLink({type:'recovery'}), which never sends
-// anything on its own — switched once SMTP was confirmed working.)
+// (Briefly used the self-service resetPasswordForEmail() while SMTP was
+// live — reverted along with the provisioning side.)
 //
 // Deliberately does not cover OWNER_ADMIN targets, for the same reason
 // admin-provision-desktop-account doesn't create them: this only ever
@@ -79,6 +80,10 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
   const { data: callerAuth, error: callerAuthError } = await caller.auth.getUser()
   if (callerAuthError || !callerAuth?.user) {
     return json({ error: 'unauthorized' }, 401)
@@ -120,14 +125,16 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'missing_email' }, 400)
   }
 
-  const { error: resetError } = await caller.auth.resetPasswordForEmail(target.email, {
-    redirectTo: setPasswordRedirectUrl(),
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'recovery',
+    email: target.email,
+    options: { redirectTo: setPasswordRedirectUrl() },
   })
 
-  if (resetError) {
-    console.error('admin-reset-desktop-password: resetPasswordForEmail failed', resetError)
+  if (linkError || !linkData?.properties?.action_link) {
+    console.error('admin-reset-desktop-password: generateLink failed', linkError)
     return json({ error: 'server_error' }, 500)
   }
 
-  return json({ ok: true })
+  return json({ ok: true, action_link: linkData.properties.action_link })
 })

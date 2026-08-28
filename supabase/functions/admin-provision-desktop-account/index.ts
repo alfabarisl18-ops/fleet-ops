@@ -2,10 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 import { adminTableRequest, setPasswordRedirectUrl } from '../_shared/mobile-auth.ts'
 
 // Owner/Admin only: creates the auth.users row a Fleet Manager account
-// needs before it can ever sign in, and emails them a one-time setup
-// link directly (via this project's now-configured SMTP) — no password
-// is ever generated, shown, or stored by this app or this function
-// (CLAUDE.md: never print credentials in the UI). See
+// needs before it can ever sign in, and returns a one-time setup link for
+// the app to show — no password is ever generated, shown, or stored by
+// this app or this function (CLAUDE.md: never print credentials in the
+// UI — a one-time setup link is not a credential). See
 // docs/decisions/0016-settings-scope-and-export-format.md's "Revisit this
 // when a real desktop-account self-service flow is explicitly requested"
 // note — this is that flow.
@@ -23,15 +23,21 @@ import { adminTableRequest, setPasswordRedirectUrl } from '../_shared/mobile-aut
 // Authorization header for table requests specifically — see that helper's
 // comment in _shared/mobile-auth.ts). Differs where it has to: a desktop
 // account has a real email and no PIN, so this calls
-// admin.auth.admin.inviteUserByEmail() instead of setting a synthetic
-// email — Supabase's admin method that both creates the account and sends
-// the invite itself, through whatever SMTP is configured on this project.
-// (Originally used generateLink(), which never sends anything on its own —
-// switched once SMTP was confirmed working; see git history if that ever
-// needs to be reverted.) redirectTo points at the app's own password-setup
-// gate — see that helper's comment for why this is mandatory, not
-// cosmetic: Supabase signs the browser in the instant the link is opened,
-// before any password exists.
+// admin.auth.admin.generateLink({type: 'invite'}) instead of setting a
+// synthetic email.
+//
+// generateLink() returns a link and sends nothing itself — the app shows it
+// for the Owner/Admin to copy and send themselves. Briefly switched to
+// inviteUserByEmail() (which both creates the account and sends the email,
+// through whatever SMTP is configured) once this project's Resend SMTP was
+// confirmed working — reverted after a live failure onboarding a real
+// Fleet Manager: Resend's shared onboarding@resend.dev address can only
+// ever reach the account owner's own inbox, and sending to anyone else
+// needs a verified custom domain this project doesn't have (see decision
+// 0021). redirectTo points at the app's own password-setup gate — see that
+// helper's comment for why this is mandatory, not cosmetic: Supabase signs
+// the browser in the instant the link is opened, before any password
+// exists.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -136,30 +142,31 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'missing_email' }, 400)
   }
 
-  // Creates the auth.users row for a brand-new email AND sends the invite
-  // email itself, through whatever SMTP is configured on this project —
-  // unlike generateLink(), which only ever returns a link and never sends
-  // anything on its own.
-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(target.email, {
-    redirectTo: setPasswordRedirectUrl(),
+  // Creates the auth.users row for a brand-new email and returns a one-time
+  // setup link. Sends nothing itself — the app shows this for the
+  // Owner/Admin to copy and deliver themselves (WhatsApp, SMS, in person).
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'invite',
+    email: target.email,
+    options: { redirectTo: setPasswordRedirectUrl() },
   })
 
-  if (inviteError || !inviteData?.user) {
-    console.error('admin-provision-desktop-account: inviteUserByEmail failed', inviteError)
+  if (linkError || !linkData?.user || !linkData.properties?.action_link) {
+    console.error('admin-provision-desktop-account: generateLink failed', linkError)
     return json({ error: 'server_error' }, 500)
   }
 
-  const linkResp = await adminTableRequest(
+  const patchResp = await adminTableRequest(
     supabaseUrl,
     serviceRoleKey,
     `users?id=eq.${encodeURIComponent(targetUserId)}`,
-    { method: 'PATCH', body: JSON.stringify({ auth_user_id: inviteData.user.id }) },
+    { method: 'PATCH', body: JSON.stringify({ auth_user_id: linkData.user.id }) },
   )
 
-  if (!linkResp.ok) {
-    console.error('admin-provision-desktop-account: failed to link auth_user_id', await linkResp.text())
+  if (!patchResp.ok) {
+    console.error('admin-provision-desktop-account: failed to link auth_user_id', await patchResp.text())
     return json({ error: 'server_error' }, 500)
   }
 
-  return json({ ok: true, user_id: targetUserId, auth_user_id: inviteData.user.id })
+  return json({ ok: true, user_id: targetUserId, auth_user_id: linkData.user.id, action_link: linkData.properties.action_link })
 })

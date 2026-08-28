@@ -866,6 +866,12 @@ function RequestVehicleCorrectionForm({
   const [distinguishingMarks, setDistinguishingMarks] = useState(vehicle.distinguishingMarks ?? '')
   const [customType, setCustomType] = useState(vehicle.customType ?? '')
   const [customDescription, setCustomDescription] = useState(vehicle.customDescription ?? '')
+  // apply_correction() has allow-listed route_id since Phase 4
+  // (20260811030000_records_spine.sql) -- this form just never had a field
+  // for it. Same fetchRoutes()/RouteOption pattern as AssignDriverPanel's
+  // own Route select, further down this file.
+  const [routes, setRoutes] = useState<RouteOption[]>([])
+  const [routeId, setRouteId] = useState(vehicle.routeId ?? '')
   const [purchasedOn, setPurchasedOn] = useState(vehicle.purchasedOn ?? '')
   const [purchasePrice, setPurchasePrice] = useState(
     vehicle.purchasePriceMinor !== null ? formatMinorUnits(vehicle.purchasePriceMinor).replace('SLE ', '').replace(/,/g, '') : '',
@@ -878,6 +884,21 @@ function RequestVehicleCorrectionForm({
 
   const priceMinor = purchasePrice.trim() === '' ? null : parseMinorUnits(purchasePrice)
   const priceInvalid = purchasePrice.trim() !== '' && priceMinor === null
+
+  useEffect(() => {
+    let cancelled = false
+    fetchRoutes()
+      .then((r) => {
+        if (!cancelled) setRoutes(r)
+      })
+      .catch(() => {
+        // Non-critical -- the select just shows "None" plus whatever route
+        // was already selected below, without an options list to change to.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -906,6 +927,7 @@ function RequestVehicleCorrectionForm({
           distinguishing_marks: distinguishingMarks.trim() === '' ? null : distinguishingMarks.trim(),
           custom_type: customType.trim() === '' ? null : customType.trim(),
           custom_description: customDescription.trim() === '' ? null : customDescription.trim(),
+          route_id: routeId === '' ? null : routeId,
           purchased_on: purchasedOn === '' ? null : purchasedOn,
           purchase_price_minor: priceMinor,
           entered_service_on: enteredServiceOn === '' ? null : enteredServiceOn,
@@ -957,6 +979,21 @@ function RequestVehicleCorrectionForm({
           onChange={(e) => setDistinguishingMarks(e.target.value)}
           className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Route</span>
+        <select
+          value={routeId}
+          onChange={(e) => setRouteId(e.target.value)}
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+        >
+          <option value="">None</option>
+          {routes.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
       </label>
       {vehicle.type === 'OTHER' && (
         <>

@@ -259,6 +259,7 @@ export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
   INSURANCE_DUE: 'Insurance due',
   MISSING_DOCUMENTS: 'Missing documents',
   VEHICLE_READY_FOR_ONBOARDING: 'Vehicle ready for onboarding',
+  CORRECTION_REQUESTED: 'Correction requested',
 }
 
 /**

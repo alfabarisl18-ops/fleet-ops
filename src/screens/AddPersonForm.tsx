@@ -24,12 +24,15 @@ function isMobileRole(role: AppRole): role is 'COLLECTIONS_FINANCE' | 'MAINTENAN
  * on PeopleList, settable later via Reset PIN.
  *
  * Fleet Manager (added later, see docs/decisions/0016's own "revisit this
- * when…" note) is a different shape: no PIN, a real email — an invite
- * email goes out directly (this project's SMTP is configured), and the
- * new Fleet Manager sets their own password when they open it, on a
- * screen this app gates entry on (SetPasswordScreen). Nothing in this app
- * ever sees or stores that password (CLAUDE.md: never print credentials
- * in the UI).
+ * when…" note) is a different shape: no PIN, a real email. A one-time
+ * setup link is generated and shown here for the Owner/Admin to copy and
+ * send themselves (WhatsApp, SMS, in person) — not emailed automatically;
+ * see decision 0021 for why (Resend's shared sending address can't reach
+ * anyone but this project's own account owner without a verified domain).
+ * The new Fleet Manager sets their own password when they open the link,
+ * on a screen this app gates entry on (SetPasswordScreen). Nothing in
+ * this app ever sees or stores that password (CLAUDE.md: never print
+ * credentials in the UI — a one-time setup link is not a credential).
  */
 export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
   const [displayName, setDisplayName] = useState('')
@@ -39,7 +42,8 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [inviteSent, setInviteSent] = useState(false)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -94,8 +98,8 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
     setSubmitting(true)
     try {
       const userId = await createDesktopPerson(displayName.trim(), email.trim())
-      await provisionDesktopPerson(userId)
-      setInviteSent(true)
+      const link = await provisionDesktopPerson(userId)
+      setInviteLink(link)
     } catch {
       setError('Something went wrong. Try again.')
     } finally {
@@ -103,7 +107,18 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
     }
   }
 
-  if (inviteSent) {
+  async function copyLink() {
+    if (!inviteLink) return
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+      setCopied(true)
+    } catch {
+      // Clipboard access can fail (permissions, non-HTTPS context) — the
+      // link is still selectable text below either way.
+    }
+  }
+
+  if (inviteLink) {
     return (
       <div className="mx-auto max-w-xl p-4 sm:p-6">
         <div className="mb-4 flex items-center gap-3">
@@ -112,13 +127,20 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
         </div>
 
         <p className="mb-4 text-sm text-slate-600">
-          An email was sent to {email.trim()} with a link to set their own password — nobody else, including this
-          app, ever sees it. Ask them to check their inbox (and spam folder).
+          Send this one-time link to {email.trim()} yourself — WhatsApp, SMS, in person. Nobody else, including this
+          app, ever sees the password they set with it. The link only works once.
         </p>
 
-        <button type="button" onClick={onCreated} className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white">
-          Done
-        </button>
+        <p className="mb-4 break-all rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">{inviteLink}</p>
+
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={copyLink} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700">
+            {copied ? 'Copied' : 'Copy link'}
+          </button>
+          <button type="button" onClick={onCreated} className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white">
+            Done
+          </button>
+        </div>
       </div>
     )
   }
@@ -195,7 +217,9 @@ export function AddPersonForm({ onCreated, onCancel }: AddPersonFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               className="rounded-xl border border-slate-300 px-4 py-3 text-base"
             />
-            <span className="text-xs text-slate-500">They'll get an email with a one-time link to set their own password — never typed here.</span>
+            <span className="text-xs text-slate-500">
+              You'll get a one-time link to send them yourself — their password is never typed here.
+            </span>
           </label>
         )}
 

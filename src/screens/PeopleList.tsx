@@ -113,7 +113,13 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   const [busy, setBusy] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
-  const [rowNotice, setRowNotice] = useState<string | null>(null)
+  // A one-time setup/reset link for a Fleet Manager row — shown for the
+  // Owner/Admin to copy and deliver themselves. See decision 0021: Resend's
+  // shared sending address can't reach anyone but this project's own
+  // account owner without a verified domain, so this app never sends the
+  // link itself.
+  const [rowLink, setRowLink] = useState<string | null>(null)
+  const [rowLinkCopied, setRowLinkCopied] = useState(false)
   // Only promotion to Owner/Admin gets a confirm step — the same-category
   // swaps (Fleet Manager, or either mobile role) stay a single click, same
   // as before. Owner/Admin is the one role with no ceiling on what it can
@@ -167,15 +173,17 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   async function finishSetup() {
     setBusy(true)
     setRowError(null)
-    setRowNotice(null)
+    setRowLink(null)
+    setRowLinkCopied(false)
     try {
       if (isMobileRole(person.role)) {
         await provisionMobilePerson(person.id)
+        onChanged()
       } else {
-        await provisionDesktopPerson(person.id)
-        setRowNotice(`Invite email sent to ${person.displayName}.`)
+        const link = await provisionDesktopPerson(person.id)
+        setRowLink(link)
+        onChanged()
       }
-      onChanged()
     } catch {
       setRowError('Could not finish setup. Try again.')
     } finally {
@@ -186,14 +194,25 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
   async function resetPassword() {
     setBusy(true)
     setRowError(null)
-    setRowNotice(null)
+    setRowLink(null)
+    setRowLinkCopied(false)
     try {
-      await resetDesktopPassword(person.id)
-      setRowNotice(`Password-reset email sent to ${person.displayName}.`)
+      const link = await resetDesktopPassword(person.id)
+      setRowLink(link)
     } catch {
       setRowError('Could not reset the password. Try again.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function copyRowLink() {
+    if (!rowLink) return
+    try {
+      await navigator.clipboard.writeText(rowLink)
+      setRowLinkCopied(true)
+    } catch {
+      // Clipboard access can fail — the link is still selectable text below.
     }
   }
 
@@ -321,7 +340,22 @@ function PersonRow({ person, editable, onChanged }: { person: PersonListItem; ed
           </div>
         )}
 
-        {rowNotice && <p className="mt-2 text-sm text-emerald-700">{rowNotice}</p>}
+        {rowLink && (
+          <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-2 text-sm text-slate-700">
+              Send this one-time link to {person.displayName} yourself — WhatsApp, SMS, in person. It only works
+              once.
+            </p>
+            <p className="mb-2 break-all rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-700">{rowLink}</p>
+            <button
+              type="button"
+              onClick={copyRowLink}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
+            >
+              {rowLinkCopied ? 'Copied' : 'Copy link'}
+            </button>
+          </div>
+        )}
 
         {rowError && (
           <p role="alert" className="mt-2 text-sm text-red-600">

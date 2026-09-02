@@ -27,6 +27,11 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
   const [color, setColor] = useState('')
   const [plate, setPlate] = useState('')
   const [distinguishingMarks, setDistinguishingMarks] = useState('')
+  const [vin, setVin] = useState('')
+  const [engineNumber, setEngineNumber] = useState('')
+  const [cubicCapacityCc, setCubicCapacityCc] = useState('')
+  const [seatCount, setSeatCount] = useState('')
+  const [registrationCategory, setRegistrationCategory] = useState('')
   const [routeId, setRouteId] = useState('')
   const [purchasedOn, setPurchasedOn] = useState('')
   const [purchasePrice, setPurchasePrice] = useState('')
@@ -51,6 +56,13 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
   const priceMinor = purchasePrice.trim() === '' ? null : parseMinorUnits(purchasePrice)
   const priceInvalid = purchasePrice.trim() !== '' && priceMinor === null
 
+  const cubicCapacityValue = cubicCapacityCc.trim() === '' ? null : Number(cubicCapacityCc)
+  const cubicCapacityInvalid =
+    cubicCapacityCc.trim() !== '' && (cubicCapacityValue === null || !Number.isInteger(cubicCapacityValue) || cubicCapacityValue <= 0)
+
+  const seatCountValue = seatCount.trim() === '' ? null : Number(seatCount)
+  const seatCountInvalid = seatCount.trim() !== '' && (seatCountValue === null || !Number.isInteger(seatCountValue) || seatCountValue < 0)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -67,6 +79,14 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
       setError('Purchase price is not a valid amount.')
       return
     }
+    if (cubicCapacityInvalid) {
+      setError('Cubic capacity must be a whole number greater than 0.')
+      return
+    }
+    if (seatCountInvalid) {
+      setError('Seats (excl. driver) must be a whole number, 0 or more.')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -78,6 +98,11 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
         ...(color.trim() !== '' ? { color: color.trim() } : {}),
         ...(plate.trim() !== '' ? { plate: plate.trim() } : {}),
         ...(distinguishingMarks.trim() !== '' ? { distinguishingMarks: distinguishingMarks.trim() } : {}),
+        ...(vin.trim() !== '' ? { vin: vin.trim() } : {}),
+        ...(engineNumber.trim() !== '' ? { engineNumber: engineNumber.trim() } : {}),
+        ...(cubicCapacityValue !== null ? { cubicCapacityCc: cubicCapacityValue } : {}),
+        ...(seatCountValue !== null ? { seatCount: seatCountValue } : {}),
+        ...(registrationCategory.trim() !== '' ? { registrationCategory: registrationCategory.trim() } : {}),
         ...(routeId !== '' ? { routeId } : {}),
         ...(purchasedOn !== '' ? { purchasedOn } : {}),
         ...(priceMinor !== null ? { purchasePriceMinor: priceMinor } : {}),
@@ -201,6 +226,60 @@ export function AddVehicleForm({ onCreated, onCancel }: AddVehicleFormProps) {
             value={distinguishingMarks}
             onChange={(e) => setDistinguishingMarks(e.target.value)}
             rows={2}
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-slate-700">VIN (optional)</span>
+          <input
+            type="text"
+            value={vin}
+            onChange={(e) => setVin(e.target.value)}
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-slate-700">Engine number (optional)</span>
+          <input
+            type="text"
+            value={engineNumber}
+            onChange={(e) => setEngineNumber(e.target.value)}
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-slate-700">Cubic capacity, cc (optional)</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={cubicCapacityCc}
+            onChange={(e) => setCubicCapacityCc(e.target.value)}
+            placeholder="e.g. 3000"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-slate-700">Seats, excl. driver (optional)</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={seatCount}
+            onChange={(e) => setSeatCount(e.target.value)}
+            className="rounded-xl border border-slate-300 px-4 py-3 text-base"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-slate-700">Registration category (optional)</span>
+          <input
+            type="text"
+            value={registrationCategory}
+            onChange={(e) => setRegistrationCategory(e.target.value)}
+            placeholder="e.g. C3"
             className="rounded-xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>

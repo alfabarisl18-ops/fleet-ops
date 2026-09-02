@@ -42,6 +42,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0020](decisions/0020-site-url-becomes-an-edge-function-secret.md) | `SITE_URL` becomes an Edge Function secret with a production fallback, so the same code can deploy to a staging project without redirecting its emails back to production |
 | [0021](decisions/0021-desktop-invite-reset-reverts-to-a-shown-link.md) | Desktop invite/reset reverts from auto-sent email back to a shown link, after Resend's shared address failed live onboarding a real Fleet Manager |
 | [0022](decisions/0022-correction-requested-alert.md) | `CORRECTION_REQUESTED` becomes a real alert (Owner/Admin only, event-driven, Owner/Admin's own self-applied edits excluded) instead of only showing on the Records page |
+| [0023](decisions/0023-vehicle-registration-fields.md) | `vehicles` gains VIN, engine number, cubic capacity, seat count, registration category (owner name/address excluded); a direct SQL insert into `vehicles` turned out to be impossible outside a real session, by design |
 
 ## Build order
 

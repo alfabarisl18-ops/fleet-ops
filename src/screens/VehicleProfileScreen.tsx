@@ -179,6 +179,11 @@ export function VehicleProfileScreen({
         <Field label="Fleet ID" value={vehicle.fleetId} />
         <Field label="Plate" value={vehicle.plate} />
         <Field label="Color" value={vehicle.color} />
+        <Field label="VIN" value={vehicle.vin} />
+        <Field label="Engine number" value={vehicle.engineNumber} />
+        <Field label="Cubic capacity (cc)" value={vehicle.cubicCapacityCc !== null ? String(vehicle.cubicCapacityCc) : null} />
+        <Field label="Seats (excl. driver)" value={vehicle.seatCount !== null ? String(vehicle.seatCount) : null} />
+        <Field label="Registration category" value={vehicle.registrationCategory} />
         <Field label="Distinguishing marks" value={vehicle.distinguishingMarks} />
         {vehicle.type === 'OTHER' && <Field label="Description" value={vehicle.customDescription} />}
         <Field label="Route" value={vehicle.routeName} />
@@ -902,6 +907,11 @@ function RequestVehicleCorrectionForm({
   const [plate, setPlate] = useState(vehicle.plate ?? '')
   const [color, setColor] = useState(vehicle.color ?? '')
   const [distinguishingMarks, setDistinguishingMarks] = useState(vehicle.distinguishingMarks ?? '')
+  const [vin, setVin] = useState(vehicle.vin ?? '')
+  const [engineNumber, setEngineNumber] = useState(vehicle.engineNumber ?? '')
+  const [cubicCapacityCc, setCubicCapacityCc] = useState(vehicle.cubicCapacityCc !== null ? String(vehicle.cubicCapacityCc) : '')
+  const [seatCount, setSeatCount] = useState(vehicle.seatCount !== null ? String(vehicle.seatCount) : '')
+  const [registrationCategory, setRegistrationCategory] = useState(vehicle.registrationCategory ?? '')
   const [customType, setCustomType] = useState(vehicle.customType ?? '')
   const [customDescription, setCustomDescription] = useState(vehicle.customDescription ?? '')
   // apply_correction() has allow-listed route_id since Phase 4
@@ -925,6 +935,13 @@ function RequestVehicleCorrectionForm({
   const priceMinor = purchasePrice.trim() === '' ? null : parseMinorUnits(purchasePrice)
   const priceInvalid = purchasePrice.trim() !== '' && priceMinor === null
 
+  const cubicCapacityValue = cubicCapacityCc.trim() === '' ? null : Number(cubicCapacityCc)
+  const cubicCapacityInvalid =
+    cubicCapacityCc.trim() !== '' && (cubicCapacityValue === null || !Number.isInteger(cubicCapacityValue) || cubicCapacityValue <= 0)
+
+  const seatCountValue = seatCount.trim() === '' ? null : Number(seatCount)
+  const seatCountInvalid = seatCount.trim() !== '' && (seatCountValue === null || !Number.isInteger(seatCountValue) || seatCountValue < 0)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -935,6 +952,14 @@ function RequestVehicleCorrectionForm({
     }
     if (priceInvalid) {
       setError('Purchase price is not a valid amount.')
+      return
+    }
+    if (cubicCapacityInvalid) {
+      setError('Cubic capacity must be a whole number greater than 0.')
+      return
+    }
+    if (seatCountInvalid) {
+      setError('Seats (excl. driver) must be a whole number, 0 or more.')
       return
     }
 
@@ -951,6 +976,11 @@ function RequestVehicleCorrectionForm({
           plate: plate.trim() === '' ? null : plate.trim(),
           color: color.trim() === '' ? null : color.trim(),
           distinguishing_marks: distinguishingMarks.trim() === '' ? null : distinguishingMarks.trim(),
+          vin: vin.trim() === '' ? null : vin.trim(),
+          engine_number: engineNumber.trim() === '' ? null : engineNumber.trim(),
+          cubic_capacity_cc: cubicCapacityValue,
+          seat_count: seatCountValue,
+          registration_category: registrationCategory.trim() === '' ? null : registrationCategory.trim(),
           custom_type: customType.trim() === '' ? null : customType.trim(),
           custom_description: customDescription.trim() === '' ? null : customDescription.trim(),
           route_id: routeId,
@@ -1003,6 +1033,53 @@ function RequestVehicleCorrectionForm({
           type="text"
           value={distinguishingMarks}
           onChange={(e) => setDistinguishingMarks(e.target.value)}
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">VIN</span>
+        <input
+          type="text"
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Engine number</span>
+        <input
+          type="text"
+          value={engineNumber}
+          onChange={(e) => setEngineNumber(e.target.value)}
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Cubic capacity (cc)</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={cubicCapacityCc}
+          onChange={(e) => setCubicCapacityCc(e.target.value)}
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Seats (excl. driver)</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={seatCount}
+          onChange={(e) => setSeatCount(e.target.value)}
+          className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Registration category</span>
+        <input
+          type="text"
+          value={registrationCategory}
+          onChange={(e) => setRegistrationCategory(e.target.value)}
           className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
         />
       </label>

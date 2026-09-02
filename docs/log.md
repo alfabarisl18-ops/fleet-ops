@@ -1256,3 +1256,32 @@ the display label; src/types/database.ts regenerated from production
 after both migrations landed there and on staging.
 
 `npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass.
+
+## [2026-09-02] feature | Vehicle registration fields + 6 real vehicles onboarded
+
+`vehicles` gains 5 new nullable columns from Sierra Leone Vehicle
+Registration Cards: `vin`, `engine_number`, `cubic_capacity_cc`,
+`seat_count`, `registration_category` (owner name/address deliberately
+excluded). One migration, `20260902200258_vehicle_registration_fields.sql`,
+adds the columns and extends `apply_correction()`'s VEHICLE allow-list with
+the same 5. `AddVehicleForm`, the Identity card, and
+`RequestVehicleCorrectionForm` all gained the 5 fields. See decision 0023.
+
+Discovered live that a direct SQL `INSERT INTO vehicles` (and a direct
+`vehicle_status_events` insert) is impossible outside a real authenticated
+session — `activity_after_vehicle_insert()` needs `app.current_user_id()`,
+which resolves via `auth.uid()` and is null under a service-role SQL
+connection. Pivoted to entering the 6 real vehicles (SPR-07..11, TRK-02)
+through the app itself, in the already-open authenticated Owner/Admin
+session, same as a real user would.
+
+Long vs. short Sprinter classification corrected mid-task: decided by
+`entered_service_on` (oldest 2 = Long, most recent 3 = Short), not
+manufacture year, per the user's correction to the plan.
+
+`npm run typecheck`, `lint`, `test` (33 tests) and `build` all pass. Live
+verification: added a throwaway test vehicle with all 5 new fields, edited
+its VIN through the correction flow and confirmed the value actually
+changed (exercises the new `apply_correction` allow-list), then archived it
+(not deleted — `activity_records` is append-only, and `vehicles` has no
+delete function anywhere in the app by design).

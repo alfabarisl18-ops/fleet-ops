@@ -33,6 +33,11 @@ export interface VehicleDetail {
   customDescription: string | null
   color: string | null
   distinguishingMarks: string | null
+  vin: string | null
+  engineNumber: string | null
+  cubicCapacityCc: number | null
+  seatCount: number | null
+  registrationCategory: string | null
   routeId: string | null
   routeName: string | null
   currentDriverId: string | null
@@ -90,7 +95,7 @@ export async function fetchVehicle(id: string): Promise<VehicleDetail | null> {
   const { data: vehicle, error } = await supabase
     .from('vehicles')
     .select(
-      'id, fleet_id, plate, type, custom_type, custom_description, color, distinguishing_marks, route_id, current_driver_id, purchased_on, purchase_price_minor, entered_service_on, status, expected_daily_amount_minor, yearly_target_minor, expected_retirement_on',
+      'id, fleet_id, plate, type, custom_type, custom_description, color, distinguishing_marks, vin, engine_number, cubic_capacity_cc, seat_count, registration_category, route_id, current_driver_id, purchased_on, purchase_price_minor, entered_service_on, status, expected_daily_amount_minor, yearly_target_minor, expected_retirement_on',
     )
     .eq('id', id)
     .maybeSingle()
@@ -125,6 +130,11 @@ export async function fetchVehicle(id: string): Promise<VehicleDetail | null> {
     customDescription: vehicle.custom_description,
     color: vehicle.color,
     distinguishingMarks: vehicle.distinguishing_marks,
+    vin: vehicle.vin,
+    engineNumber: vehicle.engine_number,
+    cubicCapacityCc: vehicle.cubic_capacity_cc,
+    seatCount: vehicle.seat_count,
+    registrationCategory: vehicle.registration_category,
     routeId: vehicle.route_id,
     routeName,
     currentDriverId: vehicle.current_driver_id,
@@ -211,6 +221,11 @@ export interface CreateVehicleInput {
   customDescription?: string
   color?: string
   distinguishingMarks?: string
+  vin?: string
+  engineNumber?: string
+  cubicCapacityCc?: number
+  seatCount?: number
+  registrationCategory?: string
   routeId?: string
   purchasedOn?: string
   purchasePriceMinor?: number
@@ -229,6 +244,11 @@ export async function createVehicle(input: CreateVehicleInput): Promise<string> 
       custom_description: input.customDescription ?? null,
       color: input.color ?? null,
       distinguishing_marks: input.distinguishingMarks ?? null,
+      vin: input.vin ?? null,
+      engine_number: input.engineNumber ?? null,
+      cubic_capacity_cc: input.cubicCapacityCc ?? null,
+      seat_count: input.seatCount ?? null,
+      registration_category: input.registrationCategory ?? null,
       route_id: input.routeId ?? null,
       purchased_on: input.purchasedOn ?? null,
       purchase_price_minor: input.purchasePriceMinor ?? null,

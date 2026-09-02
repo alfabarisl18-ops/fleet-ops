@@ -1285,3 +1285,13 @@ its VIN through the correction flow and confirmed the value actually
 changed (exercises the new `apply_correction` allow-list), then archived it
 (not deleted — `activity_records` is append-only, and `vehicles` has no
 delete function anywhere in the app by design).
+
+Follow-up the same day: the 6 real vehicles were meant to *replace* the
+fleet's original placeholder 6 (`SPR-01..05`, `TRK-01`), not sit alongside
+them. Checked first that none of the 6 had any real daily payments, ledger
+entries, trips, or maintenance history (all zero) before archiving all 6
+through the app, same mechanism as the throwaway test vehicle and for the
+same reason — a hard delete is not possible once a vehicle has any
+`activity_records` row. Production now shows exactly 6 Active vehicles
+(`SPR-07..11`, `TRK-02`); the 6 originals plus `SPR-06` and the earlier
+throwaway test vehicle are archived, not deleted.

@@ -124,3 +124,24 @@ export async function getDocumentUrl(storageKey: string): Promise<string> {
   if (error) throw error
   return data.signedUrl
 }
+
+/**
+ * Bulk variant of getDocumentUrl, used to populate list-row thumbnails in
+ * one round trip instead of one signed-URL request per photo. A path
+ * Supabase can't resolve — most notably a documents row whose Storage
+ * object was deleted directly (outside the app, e.g. via the Studio
+ * dashboard) rather than through it — is simply left out of the returned
+ * map. Callers must treat a missing entry as "no thumbnail available," not
+ * an error: that is exactly the failure mode a stale row produces, and it
+ * should degrade to a fallback icon, not a crash or a broken image.
+ */
+export async function getDocumentUrls(storageKeys: string[]): Promise<Record<string, string>> {
+  if (storageKeys.length === 0) return {}
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(storageKeys, 60)
+  if (error) throw error
+  const result: Record<string, string> = {}
+  for (const entry of data) {
+    if (entry.path && entry.signedUrl && !entry.error) result[entry.path] = entry.signedUrl
+  }
+  return result
+}

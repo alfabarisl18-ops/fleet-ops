@@ -11,7 +11,8 @@ specification; these pages record how it was built and why.
 | [log.md](log.md) | Chronological record of significant changes. One entry per change. |
 | [open-questions.md](open-questions.md) | SPEC section 10, plus what Phase 1 assumed where SPEC was silent. Read before Phase 2. |
 | [qa-accounts.md](qa-accounts.md) | The three non-personal accounts reserved for agent/manual verification, and the rules for using them. Read before signing in to verify anything. |
-| [deployment.md](deployment.md) | One-time Cloudflare Pages setup (this repo has no deploy config of its own), the three role-shortcut links (`?desktop`, `?collections`, `?maintenance`) that skip the role picker, and the staging environment (a second, fully separate deployment for testing). |
+| [deployment.md](deployment.md) | Separate staging/main branches, database targets, preview controls, release checks and role-shortcut links. |
+| [sources.md](sources.md) | Provenance ledger, starting with the September 2026 staging separation. |
 
 ## Decisions
 
@@ -43,6 +44,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0021](decisions/0021-desktop-invite-reset-reverts-to-a-shown-link.md) | Desktop invite/reset reverts from auto-sent email back to a shown link, after Resend's shared address failed live onboarding a real Fleet Manager |
 | [0022](decisions/0022-correction-requested-alert.md) | `CORRECTION_REQUESTED` becomes a real alert (Owner/Admin only, event-driven, Owner/Admin's own self-applied edits excluded) instead of only showing on the Records page |
 | [0023](decisions/0023-vehicle-registration-fields.md) | `vehicles` gains VIN, engine number, cubic capacity, seat count, registration category (owner name/address excluded); a direct SQL insert into `vehicles` turned out to be impossible outside a real session, by design |
+| [0024](decisions/0024-separate-staging-branch.md) | Dedicated staging branch, staging-only feature previews, and explicit approval before production release. |
 
 ## Build order
 

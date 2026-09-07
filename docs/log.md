@@ -1295,3 +1295,46 @@ same reason — a hard delete is not possible once a vehicle has any
 `activity_records` row. Production now shows exactly 6 Active vehicles
 (`SPR-07..11`, `TRK-02`); the 6 originals plus `SPR-06` and the earlier
 throwaway test vehicle are archived, not deleted.
+
+
+---
+
+## [2026-09-07] infra | Separate staging branch and disable live previews
+
+Sources: SRC-STAGING-20260907-USER, SRC-STAGING-20260907-CLOUDFLARE,
+SRC-STAGING-20260907-DOCS, SRC-STAGING-20260907-REPO,
+SRC-STAGING-20260907-BROWSER (see sources.md).
+Pages: deployment.md, sources.md, index.md,
+decisions/0024-separate-staging-branch.md; instructions: AGENTS.md, CLAUDE.md.
+
+Disabled automatic previews on Cloudflare project `fleet-ops` before
+publishing `codex/staging`. Created that branch from latest committed main
+(`3778a01efdbd453ddb97f0b565e52c4ef3253f38`) and configured
+`fleet-ops-staging` to use it as its primary branch. Staging feature previews
+remain enabled. Both staging environment scopes still use
+`netxgjqeaakbkjqvtdhl`; live still uses `hjebavtcdduortshufku`.
+No hosted SQL, migrations, database copying, or Edge Function changes.
+
+Initial staging deployment `f1377e98-e9a3-4f3f-993d-367b5ede9294`
+succeeded on `codex/staging`. Live deployment remained
+`d4357875-0c04-4b7e-b083-224aac17dfff` at the original main commit.
+Documentation-only changes follow on staging; application source is unchanged.
+
+Verification: GET/PATCH/GET of Pages settings; headless Playwright loaded
+`?desktop`, `?collections`, `?maintenance` (HTTP 200, expected headings).
+An intentionally invalid desktop login hit only staging `/auth/v1/token`
+(HTTP 400, expected error). No unexpected request hosts or uncaught page
+errors. Successful authentication and cross-database record isolation were
+not tested without valid staging credentials. Old live-project preview URLs
+remain unsafe; the new branch controls do not remove them.
+
+Local validation: `npm run typecheck`, `npm run lint`, `npm run test`
+(33 tests, 2 files), `npm run build` all exited successfully. Existing
+warnings: two react-refresh/only-export-components warnings in IconChip.tsx,
+and a Vite chunk-size warning (main JS 816.52 kB / 207.30 kB gzip).
+No runtime dependency, bundle change, or new recurring service cost.
+
+Preserved the pre-existing working-tree history and QA-account notes without
+including them in this commit. The existing staging URL correction is
+retained in the updated deployment guide. Both agents now have the same
+staging-first release instructions; main merges still require user approval.

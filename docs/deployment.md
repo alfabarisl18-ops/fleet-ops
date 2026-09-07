@@ -1,34 +1,69 @@
 # Deployment
 
-CLAUDE.md names Cloudflare Pages as the deployment target, but as of this
-writing nothing in the repo actually wires that up — no `wrangler.toml`,
-no GitHub Action. This page is the one-time setup to close that gap, plus
-what you get once it's done.
+Cloudflare Pages uses its GitHub integration; configuration lives in the
+Cloudflare dashboard/API, not a Wrangler file or GitHub Action. The two
+projects share the repository but deploy different branches and connect to
+different Supabase projects. This configuration was verified on 2026-09-07.
 
-## One-time setup (Cloudflare dashboard, not this repo)
+## Branches and database targets
 
-Cloudflare Pages' own Git integration, not the Wrangler CLI — it deploys
-automatically on every push after this, with nothing to run by hand.
+| Purpose | Pages project / URL | Branch | Supabase project |
+|---|---|---|---|
+| Live business | `fleet-ops` / `https://fleet-ops-56j.pages.dev` | `main` | `hjebavtcdduortshufku` |
+| Testing | `fleet-ops-staging` / `https://fleet-ops-staging.pages.dev` | `codex/staging` | `netxgjqeaakbkjqvtdhl` |
 
-1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
-   **Connect to Git** → select `alfabarisl18-ops/fleet-ops`.
-2. Build settings:
-   - Framework preset: **Vite** (or leave as None — the values below are
-     what matter)
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-3. Environment variables — set for **both** Production and Preview:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+The Pages setting named **Production branch** means the branch serving that
+project's primary URL. For the staging project it must be `codex/staging`;
+it does not mean the live business environment.
 
-   Values come from `.env.local` in this repo (not committed — see
-   `.env.example` for the shape) or the Supabase dashboard → Settings →
-   API. Never commit real values; Cloudflare's env var store is the
-   right place for them.
-4. Save and deploy. From here, every push to `main` deploys to
-   production automatically, and every other branch pushed to GitHub
-   gets its own separate preview URL automatically, with no further
-   config.
+## Cloudflare configuration
+
+Both projects build with `npm run build` and output `dist`.
+
+- **Live project:** production branch `main`, automatic production
+  deployments enabled, preview deployment setting **None**.
+- **Staging project:** production branch `codex/staging`, automatic
+  production deployments enabled, preview deployment setting **All**.
+  Feature-branch previews therefore belong to the staging project.
+- Staging's **Production and Preview** environment variables must both use
+  `VITE_SUPABASE_URL=https://netxgjqeaakbkjqvtdhl.supabase.co` and that
+  project's own `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- Live Production uses `https://hjebavtcdduortshufku.supabase.co` and its
+  own key. Its dormant Preview variables still target production; previews
+  must stay disabled. Do not re-enable them without reviewing isolation.
+- Get credentials from the matching project's dashboard, never by blindly
+  copying local environment files. Never commit or print credentials.
+
+Disabling automatic previews does not disable existing preview deployments.
+**Never use old `*.fleet-ops-56j.pages.dev` preview URLs for testing.**
+They can still connect to live data.
+
+## Working and releasing
+
+1. Create a focused feature branch from `codex/staging`. Keep unrelated
+   uncommitted work intact.
+2. Run `npm run typecheck`, `npm run lint`, `npm run test`, and
+   `npm run build`, then review the diff.
+3. With staging deployment authorization, merge the feature into
+   `codex/staging` and push. This updates only the staging primary URL.
+4. Verify the deployed commit, sign-in and affected flows using staging
+   accounts. Inspect browser network requests to confirm they target the
+   staging Supabase project. Use no real business records.
+5. Show the release diff and staging results to the user. Only after explicit
+   approval merge tested changes into `main`; a push to `main` automatically
+   deploys the live site. Reconcile any main-branch fixes into staging before
+   the next change and retest conflicts.
+
+**Database changes are a separate operation.** Show the exact SQL and project
+before any hosted SQL, including staging. Obtain approval, test migrations
+on staging first, then obtain separate approval for production. Never copy
+staging records to production, and never run seed/reset commands there.
+Check the CLI target and local `.env.local` before local testing: changing
+a Git branch does not change either target.
+
+For a failed staging release, restore a known-good staging deployment and
+keep the staging branch configuration. Do not point staging back to `main`
+as a workaround. An application rollback does not roll back database changes.
 
 ## Required: Supabase Auth URL configuration
 
@@ -92,17 +127,14 @@ drivers, and payments. See
 [decision 0020](decisions/0020-site-url-becomes-an-edge-function-secret.md)
 for why this needed a code change first.
 
-**What it is:** a second Supabase project (`fleet-ops-staging`, same org,
-`eu-central-1`, free tier — $0/month) running the same 32 migrations and the
-same 4 Edge Functions as production, seeded with the same placeholder
-`supabase/seed.sql` data. A second Cloudflare Pages project, connected to the
-*same* GitHub repo and the *same* `main` branch as production (staging always
-mirrors whatever's live in production's codebase — there's no separate git
-branch to maintain), but pointed at the staging Supabase project via its own
-`VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` environment variables
-instead of production's.
+**What it is:** a separate Supabase project with its own accounts, storage,
+database and Edge Functions. Its Cloudflare Pages project now follows
+`codex/staging`, independently of live `main`. Database and function changes
+must be promoted explicitly; matching Git commits do not prove schema parity.
+See the historical staging setup entries in `log.md` for the original seed
+and parity work.
 
-**Staging URL:** `<fill in once the Cloudflare Pages project exists>`
+**Staging URL:** `https://fleet-ops-staging.pages.dev`
 
 **Intentionally different from production:**
 
@@ -120,7 +152,26 @@ instead of production's.
   Redirect URLs set to the staging URL above, same requirement and same
   silent-fallback risk as production's own section above if skipped.
 
-**Data isolation is the whole point** — nothing entered on staging (test
-vehicles, test drivers, test payments) ever appears on production, and vice
-versa. Verified once at setup by creating a throwaway vehicle on staging and
-confirming it does not appear on production.
+**Data isolation is the whole point.** Testing uses only staging accounts
+and its database. The older text claimed a successful throwaway-record
+isolation test, but the 2026-09-04 log explicitly left that check unverified.
+Treat that historical test as unverified. The branch-separation work verifies
+deployment configuration and browser connection targets; it does not claim
+an authenticated cross-database record test.
+
+## Verification on 2026-09-07
+
+The initial branch deployment succeeded at application commit
+`3778a01efdbd453ddb97f0b565e52c4ef3253f38`. Browser checks loaded all three
+sign-in shortcuts and confirmed an invalid desktop login reached only the
+staging Auth endpoint, returning the expected error with no uncaught page
+errors. Successful account login and business-record isolation remain
+unverified because no valid staging credentials were used.
+
+## Sources
+
+- [SRC-STAGING-20260907-USER](sources.md#src-staging-20260907-user): approved staging separation and release policy.
+- [SRC-STAGING-20260907-CLOUDFLARE](sources.md#src-staging-20260907-cloudflare): live configuration and deployment inspection.
+- [SRC-STAGING-20260907-DOCS](sources.md#src-staging-20260907-docs): Cloudflare branch controls.
+- [SRC-STAGING-20260907-REPO](sources.md#src-staging-20260907-repo): existing client and redirect configuration.
+- [SRC-STAGING-20260907-BROWSER](sources.md#src-staging-20260907-browser): observed sign-in pages and staging-only authentication request.

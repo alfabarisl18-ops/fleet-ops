@@ -96,3 +96,5 @@ driver debt forgiveness (decision 0017), the rent-to-own redesign
 0019) — the last of SPEC section 10's seven questions. See
 [open-questions.md](open-questions.md) for the full account of all
 seven.
+
+- [0026 — Purchase schedule](decisions/0026-purchase-schedule.md): forward-only deferrals, principal allocation and correction audit.

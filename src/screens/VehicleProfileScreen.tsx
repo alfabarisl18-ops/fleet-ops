@@ -47,6 +47,7 @@ export function VehicleProfileScreen({
 }: VehicleProfileScreenProps) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null)
   const [agreement, setAgreement] = useState<(DriverPurchaseAgreement & { driverName: string }) | null>(null)
+  const [progressError, setProgressError] = useState<string | null>(null)
   const [progress, setProgress] = useState<AgreementProgress | null>(null)
   const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -104,23 +105,26 @@ export function VehicleProfileScreen({
     return value === null || value === '' ? '—' : String(value)
   }
 
-  // Amount paid/remaining is derived from ledger entries, not stored on the
-  // agreement — fetched separately, keyed on the agreement so it refetches
-  // after a reload (e.g. right after a new agreement is set up, when it's
-  // still zero paid). Only rendered when `agreement` is truthy (below), so
-  // there's no need to reset it back to null when the agreement goes away.
   useEffect(() => {
     if (!vehicle || !agreement) return
     let cancelled = false
-    fetchAgreementProgress(vehicle.id, agreement.agreementAmountMinor, agreement.startedOn)
-      .then((p) => {
-        if (!cancelled) setProgress(p)
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return
+      fetchAgreementProgress(agreement.id).then((p) => {
+        if (!cancelled) { setProgress(p); setProgressError(null) }
+      }).catch(() => {
+        if (!cancelled) setProgressError('Could not refresh purchase progress. Check your connection.')
       })
-      .catch(() => {
-        // Non-critical — the rest of the profile still shows without it.
-      })
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    const timer = window.setInterval(refresh, 60000)
     return () => {
       cancelled = true
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
     }
   }, [vehicle, agreement])
 
@@ -277,12 +281,18 @@ export function VehicleProfileScreen({
               value={`${formatMinorUnits(agreement.regularPaymentMinor)} (${PAYMENT_FREQUENCY_LABELS[agreement.paymentFrequency]})`}
             />
             <Field label="Started" value={agreement.startedOn} />
-            <Field label="Expected completion" value={agreement.expectedCompletionOn} />
+            <Field label="Original agreed completion" value={agreement.expectedCompletionOn} />
             <Field label="Ownership transfer" value={OWNERSHIP_TRANSFER_STATUS_LABELS[agreement.ownershipTransferStatus]} />
+            {progressError && <p role="alert" className="text-sm text-red-600">{progressError}</p>}
             {progress && (
               <>
                 <Field label="Paid so far" value={formatMinorUnits(progress.paidMinor)} />
-                <Field label="Remaining" value={formatMinorUnits(progress.remainingMinor)} />
+                <Field label="Remaining" value={progress.remainingMinor === 0 ? 'Paid in full' : formatMinorUnits(progress.remainingMinor)} />
+                <Field label={progress.estimatedBaseline ? 'Estimated completion (adjusted)' : 'Adjusted completion'} value={progress.adjustedCompletionOn} />
+                <Field label="Days remaining" value={progress.remainingDays?.toString()} />
+                <Field label="Date adjustment (days)" value={`${progress.adjustmentDays > 0 ? '+' : ''}${progress.adjustmentDays}`} />
+                <Field label="Missing daily entries" value={String(progress.missingDays)} />
+                <p className="mt-2 text-xs text-slate-500">As of {progress.asOfDate} in Freetown. Missing entries are unpaid installments, not debt alerts. Ownership transfer still requires management action.</p>
               </>
             )}
             {isDesktopRole(currentUserRole) && (

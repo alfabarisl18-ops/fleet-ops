@@ -3,7 +3,7 @@ import { DAY_OUTCOME_LABELS, OVERPAYMENT_REASON_LABELS, SHORTFALL_CAUSE_LABELS, 
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { DayOutcome, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
 import { fetchFreetownToday, isDayOutcomeEligible, recordBundledPayment, recordDailyPayment } from '@/data/dailyPayments'
-import { fetchVehicleHasActiveAgreement } from '@/data/driverPurchaseAgreements'
+import { fetchVehiclePurchasePaymentContext } from '@/data/driverPurchaseAgreements'
 import type { VehicleListItem, VehicleType } from '@/data/vehicles'
 import { fetchVehicle, fetchVehicles } from '@/data/vehicles'
 import { RecordTripForm } from '@/screens/RecordTripForm'
@@ -14,13 +14,13 @@ interface VehiclePaymentScreenProps {
 
 type Step =
   | { name: 'pick' }
-  | { name: 'day-outcome'; vehicleId: string; fleetId: string; date: string; expectedAmountMinor: number; underActiveAgreement: boolean }
+  | { name: 'day-outcome'; vehicleId: string; fleetId: string; date: string; expectedAmountMinor: number; underActiveAgreement: boolean; deferred: boolean }
   | { name: 'bundle'; vehicleId: string; fleetId: string; startDate: string; expectedAmountMinor: number }
   | { name: 'trip'; vehicleId: string; fleetId: string }
 
 const DAY_OUTCOMES: DayOutcome[] = ['FULL_DAY', 'HALF_DAY', 'DRIVERS_DAY', 'BREAKDOWN', 'DID_NOT_WORK']
 const SHORTFALL_CAUSES: ShortfallCause[] = ['BREAKDOWN', 'ACCIDENT', 'POLICE_CHECKPOINT', 'OTHER']
-const OVERPAYMENT_REASONS: OverpaymentReason[] = ['SETTLING_BALANCE', 'ADVANCE', 'OTHER']
+const OVERPAYMENT_REASONS: OverpaymentReason[] = ['SETTLING_BALANCE', 'ADVANCE', 'PURCHASE_PAYMENT', 'OTHER']
 
 /**
  * SPEC section 5: "After choosing a vehicle and date, ask What happened
@@ -41,6 +41,7 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
         date={step.date}
         expectedAmountMinor={step.expectedAmountMinor}
         underActiveAgreement={step.underActiveAgreement}
+        deferred={step.deferred}
         onDone={onDone}
         onBack={() => setStep({ name: 'pick' })}
       />
@@ -72,12 +73,13 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
           return
         }
         const detail = await fetchVehicle(vehicleId)
-        const expectedAmountMinor = detail?.expectedDailyAmountMinor ?? 0
+        const context = await fetchVehiclePurchasePaymentContext(vehicleId, date)
+        const expectedAmountMinor = context.dailyAmountMinor ?? detail?.expectedDailyAmountMinor ?? 0
         if (bundle) {
           setStep({ name: 'bundle', vehicleId, fleetId, startDate: date, expectedAmountMinor })
         } else {
-          const underActiveAgreement = await fetchVehicleHasActiveAgreement(vehicleId)
-          setStep({ name: 'day-outcome', vehicleId, fleetId, date, expectedAmountMinor, underActiveAgreement })
+          const underActiveAgreement = context.underAgreement
+          setStep({ name: 'day-outcome', vehicleId, fleetId, date, expectedAmountMinor, underActiveAgreement, deferred: context.deferred })
         }
       }}
     />
@@ -87,8 +89,9 @@ export function VehiclePaymentScreen({ onDone }: VehiclePaymentScreenProps) {
 function VehiclePicker({
   onChoose,
 }: {
-  onChoose: (vehicleId: string, fleetId: string, type: VehicleType, date: string, bundle: boolean) => void
+  onChoose: (vehicleId: string, fleetId: string, type: VehicleType, date: string, bundle: boolean) => Promise<void>
 }) {
+  const [choosing, setChoosing] = useState(false)
   const [vehicles, setVehicles] = useState<VehicleListItem[] | null>(null)
   const [date, setDate] = useState('')
   const [bundle, setBundle] = useState(false)
@@ -158,8 +161,14 @@ function VehiclePicker({
               <li key={v.id}>
                 <button
                   type="button"
-                  disabled={!isDayOutcomeEligible(v.type) ? false : date === ''}
-                  onClick={() => onChoose(v.id, v.fleetId, v.type, date, bundle)}
+                  disabled={choosing || (isDayOutcomeEligible(v.type) && date === '')}
+                  onClick={async () => {
+                    setChoosing(true)
+                    setError(null)
+                    try { await onChoose(v.id, v.fleetId, v.type, date, bundle) }
+                    catch { setError('Could not load payment details. Check your connection and try again.') }
+                    finally { setChoosing(false) }
+                  }}
                   className="w-full rounded-2xl bg-white px-4 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50 disabled:opacity-50"
                 >
                   {v.fleetId}
@@ -180,6 +189,7 @@ function DayOutcomeForm({
   date,
   expectedAmountMinor,
   underActiveAgreement,
+  deferred,
   onDone,
   onBack,
 }: {
@@ -187,7 +197,7 @@ function DayOutcomeForm({
   fleetId: string
   date: string
   expectedAmountMinor: number
-  underActiveAgreement: boolean
+  underActiveAgreement: boolean; deferred: boolean
   onDone: () => void
   onBack: () => void
 }) {
@@ -292,7 +302,12 @@ function DayOutcomeForm({
         <div className="flex flex-col gap-4">
           <p className="text-base font-medium text-slate-700">{DAY_OUTCOME_LABELS[outcome]}</p>
 
-          {underActiveAgreement && (outcome === 'HALF_DAY' || outcome === 'BREAKDOWN' || outcome === 'DID_NOT_WORK') && (
+          {deferred && (
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              Payments go toward the vehicle purchase. Any unpaid part of {formatMinorUnits(expectedAmountMinor)} defers the installment and adjusts the completion date. It creates no new driver debt.
+            </p>
+          )}
+          {underActiveAgreement && !deferred && (outcome === 'HALF_DAY' || outcome === 'BREAKDOWN' || outcome === 'DID_NOT_WORK') && (
             <p className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
               This vehicle is being purchased by its driver on installment. Any amount short of{' '}
               {formatMinorUnits(expectedAmountMinor)} today becomes driver debt, regardless of what happened.
@@ -323,7 +338,7 @@ function DayOutcomeForm({
             <>
               <p className="text-2xl font-semibold text-slate-900">{formatMinorUnits(expectedAmountMinor)}</p>
               <button type="button" onClick={() => setShowAmountField(true)} className="self-start text-sm font-medium text-slate-600 underline decoration-slate-300">
-                Paid less than expected
+                Change amount received
               </button>
             </>
           )}
@@ -357,7 +372,7 @@ function DayOutcomeForm({
                 <option value="" disabled>
                   Choose a reason
                 </option>
-                {OVERPAYMENT_REASONS.map((r) => (
+                {OVERPAYMENT_REASONS.filter((r) => deferred || r !== 'PURCHASE_PAYMENT').map((r) => (
                   <option key={r} value={r}>
                     {OVERPAYMENT_REASON_LABELS[r]}
                   </option>

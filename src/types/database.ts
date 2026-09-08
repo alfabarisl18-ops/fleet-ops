@@ -618,6 +618,8 @@ export type Database = {
           shortfall_treatment_override_reason: string | null
           under_active_agreement: boolean
           vehicle_id: string
+          purchase_agreement_id: string | null
+          defer_installment: boolean
         }
         Insert: {
           bundled_payment_id?: string | null
@@ -650,6 +652,8 @@ export type Database = {
           shortfall_treatment_override_reason?: string | null
           under_active_agreement?: boolean
           vehicle_id: string
+          purchase_agreement_id?: string | null
+          defer_installment?: boolean
         }
         Update: {
           bundled_payment_id?: string | null
@@ -682,8 +686,17 @@ export type Database = {
           shortfall_treatment_override_reason?: string | null
           under_active_agreement?: boolean
           vehicle_id?: string
+          purchase_agreement_id?: string | null
+          defer_installment?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_payment_records_purchase_agreement_id_fkey"
+            columns: ["purchase_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "driver_purchase_agreements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_payment_records_bundled_payment_id_fkey"
             columns: ["bundled_payment_id"]
@@ -899,6 +912,10 @@ export type Database = {
           regular_payment_minor: number
           started_on: string
           vehicle_id: string
+          schedule_effective_on: string | null
+          schedule_daily_amount_minor: number | null
+          schedule_baseline_on: string | null
+          schedule_closed_progress: Json | null
         }
         Insert: {
           agreement_amount_minor: number
@@ -917,6 +934,10 @@ export type Database = {
           regular_payment_minor: number
           started_on: string
           vehicle_id: string
+          schedule_effective_on?: string | null
+          schedule_daily_amount_minor?: number | null
+          schedule_baseline_on?: string | null
+          schedule_closed_progress?: Json | null
         }
         Update: {
           agreement_amount_minor?: number
@@ -935,6 +956,10 @@ export type Database = {
           regular_payment_minor?: number
           started_on?: string
           vehicle_id?: string
+          schedule_effective_on?: string | null
+          schedule_daily_amount_minor?: number | null
+          schedule_baseline_on?: string | null
+          schedule_closed_progress?: Json | null
         }
         Relationships: [
           {
@@ -1122,6 +1147,8 @@ export type Database = {
           subcategory: string | null
           superseded_by_id: string | null
           vehicle_id: string | null
+          purchase_agreement_id: string | null
+          purchase_applied_minor: number
         }
         Insert: {
           amount_minor: number
@@ -1144,6 +1171,8 @@ export type Database = {
           subcategory?: string | null
           superseded_by_id?: string | null
           vehicle_id?: string | null
+          purchase_agreement_id?: string | null
+          purchase_applied_minor?: number
         }
         Update: {
           amount_minor?: number
@@ -1166,8 +1195,17 @@ export type Database = {
           subcategory?: string | null
           superseded_by_id?: string | null
           vehicle_id?: string | null
+          purchase_agreement_id?: string | null
+          purchase_applied_minor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "ledger_entries_purchase_agreement_id_fkey"
+            columns: ["purchase_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "driver_purchase_agreements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ledger_entries_driver_id_fkey"
             columns: ["driver_id"]
@@ -2162,6 +2200,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      correct_purchase_payment: {
+        Args: { p_client_record_id: string; p_daily_payment_id: string; p_amount_minor: number; p_reason: string }
+        Returns: string
+      }
+      vehicle_purchase_payment_context: {
+        Args: { p_vehicle_id: string; p_service_date: string }
+        Returns: Json
+      }
+      driver_purchase_progress: {
+        Args: { p_agreement_id: string }
+        Returns: Json
+      }
       admin_reset_pin: {
         Args: { p_new_pin: string; p_user_id: string }
         Returns: boolean
@@ -2427,12 +2477,7 @@ export type Database = {
       approval_status: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "DISPUTED"
       balance_status: "OPEN" | "PARTIAL" | "CLEARED" | "WRITTEN_OFF"
       correction_status: "REQUESTED" | "APPROVED" | "REJECTED" | "APPLIED"
-      day_outcome:
-        | "FULL_DAY"
-        | "HALF_DAY"
-        | "DRIVERS_DAY"
-        | "BREAKDOWN"
-        | "DID_NOT_WORK"
+      day_outcome: "FULL_DAY" | "HALF_DAY" | "DRIVERS_DAY" | "BREAKDOWN" | "DID_NOT_WORK"
       document_type:
         | "VEHICLE_PHOTO"
         | "DRIVER_PHOTO"
@@ -2502,7 +2547,7 @@ export type Database = {
         | "RETURNED_TO_SERVICE"
         | "ADDITIONAL_PROBLEM_FOUND"
         | "COMPLETED_AND_VERIFIED"
-      overpayment_reason: "SETTLING_BALANCE" | "ADVANCE" | "OTHER"
+      overpayment_reason: "SETTLING_BALANCE" | "ADVANCE" | "OTHER" | "PURCHASE_PAYMENT"
       ownership_transfer_status:
         | "NOT_STARTED"
         | "IN_PROGRESS"
@@ -2546,7 +2591,7 @@ export type Database = {
         | "NOT_ROADWORTHY"
         | "UNKNOWN"
       shortfall_cause: "BREAKDOWN" | "ACCIDENT" | "POLICE_CHECKPOINT" | "OTHER"
-      shortfall_treatment: "DRIVER_DEBT" | "ACCEPTED_LOSS"
+      shortfall_treatment: "DRIVER_DEBT" | "ACCEPTED_LOSS" | "DEFERRED_INSTALLMENT"
       transmission_type: "MANUAL" | "AUTOMATIC" | "OTHER"
       trip_status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
       user_role:
@@ -2762,13 +2807,7 @@ export const Constants = {
       approval_status: ["NOT_REQUIRED", "PENDING", "APPROVED", "DISPUTED"],
       balance_status: ["OPEN", "PARTIAL", "CLEARED", "WRITTEN_OFF"],
       correction_status: ["REQUESTED", "APPROVED", "REJECTED", "APPLIED"],
-      day_outcome: [
-        "FULL_DAY",
-        "HALF_DAY",
-        "DRIVERS_DAY",
-        "BREAKDOWN",
-        "DID_NOT_WORK",
-      ],
+      day_outcome: ["FULL_DAY", "HALF_DAY", "DRIVERS_DAY", "BREAKDOWN", "DID_NOT_WORK"],
       document_type: [
         "VEHICLE_PHOTO",
         "DRIVER_PHOTO",
@@ -2847,7 +2886,7 @@ export const Constants = {
         "ADDITIONAL_PROBLEM_FOUND",
         "COMPLETED_AND_VERIFIED",
       ],
-      overpayment_reason: ["SETTLING_BALANCE", "ADVANCE", "OTHER"],
+      overpayment_reason: ["SETTLING_BALANCE", "ADVANCE", "OTHER", "PURCHASE_PAYMENT"],
       ownership_transfer_status: [
         "NOT_STARTED",
         "IN_PROGRESS",
@@ -2895,7 +2934,7 @@ export const Constants = {
         "UNKNOWN",
       ],
       shortfall_cause: ["BREAKDOWN", "ACCIDENT", "POLICE_CHECKPOINT", "OTHER"],
-      shortfall_treatment: ["DRIVER_DEBT", "ACCEPTED_LOSS"],
+      shortfall_treatment: ["DRIVER_DEBT", "ACCEPTED_LOSS", "DEFERRED_INSTALLMENT"],
       transmission_type: ["MANUAL", "AUTOMATIC", "OTHER"],
       trip_status: ["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
       user_role: [

@@ -188,6 +188,8 @@ export interface DailyPaymentRecord {
   dayOutcome: DayOutcome
   expectedAmountMinor: number
   receivedAmountMinor: number
+  deferInstallment: boolean
+  currentAmountMinor: number
   shortfallAmountMinor: number
   shortfallTreatment: ShortfallTreatment | null
   shortfallCause: ShortfallCause | null
@@ -198,12 +200,18 @@ export interface DailyPaymentRecord {
 }
 
 const DAILY_PAYMENT_COLUMNS =
-  'id, vehicle_id, driver_id, service_date, day_outcome, expected_amount_minor, received_amount_minor, shortfall_amount_minor, shortfall_treatment, shortfall_cause, shortfall_note, overpayment_reason, shortfall_treatment_override, shortfall_treatment_override_reason'
+  'id, defer_installment, vehicle_id, driver_id, service_date, day_outcome, expected_amount_minor, received_amount_minor, shortfall_amount_minor, shortfall_treatment, shortfall_cause, shortfall_note, overpayment_reason, shortfall_treatment_override, shortfall_treatment_override_reason'
 
 export async function fetchDailyPaymentRecord(id: string): Promise<DailyPaymentRecord | null> {
   const { data, error } = await supabase.from('daily_payment_records').select(DAILY_PAYMENT_COLUMNS).eq('id', id).maybeSingle()
   if (error) throw error
   if (!data) return null
+  let currentAmountMinor = data.received_amount_minor
+  if (data.defer_installment) {
+    const { data: entries, error: ledgerError } = await supabase.from('ledger_entries').select('amount_minor').eq('source_type', 'DAILY_PAYMENT_RECORD').eq('source_id', id).is('superseded_by_id', null)
+    if (ledgerError) throw ledgerError
+    currentAmountMinor = (entries ?? []).reduce((sum, entry) => sum + entry.amount_minor, 0)
+  }
   return {
     id: data.id,
     vehicleId: data.vehicle_id,
@@ -212,6 +220,8 @@ export async function fetchDailyPaymentRecord(id: string): Promise<DailyPaymentR
     dayOutcome: data.day_outcome,
     expectedAmountMinor: data.expected_amount_minor,
     receivedAmountMinor: data.received_amount_minor,
+    deferInstallment: data.defer_installment,
+    currentAmountMinor,
     shortfallAmountMinor: data.shortfall_amount_minor ?? 0,
     shortfallTreatment: data.shortfall_treatment,
     shortfallCause: data.shortfall_cause,
@@ -280,5 +290,13 @@ export async function fetchOutstandingBalancesForDriver(driverId: string): Promi
  */
 export async function forgiveDriverDebt(balanceId: string, reason: string): Promise<void> {
   const { error } = await supabase.rpc('forgive_driver_debt', { p_balance_id: balanceId, p_reason: reason })
+  if (error) throw error
+}
+
+export async function correctPurchasePayment(clientRecordId: string, dailyPaymentId: string, amountMinor: number, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('correct_purchase_payment', {
+    p_client_record_id: clientRecordId, p_daily_payment_id: dailyPaymentId,
+    p_amount_minor: amountMinor, p_reason: reason,
+  })
   if (error) throw error
 }

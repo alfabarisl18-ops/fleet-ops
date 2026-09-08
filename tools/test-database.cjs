@@ -1,7 +1,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const assert = require('node:assert/strict');
 const { PGlite } = require(process.env.FLEET_PGLITE_MODULE || path.join(require('node:os').tmpdir(), 'fleet-ops-db-test-runtime/node_modules/@electric-sql/pglite'));
 (async () => {
  const db = new PGlite();
@@ -20,13 +19,15 @@ const { PGlite } = require(process.env.FLEET_PGLITE_MODULE || path.join(require(
  grant execute on all functions in schema auth to authenticated,anon;
  `);
  for (const file of fs.readdirSync('supabase/migrations').filter(n=>n.endsWith('.sql')).sort()) {
+   if(file==='20260907172000_purchase_schedule.sql') await db.exec(fs.readFileSync('tools/database-before-policy.sql','utf8'));
    let sql=fs.readFileSync(path.join('supabase/migrations',file),'utf8');
    sql=sql.replace(/create extension if not exists pg_cron[^;]*;/gi,'');
    sql=sql.replace(/create extension if not exists pgcrypto[^;]*;/gi,'');
    try { await db.exec(sql); } catch(e) { throw new Error(file+': '+e.message); }
  }
+ if(process.argv.includes('--generate-types')) await require('./update-local-types.cjs')(db);
  console.log('All migrations applied to isolated PostgreSQL (platform auth/storage/cron scaffolding).');
  if(fs.existsSync('tools/database-tests.sql')) await db.exec(fs.readFileSync('tools/database-tests.sql','utf8'));
  console.log('Database behavior assertions passed.');
  await db.close();
-})().catch(e=>{ console.error(e.message); process.exit(1); });
+})().catch(e=>{ console.error(e.message, e.where || ''); process.exit(1); });

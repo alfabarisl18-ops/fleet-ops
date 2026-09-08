@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/Card'
 import { IconChip } from '@/components/IconChip'
-import { recordTypeLabel } from '@/constants/labels'
-import { formatMinorUnits } from '@/lib/money'
+import { recordTypeLabel, SHORTFALL_TREATMENT_LABELS } from '@/constants/labels'
+import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { AppRole } from '@/data/auth'
 import type { ActivityRecord } from '@/data/activityRecords'
 import { fetchActivityRecord } from '@/data/activityRecords'
 import type { DailyPaymentRecord } from '@/data/dailyPayments'
-import { fetchDailyPaymentRecord, overrideShortfallTreatment } from '@/data/dailyPayments'
+import { correctPurchasePayment, fetchDailyPaymentRecord, overrideShortfallTreatment } from '@/data/dailyPayments'
 import { supabase } from '@/lib/supabase'
 import { DocumentPanel } from '@/screens/DocumentPanel'
 
@@ -51,7 +51,7 @@ export function RecordDetailScreen({
         if (cancelled || !r) return
         setRecord(r)
 
-        if (r.recordType === 'DAILY_PAYMENT_RECORDED') {
+        if (r.targetType === 'DAILY_PAYMENT_RECORD') {
           fetchDailyPaymentRecord(r.targetId)
             .then((dpr) => {
               if (!cancelled) setDailyPayment(dpr)
@@ -170,6 +170,7 @@ export function RecordDetailScreen({
             value={`${record.direction === 'EXPENSE' ? '−' : ''}${formatMinorUnits(record.amountMinor).replace('−', '')}`}
           />
         )}
+        {dailyPayment?.shortfallTreatment && <Field label="Shortfall treatment" value={SHORTFALL_TREATMENT_LABELS[dailyPayment.shortfallTreatment]} />}
         <Field label="Applies to" value={record.appliesToDate ?? '—'} />
         <Field label="Entered" value={record.enteredAt.slice(0, 10)} />
         <Field label="Entered by" value={enteredByName ?? '…'} />
@@ -181,6 +182,13 @@ export function RecordDetailScreen({
         </Card>
       )}
 
+      {dailyPayment?.deferInstallment && (
+        <Card title="Purchase installment" className="mt-4">
+          <Field label="Original recorded amount" value={formatMinorUnits(dailyPayment.receivedAmountMinor)} />
+          <Field label="Current amount after corrections" value={formatMinorUnits(dailyPayment.currentAmountMinor)} />
+          {currentUserRole === 'OWNER_ADMIN' && <PurchaseCorrectionForm payment={dailyPayment} onDone={() => setReloadKey((k) => k + 1)} />}
+        </Card>
+      )}
       {dailyPayment &&
         (currentUserRole === 'OWNER_ADMIN' || currentUserRole === 'FLEET_MANAGER') &&
         dailyPayment.shortfallTreatment === 'ACCEPTED_LOSS' &&
@@ -289,4 +297,36 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-right text-slate-900">{value}</span>
     </p>
   )
+}
+
+function PurchaseCorrectionForm({ payment, onDone }: { payment: DailyPaymentRecord; onDone: () => void }) {
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const [request, setRequest] = useState<{ signature: string; id: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  if (payment.overpaymentReason && payment.overpaymentReason !== 'PURCHASE_PAYMENT') return <p className="text-sm text-slate-500">This payment includes another allocation. Its credit or debt settlement must be reviewed separately.</p>
+  return <form className="mt-4 flex flex-col gap-3" onSubmit={async (event) => {
+    event.preventDefault()
+    const minor = parseMinorUnits(amount)
+    if (minor === null || reason.trim().length < 3) { setMessage('Enter a valid amount and a reason.'); return }
+    const signature = JSON.stringify([payment.id, minor, reason.trim()])
+    const id = request?.signature === signature ? request.id : crypto.randomUUID()
+    setRequest({ signature, id }); setBusy(true); setMessage(null)
+    try {
+      await correctPurchasePayment(id, payment.id, minor, reason.trim())
+      setAmount(''); setReason(''); setRequest(null); setMessage('Purchase payment corrected.'); onDone()
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not save the correction. Check the amount, agreement status, and connection.') }
+    finally { setBusy(false) }
+  }}>
+    <label className="flex flex-col gap-1 text-sm">Corrected total amount received
+      <input required inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3" />
+    </label>
+    <label className="flex flex-col gap-1 text-sm">Reason for correction
+      <input required minLength={3} value={reason} onChange={(e) => setReason(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3" />
+    </label>
+    <p className="text-xs text-slate-500">Correct a recording mistake here. Record newly received money through Collections. The original payment remains in history.</p>
+    {message && <p role="status" className="text-sm">{message}</p>}
+    <button disabled={busy} className="rounded-xl bg-slate-900 px-4 py-3 text-sm text-white disabled:opacity-50">{busy ? 'Saving…' : 'Correct purchase payment'}</button>
+  </form>
 }

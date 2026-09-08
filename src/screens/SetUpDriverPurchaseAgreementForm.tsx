@@ -264,9 +264,8 @@ export function SetUpDriverPurchaseAgreementForm({
                   <>
                     <p className="font-medium text-slate-900">New daily target: {formatMinorUnits(daily)}</p>
                     <p className="mt-1 text-slate-600">
-                      This vehicle&apos;s daily payment target will change to this amount. Every day the driver comes
-                      up short — Full Day, Half Day, or Breakdown — the shortfall becomes driver debt while this
-                      agreement is active.
+                      This vehicle&apos;s daily target becomes the installment amount. Payments reduce the purchase balance.
+                      Unpaid installments adjust the completion date instead of creating new debt. Existing debts remain unchanged.
                     </p>
                   </>
                 )

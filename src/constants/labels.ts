@@ -137,6 +137,7 @@ export const SHORTFALL_CAUSE_LABELS: Record<ShortfallCause, string> = {
 }
 
 export const OVERPAYMENT_REASON_LABELS: Record<OverpaymentReason, string> = {
+  PURCHASE_PAYMENT: 'Extra toward vehicle purchase',
   SETTLING_BALANCE: 'Settling an earlier shortfall',
   ADVANCE: 'Advance on a future day',
   OTHER: 'Other',
@@ -440,3 +441,9 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   CUSTOMS_DOCUMENT: 'Customs document',
   OTHER: 'Other',
 }
+
+export const SHORTFALL_TREATMENT_LABELS = {
+  DRIVER_DEBT: 'Driver debt',
+  ACCEPTED_LOSS: 'Accepted loss',
+  DEFERRED_INSTALLMENT: 'Deferred installment',
+} as const

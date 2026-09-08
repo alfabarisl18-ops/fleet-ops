@@ -153,43 +153,49 @@ export async function cancelAgreement(agreementId: string, reason: string): Prom
   if (error) throw error
 }
 
-/**
- * Whether this vehicle has a non-cancelled agreement — nothing more.
- * fetchOpenAgreementForVehicle can't be used for this from a mobile screen:
- * driver_purchase_agreements' only SELECT policy (dpa_select_desktop) is
- * desktop-only, so Collections & Finance gets nothing back from it, not
- * even to answer a yes/no question. This calls a narrow SECURITY DEFINER
- * RPC instead (public.vehicle_has_active_purchase_agreement) that reveals
- * only the boolean the mobile day-outcome screen needs — the agreement's
- * amount, driver, and terms stay desktop-only.
- */
-export async function fetchVehicleHasActiveAgreement(vehicleId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('vehicle_has_active_purchase_agreement', { p_vehicle_id: vehicleId })
+export interface PurchasePaymentContext {
+  underAgreement: boolean
+  deferred: boolean
+  dailyAmountMinor: number | null
+}
+
+export async function fetchVehiclePurchasePaymentContext(vehicleId: string, serviceDate: string): Promise<PurchasePaymentContext> {
+  const { data, error } = await supabase.rpc('vehicle_purchase_payment_context', { p_vehicle_id: vehicleId, p_service_date: serviceDate })
   if (error) throw error
-  return data
+  if (!data || typeof data !== 'object' || Array.isArray(data) || typeof data.underAgreement !== 'boolean' || typeof data.deferred !== 'boolean' || (data.dailyAmountMinor !== null && (typeof data.dailyAmountMinor !== 'number' || !Number.isSafeInteger(data.dailyAmountMinor)))) throw new Error('Invalid purchase payment context')
+  return { underAgreement: data.underAgreement, deferred: data.deferred, dailyAmountMinor: data.dailyAmountMinor as number | null }
 }
 
 export interface AgreementProgress {
   paidMinor: number
   remainingMinor: number
+  originalCompletionOn: string | null
+  adjustedCompletionOn: string | null
+  remainingDays: number | null
+  adjustmentDays: number
+  missingDays: number
+  asOfDate: string
+  estimatedBaseline: boolean
+  policyEffectiveOn: string | null
 }
 
-/** Amount paid so far, summed from ledger_entries category
- *  DRIVER_PURCHASE_INSTALLMENT for this vehicle since the agreement
- *  started — the only place installment payments actually get recorded
- *  (the ordinary daily-payment flow, re-categorized). Not a stored or
- *  enforced figure, just what the vehicle profile shows so a person can
- *  decide when to mark an agreement complete. */
-export async function fetchAgreementProgress(vehicleId: string, agreementAmountMinor: number, startedOn: string): Promise<AgreementProgress> {
-  const { data, error } = await supabase
-    .from('ledger_entries')
-    .select('amount_minor')
-    .eq('vehicle_id', vehicleId)
-    .eq('category', 'DRIVER_PURCHASE_INSTALLMENT')
-    .gte('applies_to_date', startedOn)
-    .is('superseded_by_id', null)
+export function parseAgreementProgress(value: unknown): AgreementProgress {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid purchase progress')
+  const v = value as Record<string, unknown>
+  for (const key of ['paidMinor', 'remainingMinor', 'adjustmentDays', 'missingDays']) {
+    if (typeof v[key] !== 'number' || !Number.isSafeInteger(v[key])) throw new Error('Invalid purchase progress')
+  }
+  if (v.remainingDays !== null && (typeof v.remainingDays !== 'number' || !Number.isSafeInteger(v.remainingDays))) throw new Error('Invalid remaining days')
+  for (const key of ['originalCompletionOn', 'adjustedCompletionOn', 'policyEffectiveOn']) {
+    if (v[key] !== null && (typeof v[key] !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v[key]))) throw new Error('Invalid purchase date')
+  }
+  if (typeof v.asOfDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v.asOfDate) || typeof v.estimatedBaseline !== 'boolean') throw new Error('Invalid purchase progress')
+  return v as unknown as AgreementProgress
+}
 
+/** Server allocation excludes unrelated settlements and held advances. */
+export async function fetchAgreementProgress(agreementId: string): Promise<AgreementProgress> {
+  const { data, error } = await supabase.rpc('driver_purchase_progress', { p_agreement_id: agreementId })
   if (error) throw error
-  const paidMinor = (data ?? []).reduce((sum, row) => sum + row.amount_minor, 0)
-  return { paidMinor, remainingMinor: Math.max(agreementAmountMinor - paidMinor, 0) }
+  return parseAgreementProgress(data)
 }

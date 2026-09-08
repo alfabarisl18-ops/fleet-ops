@@ -293,7 +293,7 @@ describe('Insertable', () => {
 
     // But it is readable on the row, because the database computes it.
     const row = {} as Tables<'daily_payment_records'>
-    const treatment: 'DRIVER_DEBT' | 'ACCEPTED_LOSS' | null = row.shortfall_treatment
+    const treatment: 'DRIVER_DEBT' | 'ACCEPTED_LOSS' | 'DEFERRED_INSTALLMENT' | null = row.shortfall_treatment
     const shortfall: number | null = row.shortfall_amount_minor
 
     expect([_a, _b, treatment, shortfall]).toBeDefined()

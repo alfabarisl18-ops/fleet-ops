@@ -45,6 +45,7 @@ decided, what else was considered, and what would make us revisit it.
 | [0022](decisions/0022-correction-requested-alert.md) | `CORRECTION_REQUESTED` becomes a real alert (Owner/Admin only, event-driven, Owner/Admin's own self-applied edits excluded) instead of only showing on the Records page |
 | [0023](decisions/0023-vehicle-registration-fields.md) | `vehicles` gains VIN, engine number, cubic capacity, seat count, registration category (owner name/address excluded); a direct SQL insert into `vehicles` turned out to be impossible outside a real session, by design |
 | [0024](decisions/0024-separate-staging-branch.md) | Dedicated staging branch, staging-only feature previews, and explicit approval before production release. |
+| [0025](decisions/0025-assignment-route.md) | Atomic assignment route synchronization and safe retries. |
 
 ## Build order
 

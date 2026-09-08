@@ -753,6 +753,7 @@ function AssignDriverPanel({
   onAddNewDriver: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const [assignmentRequest, setAssignmentRequest] = useState<{ signature: string; id: string } | null>(null)
   const [drivers, setDrivers] = useState<DriverListItem[] | null>(null)
   const [routes, setRoutes] = useState<RouteOption[]>([])
   const [driverId, setDriverId] = useState('')
@@ -787,7 +788,11 @@ function AssignDriverPanel({
     setSubmitting(true)
     setError(null)
     try {
-      await assignDriverToVehicle(driverId, vehicleId, routeId === '' ? null : routeId)
+      const signature = JSON.stringify([driverId, vehicleId, routeId])
+      const request = assignmentRequest?.signature === signature ? assignmentRequest : { signature, id: crypto.randomUUID() }
+      setAssignmentRequest(request)
+      await assignDriverToVehicle(driverId, vehicleId, routeId === '' ? null : routeId, request.id)
+      setAssignmentRequest(null)
       setOpen(false)
       onAssigned()
     } catch {
@@ -801,7 +806,7 @@ function AssignDriverPanel({
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setRouteId(vehicleRouteId ?? ''); setOpen(true) }}
         className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         Assign driver

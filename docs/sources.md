@@ -66,3 +66,26 @@ claim provenance coverage for older pages.
 - Permission: authorized staging verification; no real credentials or
   business data copied.
 - Used by: deployment.md, log.md.
+
+## SRC-OPERATIONS-20260907-USER
+
+- Kind: user-approved implementation plan in this Codex task, 2026-09-07.
+- Author/permission: repository owner, implementation authorized; hosted SQL requires separate approval.
+- Decisions: assignment route synchronization, automatic forward-only purchase deferral,
+  original/adjusted end dates, extra purchase payments, zero-payment Service with no monthly cap.
+- Used by: SPEC.md, schema.md, agent instructions, decisions 0025 onward, log.md.
+
+## SRC-OPERATIONS-20260907-REPO
+
+- Kind: repository code, snapshot 94fe6e6; user-owned private source.
+- Locations: src/data/driverPurchaseAgreements.ts, src/screens/VehiclePaymentScreen.tsx,
+  migrations 20260811003250, 20260812010000, 20260818010000.
+- Used by: implementation decisions and schema documentation.
+
+## SRC-PGLITE-20260907
+
+- Publisher: ElectricSQL; official documentation, retrieved 2026-09-07.
+- URL: https://pglite.dev/docs/
+- Linked/summarized only. Local test runtime installed outside the project;
+  no production dependency or browser payload. Platform scaffolding is not a hosted Supabase test.
+- Used by: database validation documentation.

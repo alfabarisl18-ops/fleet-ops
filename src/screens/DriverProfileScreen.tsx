@@ -382,6 +382,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 
 function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssigned: () => void }) {
   const [open, setOpen] = useState(false)
+  const [assignmentRequest, setAssignmentRequest] = useState<{ signature: string; id: string } | null>(null)
   const [vehicles, setVehicles] = useState<VehicleListItem[] | null>(null)
   const [routes, setRoutes] = useState<RouteOption[]>([])
   const [vehicleId, setVehicleId] = useState('')
@@ -397,7 +398,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
         if (cancelled) return
         setVehicles(v)
         setRoutes(r)
-        if (v[0]) setVehicleId(v[0].id)
+        if (v[0]) { setVehicleId(v[0].id); setRouteId(v[0].routeId ?? '') }
       })
       .catch(() => {
         if (!cancelled) setError('Could not load vehicles.')
@@ -415,7 +416,11 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
     setSubmitting(true)
     setError(null)
     try {
-      await assignDriverToVehicle(driverId, vehicleId, routeId === '' ? null : routeId)
+      const signature = JSON.stringify([driverId, vehicleId, routeId])
+      const request = assignmentRequest?.signature === signature ? assignmentRequest : { signature, id: crypto.randomUUID() }
+      setAssignmentRequest(request)
+      await assignDriverToVehicle(driverId, vehicleId, routeId === '' ? null : routeId, request.id)
+      setAssignmentRequest(null)
       setOpen(false)
       onAssigned()
     } catch {
@@ -448,7 +453,10 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
             <span className="text-sm font-medium text-slate-700">Vehicle</span>
             <select
               value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
+              onChange={(e) => {
+                setVehicleId(e.target.value)
+                setRouteId(vehicles.find((v) => v.id === e.target.value)?.routeId ?? '')
+              }}
               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               {vehicles.map((v) => (

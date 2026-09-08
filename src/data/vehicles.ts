@@ -10,6 +10,7 @@ export type VehicleType = Enums<'vehicle_type'>
 export type VehicleStatus = Enums<'vehicle_status'>
 
 export interface VehicleListItem {
+  routeId: string | null
   id: string
   fleetId: string
   plate: string | null
@@ -60,13 +61,14 @@ export interface RouteOption {
 export async function fetchVehicles(): Promise<VehicleListItem[]> {
   const { data, error } = await supabase
     .from('vehicles')
-    .select('id, fleet_id, plate, type, status')
+    .select('id, fleet_id, plate, type, status, route_id')
     .neq('status', 'ARCHIVED')
     .order('fleet_id')
 
   if (error) throw error
   return (data ?? []).map((v) => ({
     id: v.id,
+    routeId: v.route_id,
     fleetId: v.fleet_id,
     plate: v.plate,
     type: v.type,

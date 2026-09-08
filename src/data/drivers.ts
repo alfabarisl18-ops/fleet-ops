@@ -248,7 +248,7 @@ export async function createDriver(input: CreateDriverInput): Promise<string> {
 }
 
 /**
- * Inserts the assignment and updates vehicles.current_driver_id together.
+ * Inserts the assignment and updates the vehicle driver and route together.
  * Unlike vehicle status (a trigger-maintained projection of
  * vehicle_status_events), current_driver_id is a plain column the
  * application keeps in sync — confirmed against Phase 1's own seed script,
@@ -260,9 +260,10 @@ export async function assignDriverToVehicle(
   driverId: string,
   vehicleId: string,
   routeId: string | null,
+  clientRecordId: string = crypto.randomUUID(),
 ): Promise<void> {
   const args: RpcArgs<'assign_driver_to_vehicle'> = {
-    p_client_record_id: crypto.randomUUID(),
+    p_client_record_id: clientRecordId,
     p_driver_id: driverId,
     p_vehicle_id: vehicleId,
     p_route_id: routeId,

@@ -2477,7 +2477,7 @@ export type Database = {
       approval_status: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "DISPUTED"
       balance_status: "OPEN" | "PARTIAL" | "CLEARED" | "WRITTEN_OFF"
       correction_status: "REQUESTED" | "APPROVED" | "REJECTED" | "APPLIED"
-      day_outcome: "FULL_DAY" | "HALF_DAY" | "DRIVERS_DAY" | "BREAKDOWN" | "DID_NOT_WORK"
+      day_outcome: "FULL_DAY" | "HALF_DAY" | "DRIVERS_DAY" | "SERVICE" | "BREAKDOWN" | "DID_NOT_WORK"
       document_type:
         | "VEHICLE_PHOTO"
         | "DRIVER_PHOTO"
@@ -2807,7 +2807,7 @@ export const Constants = {
       approval_status: ["NOT_REQUIRED", "PENDING", "APPROVED", "DISPUTED"],
       balance_status: ["OPEN", "PARTIAL", "CLEARED", "WRITTEN_OFF"],
       correction_status: ["REQUESTED", "APPROVED", "REJECTED", "APPLIED"],
-      day_outcome: ["FULL_DAY", "HALF_DAY", "DRIVERS_DAY", "BREAKDOWN", "DID_NOT_WORK"],
+      day_outcome: ["FULL_DAY", "HALF_DAY", "DRIVERS_DAY", "SERVICE", "BREAKDOWN", "DID_NOT_WORK"],
       document_type: [
         "VEHICLE_PHOTO",
         "DRIVER_PHOTO",

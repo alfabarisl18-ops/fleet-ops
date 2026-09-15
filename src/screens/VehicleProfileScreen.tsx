@@ -48,7 +48,7 @@ export function VehicleProfileScreen({
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null)
   const [agreement, setAgreement] = useState<(DriverPurchaseAgreement & { driverName: string }) | null>(null)
   const [progressError, setProgressError] = useState<string | null>(null)
-  const [progress, setProgress] = useState<AgreementProgress | null>(null)
+  const [progress, setProgress] = useState<(AgreementProgress & { agreementId: string }) | null>(null)
   const [pendingCorrection, setPendingCorrection] = useState<Correction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -111,7 +111,7 @@ export function VehicleProfileScreen({
     const refresh = () => {
       if (document.visibilityState === 'hidden') return
       fetchAgreementProgress(agreement.id).then((p) => {
-        if (!cancelled) { setProgress(p); setProgressError(null) }
+        if (!cancelled) { setProgress({ ...p, agreementId: agreement.id }); setProgressError(null) }
       }).catch(() => {
         if (!cancelled) setProgressError('Could not refresh purchase progress. Check your connection.')
       })
@@ -284,7 +284,7 @@ export function VehicleProfileScreen({
             <Field label="Original agreed completion" value={agreement.expectedCompletionOn} />
             <Field label="Ownership transfer" value={OWNERSHIP_TRANSFER_STATUS_LABELS[agreement.ownershipTransferStatus]} />
             {progressError && <p role="alert" className="text-sm text-red-600">{progressError}</p>}
-            {progress && (
+            {progress && progress.agreementId === agreement.id && (
               <>
                 <Field label="Paid so far" value={formatMinorUnits(progress.paidMinor)} />
                 <Field label="Remaining" value={progress.remainingMinor === 0 ? 'Paid in full' : formatMinorUnits(progress.remainingMinor)} />

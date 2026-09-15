@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:types": "supabase gen types typescript --project-id hjebavtcdduortshufku > src/types/database.ts",
+    "db:types": "supabase gen types typescript --project-id netxgjqeaakbkjqvtdhl > src/types/database.ts",
     "db:diff": "supabase db diff",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset"

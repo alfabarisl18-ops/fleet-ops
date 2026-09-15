@@ -122,7 +122,7 @@ Fleet Manager row, a phone number, an email, or anything else.
 
 ## The rule that trips people up
 
-A shortfall becomes **driver debt** only when the vehicle worked a **Full Day**.
+For ordinary vehicles, a shortfall becomes **driver debt** only when the vehicle worked a **Full Day**.
 
 This is not application logic. `daily_payment_records.shortfall_treatment` is a
 `GENERATED ALWAYS ... STORED` column:
@@ -260,3 +260,33 @@ that list would put the PIN hashes on the public API.
   signed-in users. Also the point: it is definer precisely so it can read
   columns the caller cannot, and it checks `app.is_desktop()` before returning
   anything.
+
+
+## Purchase policy and Service update
+
+Sources: SRC-OPERATIONS-20260907-USER and SRC-OPERATIONS-20260907-REPO
+in sources.md; implementation migrations 20260907170000 through 20260907174000.
+See decisions 0025–0027. Hosted execution remains pending approval.
+
+- Agreement snapshots: `schedule_effective_on`, `schedule_daily_amount_minor`,
+  `schedule_baseline_on`, `schedule_closed_progress`. Original agreed end unchanged;
+  closed progress freezes the display. Existing open agreements activate on migration
+  day (or future start), without pre-policy missing-day penalties.
+- Daily snapshots: `purchase_agreement_id`, `defer_installment`. Generated treatment
+  adds `DEFERRED_INSTALLMENT`; old rows remain on their original treatment.
+- Ledger allocation: `purchase_agreement_id`, `purchase_applied_minor`; excludes
+  held advances/unrelated debt. Append-only originals remain. Approved purchase
+  corrections may append zero-valued superseding entries, not cash movements.
+- Enums: `SERVICE`, `DEFERRED_INSTALLMENT`, `PURCHASE_PAYMENT`; Service is zero-only.
+- RPCs: `vehicle_purchase_payment_context(uuid,date)` exposes only collection context;
+  `driver_purchase_progress(uuid)` is management-only;
+  `correct_purchase_payment(uuid,uuid,bigint,text)` is Owner/Admin-only, audited,
+  idempotent, and limited to new-policy pure installment allocations.
+- Existing table RLS remains; explicit function permissions reject missing/expired
+  identities. Snapshot triggers disregard caller-supplied policy and allocation.
+- Route assignment uses the original RPC signature, a transaction lock and client
+  record ID; vehicle and assignment update atomically, preserving transfer history.
+
+Local verification: `node tools/test-database.cjs` uses an isolated PostgreSQL
+runtime. It includes an upgrade fixture and equality checks on historical records.
+It is not a substitute for Supabase staging/RLS and browser verification.

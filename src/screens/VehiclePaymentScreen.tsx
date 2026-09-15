@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { DAY_OUTCOME_LABELS, OVERPAYMENT_REASON_LABELS, SHORTFALL_CAUSE_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
+import { DAY_OUTCOMES, DAY_OUTCOME_LABELS, OVERPAYMENT_REASON_LABELS, SHORTFALL_CAUSE_LABELS, VEHICLE_TYPE_LABELS } from '@/constants/labels'
 import { formatMinorUnits, parseMinorUnits } from '@/lib/money'
 import type { DayOutcome, OverpaymentReason, ShortfallCause } from '@/data/dailyPayments'
 import { fetchFreetownToday, isDayOutcomeEligible, recordBundledPayment, recordDailyPayment } from '@/data/dailyPayments'
@@ -18,7 +18,6 @@ type Step =
   | { name: 'bundle'; vehicleId: string; fleetId: string; startDate: string; expectedAmountMinor: number }
   | { name: 'trip'; vehicleId: string; fleetId: string }
 
-const DAY_OUTCOMES: DayOutcome[] = ['FULL_DAY', 'HALF_DAY', 'DRIVERS_DAY', 'BREAKDOWN', 'DID_NOT_WORK']
 const SHORTFALL_CAUSES: ShortfallCause[] = ['BREAKDOWN', 'ACCIDENT', 'POLICE_CHECKPOINT', 'OTHER']
 const OVERPAYMENT_REASONS: OverpaymentReason[] = ['SETTLING_BALANCE', 'ADVANCE', 'PURCHASE_PAYMENT', 'OTHER']
 
@@ -211,7 +210,7 @@ function DayOutcomeForm({
   const [error, setError] = useState<string | null>(null)
 
   const amountMinor = amount.trim() === '' ? null : parseMinorUnits(amount)
-  const receivedMinor = outcome === 'FULL_DAY' && !showAmountField ? expectedAmountMinor : (amountMinor ?? 0)
+  const receivedMinor = outcome === 'SERVICE' ? 0 : outcome === 'FULL_DAY' && !showAmountField ? expectedAmountMinor : (amountMinor ?? 0)
   const isOverpaid = receivedMinor > expectedAmountMinor
 
   function choose(o: DayOutcome) {
@@ -302,6 +301,7 @@ function DayOutcomeForm({
         <div className="flex flex-col gap-4">
           <p className="text-base font-medium text-slate-700">{DAY_OUTCOME_LABELS[outcome]}</p>
 
+          {outcome === 'SERVICE' && <p className="text-sm text-slate-600">No payment is recorded for Service. Use Half Day if the vehicle worked and paid something.</p>}
           {deferred && (
             <p className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               Payments go toward the vehicle purchase. Any unpaid part of {formatMinorUnits(expectedAmountMinor)} defers the installment and adjusts the completion date. It creates no new driver debt.

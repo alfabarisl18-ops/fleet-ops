@@ -175,3 +175,6 @@ unverified because no valid staging credentials were used.
 - [SRC-STAGING-20260907-DOCS](sources.md#src-staging-20260907-docs): Cloudflare branch controls.
 - [SRC-STAGING-20260907-REPO](sources.md#src-staging-20260907-repo): existing client and redirect configuration.
 - [SRC-STAGING-20260907-BROWSER](sources.md#src-staging-20260907-browser): observed sign-in pages and staging-only authentication request.
+
+
+Purchase schedule and Service rollout: see [operations-rollout.md](operations-rollout.md) for the exact pending SQL, staging target, migration ordering, and verification. Source: SRC-OPERATIONS-20260907-USER in sources.md.

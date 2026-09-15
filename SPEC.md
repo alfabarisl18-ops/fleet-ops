@@ -148,18 +148,18 @@ possible across every kind of record.
 
 **`daily_payment_records`** — `id`, `client_record_id`, `vehicle_id`, `driver_id`,
 `service_date`, `day_outcome`
-(`FULL_DAY | HALF_DAY | DRIVERS_DAY | BREAKDOWN | DID_NOT_WORK`),
+(`FULL_DAY | HALF_DAY | DRIVERS_DAY | SERVICE | BREAKDOWN | DID_NOT_WORK`),
 `expected_amount_minor` (snapshot of the target on that date),
 `received_amount_minor`, `shortfall_amount_minor`, `shortfall_treatment`
-(`DRIVER_DEBT | ACCEPTED_LOSS`), `shortfall_cause`
+(`DRIVER_DEBT | ACCEPTED_LOSS | DEFERRED_INSTALLMENT`), `shortfall_cause`
 (`BREAKDOWN | ACCIDENT | POLICE_CHECKPOINT | OTHER`), `shortfall_note`,
-`overpayment_reason` (`SETTLING_BALANCE | ADVANCE | OTHER`),
+`overpayment_reason` (`SETTLING_BALANCE | ADVANCE | PURCHASE_PAYMENT | OTHER`),
 `ledger_entry_id`, `bundled_payment_id`, `entered_by`, `entered_at`.
 
 **Unique index on `(vehicle_id, service_date)`.** One record per vehicle per day.
 
 `shortfall_treatment` is set by the day outcome, never chosen by the collector.
-Only `FULL_DAY` produces `DRIVER_DEBT`.
+For ordinary vehicles, only `FULL_DAY` produces `DRIVER_DEBT`. The forward-only purchase policy below takes precedence for agreements.
 
 **`bundled_payments`** — `vehicle_id`, `driver_id`, `total_amount_minor`,
 `received_at`, `covers_from_date`, `days_covered`, `covers_to_date` (calculated),
@@ -514,13 +514,14 @@ After choosing a vehicle and date, ask **What happened that day?**
 
 | Option | Behaviour |
 |---|---|
-| **Full Day** | The vehicle worked the whole day, so the full expected amount is due. Default to the expected amount with **Done** in one tap. A small "Paid less than expected" link reveals an amount field; any shortfall goes **automatically to the driver's debt**, whatever the reason. A note may be added but does not cancel the debt. |
+| **Full Day** | The vehicle worked the whole day, so the full expected amount is due. Default to the expected amount with **Done** in one tap. A small "Change amount received" link reveals an amount field; any shortfall goes **automatically to the driver's debt**, whatever the reason. A note may be added but does not cancel the debt. |
 | **Half Day** | A known disruption cut the day short and the vehicle worked the rest. Require a cause: breakdown, accident, police or checkpoint issue, other with a note. Ask the amount received. The shortfall is **accepted — no driver debt** — but is recorded against the vehicle's target with its cause. Owner/Admin or Fleet Manager can convert it to driver debt on review. |
 | **Driver's Day** | No amount. Owner payment recorded as zero. Reason recorded as Driver's Day. Next becomes **Done**. Monthly; the exact selection rule stays configurable. |
+| **Service** | No amount field. Record zero, then **Done**. No monthly limit. No automatic maintenance order or status change. Use Half Day when the vehicle worked and paid something. |
 | **Breakdown** | Ask what amount, if any, was received — zero or otherwise. No unpaid balance against the daily target. Allow a note on how long the vehicle worked and what happened. Then Done. |
 | **Did Not Work** | No amount. Record zero. No unpaid balance. Next becomes **Done**. |
 
-**The rule that decides everything:** a shortfall becomes driver debt only when
+**Ordinary vehicles (purchase policy takes precedence):** a shortfall becomes driver debt only when
 the vehicle worked a full day. Whether the driver has an explanation is not the
 test — the test is whether the working day was actually cut short.
 
@@ -638,3 +639,56 @@ To be answered before the phases that depend on them:
    option reserved for a vehicle that never worked at all?
 6. Can a driver's accumulated debt be forgiven, and does that need Owner approval
    and a recorded reason?
+
+
+## Approved update — assignment routes and purchase schedules (2026-09-07)
+
+Source: SRC-OPERATIONS-20260907-USER in docs/sources.md. This section supersedes
+the earlier rent-to-own "all shortfalls become debt" behavior for business dates
+on or after each agreement's policy activation. Earlier payments and debt remain
+unchanged, and backdated earlier entries still use the old policy.
+
+Assigning a driver and route updates assignment history, current driver, and
+vehicle route in one permission-checked transaction. Both forms default to the
+selected vehicle's route; None clears it. Transfers preserve the previous
+vehicle's route. Client record IDs make retries safe. Do not repair old route
+mismatches or rewrite historical assignments automatically.
+
+For an applicable purchase agreement, payments reduce principal. Every unpaid
+installment is deferred, including Full Day, Driver's Day, Service, Breakdown,
+Half Day and Did Not Work. It is neither new driver debt nor accepted loss.
+Missing daily entries are unpaid once that day ends in Freetown; today's entered
+outcome affects progress immediately. The server snapshots agreement and policy
+on each new daily record using its service date.
+
+Keep the original completion date fixed. Divide cumulative scheduled installments
+minus allocated purchase payments since activation by the fixed daily installment
+and round upward only after accumulating fractions. Two SLE 250 shortfalls at
+SLE 500 per day add one day; five unpaid days add five. Late money removes delay;
+explicit extra purchase money can bring completion before the original date.
+The fixed daily equivalent uses the existing Daily, Weekly ÷ 7, or Monthly ÷ days
+in the start month convention, in integer minor units.
+
+When no completion date exists, show an explicitly labelled estimate based on
+balance and rate at activation. Dates stop moving after cancellation/completion.
+Show Paid in full at zero balance, but management still transfers ownership and
+archives the vehicle manually. Return paid/remaining amounts, original/adjusted
+dates, remaining days, adjustment and missing-entry count from the server.
+
+Extra toward vehicle purchase is an explicit overpayment purpose. Unrelated debt
+settlements and unapplied advances never also pay principal. Existing agreement
+debt paid later can reduce that agreement's principal once. Bundles retain their
+existing per-day allocation and no-overpayment constraint; use a single-day
+payment with the extra purchase purpose for extra money. Retries and offline
+replay share the same server rules. Mobile access exposes only date-specific
+collection context, not agreement terms.
+
+Owner/Admin can correct new-policy installment recording mistakes with an audited
+superseding ledger entry, including zero, retaining the original daily fact and
+receipt/business dates. This action does not reverse a mixed-purpose credit or
+debt settlement; those separate allocations require separate review. Newly received
+late money belongs in Collections, not a correction to old receipt history.
+
+Rollout requires approved hosted SQL on staging first, followed by staging
+verification, then separate production-release approval. See decisions 0025–0027
+and docs/operations-rollout.md for the exact migration sequence and tests.

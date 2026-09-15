@@ -82,7 +82,7 @@ the working app. Never push to it, never modify it. It stays as reference.
 - Roles are **Owner/Admin**, **Fleet Manager**, **Collections & Finance**,
   **Maintenance & Repairs**. Never "Mother", never "Father", never a person's
   name as a role.
-- Day outcomes are **Full Day**, **Half Day**, **Driver's Day**, **Breakdown**,
+- Day outcomes are **Full Day**, **Half Day**, **Driver's Day**, **Service**, **Breakdown**,
   **Did Not Work**.
 - Currency displays as `SLE 1,000`. Expenses display as `−SLE 1,000`.
 
@@ -93,6 +93,12 @@ A payment shortfall becomes **driver debt** only when the vehicle worked a
 losses** recorded against the vehicle's target — real money missing, but owed by
 nobody. `shortfall_treatment` is derived from `day_outcome` in the data layer and
 must never be selectable by the person entering the record.
+
+For purchase agreements on/after their policy activation date, every shortfall
+is a **Deferred installment**, including Full Day and Service: no new debt or
+accepted loss. Server snapshots preserve the original treatment for earlier
+business dates. Purchase progress is server-calculated; extra purchase payments
+must have the explicit purchase purpose. Service records zero with no monthly cap.
 
 Outstanding balances belong to the **driver**, not the vehicle, and follow the
 driver across vehicle changes.

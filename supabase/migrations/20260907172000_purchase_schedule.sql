@@ -20,7 +20,7 @@ update public.driver_purchase_agreements a
 set schedule_baseline_on = coalesce(a.expected_completion_on,
   greatest(a.started_on,app.freetown_today()) +
   greatest(0, ((greatest(a.agreement_amount_minor-coalesce((
-    select sum(l.amount_minor) from public.ledger_entries l
+    select sum(l.amount_minor)::bigint from public.ledger_entries l
     where l.vehicle_id=a.vehicle_id and l.category='DRIVER_PURCHASE_INSTALLMENT'
       and l.applies_to_date>=a.started_on and l.superseded_by_id is null
   ),0),0)+a.schedule_daily_amount_minor-1)/nullif(a.schedule_daily_amount_minor,0))::integer-1))
@@ -175,7 +175,6 @@ begin
  end if;
  select * into a from public.driver_purchase_agreements where id=p_agreement_id;
  if not found then raise exception 'Agreement not found' using errcode='no_data_found'; end if;
- if a.schedule_closed_progress is not null then return a.schedule_closed_progress; end if;
  v_asof:=least(v_today,coalesce((a.cancelled_at at time zone 'Africa/Freetown')::date,v_today),
    coalesce((a.completed_at at time zone 'Africa/Freetown')::date,v_today));
 
@@ -224,9 +223,16 @@ begin
                   else v_delta/a.schedule_daily_amount_minor end)::integer;
  end if;
  v_date:=coalesce(a.schedule_baseline_on,a.expected_completion_on)+v_adjustment;
+ if a.schedule_closed_progress is not null then
+   -- Freeze dates, not the accounting of any later backdated receipts.
+   v_date:=(a.schedule_closed_progress->>'adjustedCompletionOn')::date;
+   v_adjustment:=(a.schedule_closed_progress->>'adjustmentDays')::integer;
+   v_missing:=(a.schedule_closed_progress->>'missingDays')::integer;
+   v_asof:=(a.schedule_closed_progress->>'asOfDate')::date;
+ end if;
  return jsonb_build_object('paidMinor',v_paid,'remainingMinor',v_remaining,
    'originalCompletionOn',a.expected_completion_on,'adjustedCompletionOn',v_date,
-   'remainingDays',case when v_remaining=0 then 0 else greatest(v_date-v_asof,0) end,
+   'remainingDays',case when v_remaining=0 then 0 when v_date is null then null else greatest(v_date-v_asof,0) end,
    'adjustmentDays',v_adjustment,'missingDays',v_missing,'asOfDate',v_asof,
    'estimatedBaseline',a.expected_completion_on is null,'policyEffectiveOn',a.schedule_effective_on);
 end; $$;
@@ -316,6 +322,7 @@ create or replace function public.record_daily_payment(
 )
   returns uuid
   language plpgsql
+  security definer
   set search_path = ''
 as $$
 declare
@@ -388,6 +395,9 @@ begin
 
         v_remaining_overpaid := v_remaining_overpaid - v_applied;
       end loop;
+    if v_remaining_overpaid>0 then
+      raise exception 'The extra amount exceeds the driver debt available to settle; choose its actual purpose' using errcode='check_violation';
+    end if;
     elsif p_overpayment_reason = 'ADVANCE' then
       if v_driver_id is null then
         raise exception 'Cannot record an advance: no driver is assigned to this vehicle'
@@ -435,7 +445,7 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_client_record_id::text,0));
   select id into v_bundle_id from public.bundled_payments where client_record_id=p_client_record_id;
   if found then
-    if not exists(select 1 from public.bundled_payments where id=v_bundle_id and vehicle_id=p_vehicle_id and covers_from_date=p_covers_from_date and days_covered=p_days_covered and total_amount_minor=p_total_amount_minor) then
+    if not exists(select 1 from public.bundled_payments where id=v_bundle_id and vehicle_id=p_vehicle_id and covers_from_date=p_covers_from_date and days_covered=p_days_covered and total_amount_minor=p_total_amount_minor and note is not distinct from p_note and (p_received_at is null or received_at=p_received_at)) then
       raise exception 'Payment retry does not match original request' using errcode='check_violation';
     end if;
     return v_bundle_id;
@@ -576,3 +586,6 @@ begin
   return null;
 end;
 $$;
+
+comment on function public.record_daily_payment(uuid,uuid,date,public.day_outcome,bigint,public.shortfall_cause,text,public.overpayment_reason) is
+ 'Explicitly authorizes active management/collection roles, stamps the caller, then atomically finishes permitted bookkeeping including debt settlement. No caller-supplied user or policy fields.';

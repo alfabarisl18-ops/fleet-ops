@@ -125,6 +125,7 @@ export const DAY_OUTCOME_LABELS: Record<DayOutcome, string> = {
   FULL_DAY: 'Full Day',
   HALF_DAY: 'Half Day',
   DRIVERS_DAY: "Driver's Day",
+  SERVICE: 'Service',
   BREAKDOWN: 'Breakdown',
   DID_NOT_WORK: 'Did Not Work',
 }
@@ -447,3 +448,5 @@ export const SHORTFALL_TREATMENT_LABELS = {
   ACCEPTED_LOSS: 'Accepted loss',
   DEFERRED_INSTALLMENT: 'Deferred installment',
 } as const
+
+export const DAY_OUTCOMES: DayOutcome[] = ['FULL_DAY', 'HALF_DAY', 'DRIVERS_DAY', 'SERVICE', 'BREAKDOWN', 'DID_NOT_WORK']

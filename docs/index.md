@@ -98,3 +98,6 @@ driver debt forgiveness (decision 0017), the rent-to-own redesign
 seven.
 
 - [0026 — Purchase schedule](decisions/0026-purchase-schedule.md): forward-only deferrals, principal allocation and correction audit.
+
+- [0027 — Service days](decisions/0027-service-days.md): zero-payment Service and server validation.
+- [Operations rollout](operations-rollout.md): SQL approval sequence and verification status.

@@ -26,6 +26,13 @@ mixed-purpose allocations cannot be silently changed with that action; their
 separate financial histories require separate review. Historical corrections
 remain outside this new-policy operation. Original daily entries stay visible.
 
+A collector settlement regression exposed the old invoker RPC silently failing
+its outstanding-balance UPDATE under desktop-only RLS. The single-payment RPC
+now explicitly authorizes an active management/collection identity, stamps that
+identity, and performs the entire fixed operation as SECURITY DEFINER. It accepts
+no caller-supplied role, user, policy or debt ID. Excess beyond the driver's actual
+debt is rejected, so money cannot silently lose its purpose.
+
 No hosted migration has been applied. Local test scaffolding runs the repository
 migrations against isolated PostgreSQL, with Supabase auth/storage/cron simulated.
 Run `node tools/test-database.cjs`; `--generate-types` generates additive schema

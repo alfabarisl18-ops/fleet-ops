@@ -434,7 +434,7 @@ function AssignVehiclePanel({ driverId, onAssigned }: { driverId: string; onAssi
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setVehicles(null); setOpen(true) }}
         className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 active:bg-slate-50"
       >
         Assign to vehicle

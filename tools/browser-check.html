@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head><body><div id="root"></div><script type="module">
+import {fetchPendingWrites} from '/src/lib/offlineQueue.ts'; import {flushOfflineQueue} from '/src/lib/offlineQueueReplay.ts'; window.testQueue={fetchPendingWrites,flushOfflineQueue};
+import React from 'react'; import {createRoot} from 'react-dom/client'; import {VehiclePaymentScreen} from '/src/screens/VehiclePaymentScreen.tsx'; import '/src/index.css'; import {VehicleProfileScreen} from '/src/screens/VehicleProfileScreen.tsx'; import {DriverProfileScreen} from '/src/screens/DriverProfileScreen.tsx';
+const scene=new URLSearchParams(location.search).get('scene');
+const props={vehicleId:'30000000-0000-0000-0000-000000000001',driverId:'20000000-0000-0000-0000-000000000001',currentUserId:'00000000-0000-0000-0000-000000000001',currentUserRole:'FLEET_MANAGER',onBack:()=>{},onOpenDriver:()=>{},onOpenVehicle:()=>{},onAddDriverToAssign:()=>{},onSetUpAgreement:()=>{},onDone:()=>document.body.dataset.saved='true'};
+createRoot(document.getElementById('root')).render(React.createElement(scene==='vehicle'?VehicleProfileScreen:scene==='driver'?DriverProfileScreen:VehiclePaymentScreen,props));
+</script></body></html>

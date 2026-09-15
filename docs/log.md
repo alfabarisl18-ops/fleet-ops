@@ -1338,3 +1338,55 @@ Preserved the pre-existing working-tree history and QA-account notes without
 including them in this commit. The existing staging URL correction is
 retained in the updated deployment guide. Both agents now have the same
 staging-first release instructions; main merges still require user approval.
+
+
+## [2026-09-15] feature | Assignment routes, purchase deferrals and Service
+
+Sources: SRC-OPERATIONS-20260907-USER, SRC-OPERATIONS-20260907-REPO,
+SRC-PGLITE-20260907. Pages: SPEC, schema, deployment, operations-rollout,
+decisions 0025–0027, agent instructions, index.
+
+Implemented route synchronization on codex/assignment-route (6a35c2c), purchase
+schedules/allocation/corrections on codex/purchase-schedule (943d637), and Service
+with follow-up validation on codex/service-days. Integrated only locally through
+codex/staging. No hosted SQL, remote push, or deployment in this implementation.
+Main and origin/main remain 3778a01 locally.
+
+New-policy daily shortfalls defer; missed entries count after Freetown midnight;
+original dates stay fixed and extra purchase payments can shorten the schedule.
+Original daily/ledger/debt facts survive the migration; new correction entries
+supersede only the financial projection. Mixed-purpose credits/settlements are
+not silently reversed by purchase corrections. Closed dates freeze; accounting
+can still include valid backdated receipts. Collector settlement testing found
+and fixed an old invoker/RLS mismatch that left paid debt uncleared.
+
+Service is after Driver's Day, records zero, and creates no maintenance order or
+status change. Tested multiple same-month dates. Ordinary outcome rules remain.
+Local .env.local was found pointing at production; replaced its API URL and public
+key with staging (ignored by Git). Final build contains only staging's Supabase
+host. No local CLI project-ref file is present. Type generation defaults to staging.
+
+Final checks passed: npm run typecheck; npm run lint (0 errors, the 2 existing
+IconChip Fast Refresh warnings); npm run test (37 tests, 3 files); npm run build;
+node tools/test-database.cjs; node tools/browser-check.cjs; git diff --check.
+Database checks cover migration preservation, route None/transfer/retries,
+permissions, all ordinary outcomes, purchase fractions, missing days, late bundles,
+extra payment/advance/debt allocation, correction chains, cancellation/completion,
+Service and payoff. Platform auth/storage/cron are scaffolding in local PostgreSQL.
+Browser tests mock all external requests: Service at 320/375/768/1024/1440px,
+keyboard Done, zero payload, real IndexedDB offline queue/replay, both assignment
+forms' defaults/None/retry IDs, vehicle refresh and purchase progress. Mobile
+screenshot visually inspected. Earlier browser-harness selector/interception
+failures were corrected; an initial dummy-key request got staging 401, with no
+hosted record write. No production request was used for testing.
+
+Build main JS: 822.98 kB / 209.28 kB gzip versus recorded staging baseline
+816.52 kB / 207.30 kB gzip (+1.98 kB gzip). Existing chunk warning remains.
+No new production dependency or recurring service. Temporary PGlite and bundled
+Playwright are validation tools outside production dependencies.
+
+Remaining: exact SQL and staging target are in operations-rollout.md. Hosted SQL
+and staging deployment require approval, then genuine staging sign-in, writes,
+permissions and deployed-commit checks. Production release requires separate
+approval after staging. Preserved the unrelated pre-existing log and QA-account
+working-tree changes without committing them.

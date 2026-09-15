@@ -131,3 +131,98 @@ do $$ declare a uuid; p jsonb; begin
  assert public.driver_purchase_progress(a)=p, 'Cancelled schedule freezes';
 end $$;
 reset role;
+
+select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',false);
+select set_config('test.today','2026-11-01',false);
+set role authenticated;
+insert into public.drivers(id,full_name) values ('a0000000-0000-0000-0000-000000000001','Service driver');
+insert into public.vehicles(id,fleet_id,type,current_driver_id,expected_daily_amount_minor) values ('a0000000-0000-0000-0000-000000000002','SERVICE','LONG_SPRINTER','a0000000-0000-0000-0000-000000000001',50000);
+select public.set_up_driver_purchase_agreement(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000001',1000000,50000,'DAILY','2026-11-01','2026-11-20');
+select set_config('test.today','2026-11-10',false);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-01','SERVICE',0);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-02','SERVICE',0);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-03','DRIVERS_DAY',0);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-04','DID_NOT_WORK',0);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-05','BREAKDOWN',0);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-06','FULL_DAY',50000);
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-07','HALF_DAY',50000,'BREAKDOWN');
+select public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-08','BREAKDOWN',50000);
+do $$ begin
+ begin
+ perform public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-09','SERVICE',100);
+ raise exception 'Nonzero Service accepted'; exception when check_violation then null; end;
+ assert (select count(*)=2 from public.daily_payment_records where vehicle_id='a0000000-0000-0000-0000-000000000002' and day_outcome='SERVICE'), 'Multiple service dates in one month';
+ assert (select count(*)=5 from public.daily_payment_records where vehicle_id='a0000000-0000-0000-0000-000000000002' and shortfall_treatment='DEFERRED_INSTALLMENT'), 'Every zero purchase outcome deferred';
+ assert not exists(select 1 from public.outstanding_balances where vehicle_id='a0000000-0000-0000-0000-000000000002'), 'No purchase outcome creates new debt';
+ assert (select count(*)=2 from public.activity_records where vehicle_id='a0000000-0000-0000-0000-000000000002' and summary_text like '% — Service'), 'Service activity readable';
+ assert not exists(select 1 from public.maintenance_orders where vehicle_id='a0000000-0000-0000-0000-000000000002'), 'Service creates no maintenance order';
+end $$;
+select public.record_daily_payment(gen_random_uuid(),'30000000-0000-0000-0000-000000000001','2026-11-01','SERVICE',0);
+do $$ begin
+ assert (select shortfall_treatment='ACCEPTED_LOSS' from public.daily_payment_records where vehicle_id='30000000-0000-0000-0000-000000000001' and service_date='2026-11-01'), 'Ordinary Service remains accepted loss';
+end $$;
+select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',false);
+do $$ declare a uuid; p jsonb; begin
+ select id into a from public.driver_purchase_agreements where vehicle_id='a0000000-0000-0000-0000-000000000002';
+ p:=public.driver_purchase_progress(a);
+ assert (p->>'adjustmentDays')::integer=6 and (p->>'missingDays')::integer=1, 'Five zero days plus one missing day';
+ perform set_config('test.today','2026-11-11',false);
+ p:=public.driver_purchase_progress(a);
+ assert (p->>'missingDays')::integer=2, 'Freetown midnight moves yesterday into missing entries';
+ perform public.record_daily_payment(gen_random_uuid(),'a0000000-0000-0000-0000-000000000002','2026-11-11','FULL_DAY',850000,null,null,'PURCHASE_PAYMENT');
+ p:=public.driver_purchase_progress(a);
+ assert (p->>'remainingMinor')::bigint=0 and (p->>'remainingDays')::integer=0, 'Paid in full';
+ assert (select ownership_transfer_status<>'COMPLETED' from public.driver_purchase_agreements where id=a), 'Payoff leaves ownership action manual';
+ begin
+ perform public.correct_purchase_payment(gen_random_uuid(),(select id from public.daily_payment_records where vehicle_id='a0000000-0000-0000-0000-000000000002' and service_date='2026-11-01'),100,'Nonzero service');
+ raise exception 'Nonzero Service correction accepted'; exception when check_violation then null; end;
+end $$;
+reset role;
+
+-- Collectors settling unrelated old debt must clear it without buying principal twice.
+select set_config('test.today','2026-12-01',false);
+select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',false);
+set role authenticated;
+insert into public.drivers(id,full_name) values ('b0000000-0000-0000-0000-000000000001','Allocation driver');
+insert into public.vehicles(id,fleet_id,type,current_driver_id,expected_daily_amount_minor) values ('b0000000-0000-0000-0000-000000000002','ALLOCATION','LONG_SPRINTER','b0000000-0000-0000-0000-000000000001',50000);
+select public.record_daily_payment(gen_random_uuid(),'b0000000-0000-0000-0000-000000000002','2026-11-30','FULL_DAY',0);
+select public.set_up_driver_purchase_agreement(gen_random_uuid(),'b0000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000001',1000000,50000,'DAILY','2026-12-01','2026-12-20');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+select public.record_daily_payment('b0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000002','2026-12-01','FULL_DAY',100000,null,null,'SETTLING_BALANCE');
+select public.record_daily_payment('b0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000002','2026-12-01','FULL_DAY',100000,null,null,'SETTLING_BALANCE');
+select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',false);
+do $$ declare p jsonb; begin
+ assert (select remaining_amount_minor=0 from public.outstanding_balances where vehicle_id='b0000000-0000-0000-0000-000000000002'), 'Collector settlement clears actual debt';
+ p:=public.driver_purchase_progress((select id from public.driver_purchase_agreements where vehicle_id='b0000000-0000-0000-0000-000000000002'));
+ assert (p->>'paidMinor')::bigint=50000, 'Unrelated debt money does not pay purchase principal';
+end $$;
+reset role;
+
+select set_config('test.today','2026-12-31',false);
+select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',false);
+set role authenticated;
+insert into public.drivers(id,full_name) values ('c0000000-0000-0000-0000-000000000001','Ordinary driver');
+insert into public.vehicles(id,fleet_id,type,current_driver_id,expected_daily_amount_minor) values ('c0000000-0000-0000-0000-000000000002','ORDINARY','LONG_SPRINTER','c0000000-0000-0000-0000-000000000001',50000);
+do $$ declare o public.day_outcome; amt bigint; n integer:=0; d uuid; treatment public.shortfall_treatment; begin
+ foreach o in array enum_range(null::public.day_outcome) loop
+ foreach amt in array array[0,25000,50000]::bigint[] loop
+ n:=n+1;
+ if o in ('DRIVERS_DAY','SERVICE','DID_NOT_WORK') and amt<>0 then
+  begin
+   perform public.record_daily_payment(gen_random_uuid(),'c0000000-0000-0000-0000-000000000002','2026-12-01'::date+n,o,amt);
+   raise exception 'Zero outcome accepted nonzero'; exception when check_violation then null; end;
+ else
+  d:=public.record_daily_payment(gen_random_uuid(),'c0000000-0000-0000-0000-000000000002','2026-12-01'::date+n,o,amt,case when o='HALF_DAY' then 'BREAKDOWN'::public.shortfall_cause else null end);
+  select shortfall_treatment into treatment from public.daily_payment_records where id=d;
+  assert treatment is not distinct from (case when amt=50000 then null when o='FULL_DAY' then 'DRIVER_DEBT'::public.shortfall_treatment else 'ACCEPTED_LOSS'::public.shortfall_treatment end), 'Ordinary outcome treatment unchanged';
+ end if;
+ end loop; end loop;
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000009999',false);
+do $$ begin
+ begin
+ perform public.record_daily_payment(gen_random_uuid(),'c0000000-0000-0000-0000-000000000002','2026-12-31','FULL_DAY',50000);
+ raise exception 'Missing identity accepted payment'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;

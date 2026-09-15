@@ -141,14 +141,16 @@ export async function fetchSprinterIncome(fromDate?: string, toDate?: string): P
   const from = fromDate ?? monthStart(today)
   const to = toDate ?? today
 
-  const [{ data: vehicles, error: vError }, { data: payments, error: pError }, { data: balances, error: bError }] = await Promise.all([
+  const [{ data: vehicles, error: vError }, { data: payments, error: pError }, { data: balances, error: bError }, { data: ledger, error: lError }] = await Promise.all([
     supabase.from('vehicles').select('id, fleet_id, current_driver_id').neq('type', 'BOX_TRUCK').neq('status', 'ARCHIVED'),
     supabase.from('daily_payment_records').select('vehicle_id, expected_amount_minor, received_amount_minor').gte('service_date', from).lte('service_date', to),
     supabase.from('outstanding_balances').select('driver_id, remaining_amount_minor').in('status', ['OPEN', 'PARTIAL']),
+    supabase.from('ledger_entries').select('vehicle_id, amount_minor').eq('source_type', 'DAILY_PAYMENT_RECORD').eq('direction', 'INCOME').is('superseded_by_id', null).gte('applies_to_date', from).lte('applies_to_date', to),
   ])
   if (vError) throw vError
   if (pError) throw pError
   if (bError) throw bError
+  if (lError) throw lError
 
   const owedByDriver = new Map<string, number>()
   for (const b of balances ?? []) {
@@ -158,7 +160,7 @@ export async function fetchSprinterIncome(fromDate?: string, toDate?: string): P
   return (vehicles ?? []).map((v) => {
     const rows = (payments ?? []).filter((p) => p.vehicle_id === v.id)
     const expectedMinor = rows.reduce((sum, r) => sum + r.expected_amount_minor, 0)
-    const collectedMinor = rows.reduce((sum, r) => sum + r.received_amount_minor, 0)
+    const collectedMinor = (ledger ?? []).filter((entry) => entry.vehicle_id === v.id).reduce((sum, entry) => sum + entry.amount_minor, 0)
     return {
       vehicleId: v.id,
       fleetId: v.fleet_id,

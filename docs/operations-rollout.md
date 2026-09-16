@@ -1,6 +1,13 @@
 # Assignment, purchase schedule, and Service rollout
 
-**Status: local implementation; hosted SQL and deployment are not approved yet.**
+**Status: deployed to staging on 16 September 2026; production remains unchanged.**
+
+All five migrations below were applied only to staging Supabase
+`netxgjqeaakbkjqvtdhl`. Cloudflare deployed application commit
+`a5543ecca8878ff62a51a768884b9757601d78c3` from `codex/staging` to
+`https://fleet-ops-staging.pages.dev`. The live project still deploys `main` at
+commit `3778a01efdbd453ddb97f0b565e52c4ef3253f38` and automatic previews remain
+disabled.
 
 ## Exact SQL to review
 
@@ -21,12 +28,13 @@ payment/ledger/debt amounts stay unchanged. New columns and generated treatment
 rebuild can briefly lock their tables, so use a quiet period. Invalid existing
 installment rates fail safely rather than silently inventing a usable rate.
 
-After staging SQL approval: verify the migration list and actual policy dates,
-regenerate types with `npm run db:types` (staging), push only `codex/staging` to the
-staging Cloudflare project, verify the intended commit, and test with staging
-accounts. Recheck Pages projects: live `fleet-ops` remains main-only with automatic
-previews disabled; staging uses `codex/staging`, with staging database settings for
-both its primary deployment and previews. Old live-project previews remain unsafe.
+The staging migration list, enum values, columns, RPC security settings and grants
+were verified after execution. No open purchase agreements existed, so the rollout
+did not backfill any existing open agreement. Generated staging types were compared
+with the application types. The Pages projects were also rechecked: live `fleet-ops`
+remains main-only with automatic previews disabled; staging uses `codex/staging`,
+with staging database settings for both its primary deployment and previews. Old
+live-project previews remain unsafe.
 
 Production needs a separate SQL and release approval after staging passes. Its
 activation date will be its own Freetown migration date, not the staging date.
@@ -48,8 +56,12 @@ of branch or local environment.
   stable retry IDs, refreshed vehicle information and purchase progress.
 - Required application checks: `npm run typecheck`, `npm run lint`, `npm run test`,
   `npm run build`. Final run outcomes are recorded in docs/log.md.
-- Hosted staging sign-in, actual database writes and deployed commit verification
-  remain pending approval; mock browser tests do not establish hosted behavior.
+- Cloudflare deployed the intended staging commit successfully. A deployed browser
+  smoke test loaded the role and shortcut screens, exercised the rejected-password
+  path, and confirmed every Supabase request used staging project
+  `netxgjqeaakbkjqvtdhl`; no request used production. A successful authenticated
+  session and hands-on hosted writes remain to be tested because no staging QA
+  credential is stored in the repository or local environment.
 
 The database harness needs a temporary test-only runtime, not a project dependency:
 

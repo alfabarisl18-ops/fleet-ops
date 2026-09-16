@@ -2200,6 +2200,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_trip_expense: {
+        Args: { p_client_record_id: string; p_trip_id: string; p_category: Database["public"]["Enums"]["ledger_category"]; p_amount_minor: number; p_note: string }
+        Returns: string
+      }
       correct_purchase_payment: {
         Args: { p_client_record_id: string; p_daily_payment_id: string; p_amount_minor: number; p_reason: string }
         Returns: string

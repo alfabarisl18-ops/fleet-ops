@@ -7,6 +7,7 @@ const KIND_LABELS: Record<QueuedWrite['kind'], string> = {
   recordDailyPayment: 'Vehicle payment',
   recordBundledPayment: 'Bundled payment',
   recordTrip: 'Trip',
+  addTripExpense: 'Trip cost',
   recordOtherPayment: 'Other payment',
   createMaintenanceOrder: 'Maintenance record',
   changeMaintenanceStatus: 'Status update',

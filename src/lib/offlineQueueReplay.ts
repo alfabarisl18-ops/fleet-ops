@@ -1,11 +1,10 @@
 import { flushQueue, type QueuedWriteKind } from '@/lib/offlineQueue'
-import { flagDuplicatePayment } from '@/data/accounting'
+import { flagDuplicatePayment, replayAddTripExpense, replayRecordTrip } from '@/data/accounting'
 import { replayRecordBundledPayment, replayRecordDailyPayment, replayRecordOtherPayment } from '@/data/dailyPayments'
 import { replayAddMaintenanceNote, replayChangeMaintenanceStatus, replayCreateMaintenanceOrder, replayRecordMaintenancePart } from '@/data/maintenance'
-import { replayRecordTrip } from '@/data/accounting'
 import { replayChangeVehicleStatus } from '@/data/vehicles'
 
-// The one file that knows about all 9 mobile-write functions AND the
+// The one file that knows about all offline-aware functions AND the
 // generic queue mechanism — kept separate from offlineQueue.ts so that
 // file has no dependency on src/data/*.ts (which itself depends on
 // offlineQueue.ts for withOfflineQueue/WriteOutcome). A registry here
@@ -15,6 +14,7 @@ const REPLAY_HANDLERS: Record<QueuedWriteKind, (payload: unknown) => Promise<unk
   recordDailyPayment: replayRecordDailyPayment,
   recordBundledPayment: replayRecordBundledPayment,
   recordTrip: replayRecordTrip,
+  addTripExpense: replayAddTripExpense,
   recordOtherPayment: replayRecordOtherPayment,
   createMaintenanceOrder: replayCreateMaintenanceOrder,
   changeMaintenanceStatus: replayChangeMaintenanceStatus,

@@ -7,6 +7,7 @@ import { fetchTruckIncome } from '@/data/accounting'
 
 interface TruckIncomeScreenProps {
   onBack: () => void
+  onOpenTrip: (tripId: string) => void
 }
 
 /**
@@ -15,7 +16,7 @@ interface TruckIncomeScreenProps {
  * revenue minus linked expenses, computed the same way here as on the
  * vehicle profile, so the two never disagree.
  */
-export function TruckIncomeScreen({ onBack }: TruckIncomeScreenProps) {
+export function TruckIncomeScreen({ onBack, onOpenTrip }: TruckIncomeScreenProps) {
   const [trips, setTrips] = useState<TripListItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,7 +69,12 @@ export function TruckIncomeScreen({ onBack }: TruckIncomeScreenProps) {
 
       <ul className="flex flex-col gap-2">
         {trips?.map((t) => (
-          <li key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <li key={t.id}>
+            <button
+              type="button"
+              onClick={() => onOpenTrip(t.id)}
+              className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            >
             <div className="mb-1 flex items-center justify-between">
               <span className="font-medium text-slate-900">{t.fleetId}</span>
               <span className={`font-medium ${t.netMinor < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{formatMinorUnits(t.netMinor)}</span>
@@ -80,6 +86,7 @@ export function TruckIncomeScreen({ onBack }: TruckIncomeScreenProps) {
             <p className="text-xs text-slate-400">
               {TRIP_STATUS_LABELS[t.status]} · Revenue {formatMinorUnits(t.revenueMinor)} · Costs {formatMinorUnits(t.expenseMinor)}
             </p>
+            </button>
           </li>
         ))}
       </ul>

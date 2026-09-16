@@ -186,6 +186,23 @@ export interface TripListItem {
   netMinor: number
 }
 
+export interface TripExpenseItem {
+  id: string
+  category: LedgerCategory
+  amountMinor: number
+  note: string | null
+}
+
+export interface TripDetail extends TripListItem {
+  driverId: string | null
+  helperName: string | null
+  loadQuantity: number | null
+  loadWeight: number | null
+  loadWeightUnit: WeightUnit | null
+  notes: string | null
+  expenses: TripExpenseItem[]
+}
+
 /** "Truck Income" — every box truck's trips with their net, computed the
  *  same way as the vehicle profile per SPEC: revenue minus linked
  *  expenses, never stored. */
@@ -225,6 +242,56 @@ export async function fetchTruckIncome(): Promise<TripListItem[]> {
       netMinor: revenueMinor - expenseMinor,
     }
   })
+}
+
+/** Desktop trip breakdown. Linked, unsuperseded ledger rows remain the
+ * source of truth, so a later append-only cost immediately changes the net. */
+export async function fetchTripDetail(tripId: string): Promise<TripDetail | null> {
+  const [{ data: trip, error: tripError }, { data: entries, error: entriesError }] = await Promise.all([
+    supabase
+      .from('trips')
+      .select('id, vehicle_id, driver_id, helper_name, pickup_location, destination_location, departed_on, returned_on, load_quantity, load_weight, load_weight_unit, status, notes, vehicles(fleet_id)')
+      .eq('id', tripId)
+      .maybeSingle(),
+    supabase
+      .from('ledger_entries')
+      .select('id, direction, amount_minor, category, note')
+      .eq('source_type', 'TRIP')
+      .eq('source_id', tripId)
+      .is('superseded_by_id', null)
+      .order('entered_at', { ascending: true }),
+  ])
+  if (tripError) throw tripError
+  if (entriesError) throw entriesError
+  if (!trip) return null
+
+  const rows = entries ?? []
+  const revenueMinor = rows.filter((entry) => entry.direction === 'INCOME').reduce((sum, entry) => sum + entry.amount_minor, 0)
+  const expenses = rows
+    .filter((entry) => entry.direction === 'EXPENSE')
+    .map((entry) => ({ id: entry.id, category: entry.category, amountMinor: entry.amount_minor, note: entry.note }))
+  const expenseMinor = expenses.reduce((sum, entry) => sum + entry.amountMinor, 0)
+
+  return {
+    id: trip.id,
+    vehicleId: trip.vehicle_id,
+    fleetId: (trip.vehicles as unknown as { fleet_id: string } | null)?.fleet_id ?? '(unknown)',
+    driverId: trip.driver_id,
+    helperName: trip.helper_name,
+    pickupLocation: trip.pickup_location,
+    destinationLocation: trip.destination_location,
+    departedOn: trip.departed_on,
+    returnedOn: trip.returned_on,
+    loadQuantity: trip.load_quantity,
+    loadWeight: trip.load_weight,
+    loadWeightUnit: trip.load_weight_unit,
+    status: trip.status,
+    notes: trip.notes,
+    revenueMinor,
+    expenseMinor,
+    netMinor: revenueMinor - expenseMinor,
+    expenses,
+  }
 }
 
 export interface KnownExpenseRow {
@@ -367,6 +434,53 @@ export async function recordTrip(input: RecordTripInput): Promise<WriteOutcome<s
 /** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
 export async function replayRecordTrip(payload: unknown): Promise<string> {
   return recordTripLive(payload as RecordTripPayload)
+}
+
+export type TripExpenseChoice = 'FUEL' | 'ROAD_CHECKPOINT' | 'DRIVER_PAY' | 'HELPER_PAY'
+
+export interface AddTripExpenseInput {
+  tripId: string
+  choice: TripExpenseChoice
+  amountMinor: number
+  note?: string
+}
+
+type AddTripExpensePayload = AddTripExpenseInput & { clientRecordId: string }
+
+function expenseCategory(choice: TripExpenseChoice): 'FUEL' | 'ROAD_CHECKPOINT' | 'DRIVER_OR_HELPER_PAYMENT' {
+  return choice === 'DRIVER_PAY' || choice === 'HELPER_PAY' ? 'DRIVER_OR_HELPER_PAYMENT' : choice
+}
+
+function expenseNote(payload: AddTripExpenseInput): string | null {
+  const prefix = payload.choice === 'DRIVER_PAY' ? 'Driver pay' : payload.choice === 'HELPER_PAY' ? 'Helper pay' : ''
+  const note = payload.note?.trim() ?? ''
+  return [prefix, note].filter(Boolean).join(' — ') || null
+}
+
+async function addTripExpenseLive(payload: AddTripExpensePayload): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    'add_trip_expense',
+    rpcArgs<'add_trip_expense'>({
+      p_client_record_id: payload.clientRecordId,
+      p_trip_id: payload.tripId,
+      p_category: expenseCategory(payload.choice),
+      p_amount_minor: payload.amountMinor,
+      p_note: expenseNote(payload),
+    }),
+  )
+  if (error) throw error
+  return data
+}
+
+/** Stable client ID plus the append-only RPC makes online retries and queued
+ * replay safe without ever updating a ledger row. */
+export async function addTripExpense(input: AddTripExpenseInput): Promise<WriteOutcome<string>> {
+  const payload: AddTripExpensePayload = { ...input, clientRecordId: crypto.randomUUID() }
+  return withOfflineQueue('addTripExpense', payload.clientRecordId, payload, () => addTripExpenseLive(payload))
+}
+
+export async function replayAddTripExpense(payload: unknown): Promise<string> {
+  return addTripExpenseLive(payload as AddTripExpensePayload)
 }
 
 /** Desktop-only — a reviewer flags a transaction after entry (SPEC's own

@@ -226,3 +226,45 @@ do $$ begin
  raise exception 'Missing identity accepted payment'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+
+
+-- Trip costs remain append-only and calculate the photographed example exactly:
+-- SLE 10,000,000 revenue - SLE 750,000 original costs - SLE 3,250,000 fuel.
+select set_config('test.today','2026-09-16',false);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+set role authenticated;
+insert into public.drivers(id,client_record_id,full_name)
+values ('d0000000-0000-0000-0000-000000000001',gen_random_uuid(),'Truck driver');
+insert into public.vehicles(id,client_record_id,fleet_id,type,current_driver_id)
+values ('d0000000-0000-0000-0000-000000000002',gen_random_uuid(),'TRK-COST','BOX_TRUCK','d0000000-0000-0000-0000-000000000001');
+select public.record_trip(
+  'd0000000-0000-0000-0000-000000000003',
+  'd0000000-0000-0000-0000-000000000002',
+  'd0000000-0000-0000-0000-000000000001',
+  'Helper','Freetown','Magburaka','2026-09-10','2026-09-11',100,500,'KG',null,
+  1000000000,
+  '[{"category":"ROAD_CHECKPOINT","amount_minor":25000000},
+    {"category":"DRIVER_OR_HELPER_PAYMENT","amount_minor":30000000,"note":"Driver pay"},
+    {"category":"DRIVER_OR_HELPER_PAYMENT","amount_minor":20000000,"note":"Helper pay"}]'::jsonb
+);
+do $$ declare t uuid; e uuid; begin
+  select id into t from public.trips where client_record_id='d0000000-0000-0000-0000-000000000003';
+  e:=public.add_trip_expense('d0000000-0000-0000-0000-000000000004',t,'FUEL',325000000,'Fuel');
+  assert e=public.add_trip_expense('d0000000-0000-0000-0000-000000000004',t,'FUEL',325000000,'Fuel'), 'Trip expense retry returns the original row';
+  assert (select count(*)=1 from public.ledger_entries where client_record_id='d0000000-0000-0000-0000-000000000004'), 'Trip expense retry is counted once';
+  assert (select sum(case when direction='INCOME' then amount_minor else -amount_minor end)=600000000 from public.ledger_entries where source_type='TRIP' and source_id=t and superseded_by_id is null), 'Trip net is exactly SLE 6,000,000';
+  assert (select vehicle_id='d0000000-0000-0000-0000-000000000002' and driver_id='d0000000-0000-0000-0000-000000000001' and applies_to_date='2026-09-10' and received_at::date='2026-09-16' from public.ledger_entries where id=e), 'Trip context and dates are server-derived';
+  begin
+    perform public.add_trip_expense('d0000000-0000-0000-0000-000000000004',t,'FUEL',1,'Changed retry');
+    raise exception 'Mismatched idempotency retry accepted';
+  exception when unique_violation then null; end;
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+do $$ declare t uuid; begin
+  select id into t from public.trips where client_record_id='d0000000-0000-0000-0000-000000000003';
+  begin
+    perform public.add_trip_expense(gen_random_uuid(),t,'FUEL',100,'Forbidden');
+    raise exception 'Collections user appended a trip correction';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;

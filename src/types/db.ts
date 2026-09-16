@@ -96,6 +96,7 @@ export type Insertable<T extends keyof PublicSchema['Tables']> = Omit<
  * route). List the genuinely-nullable ones here; RpcArgs<T> corrects them.
  */
 export const NULLABLE_RPC_ARGS = {
+  add_trip_expense: ['p_note'],
   assign_driver_to_vehicle: ['p_route_id'],
   record_trip: [
     'p_driver_id',

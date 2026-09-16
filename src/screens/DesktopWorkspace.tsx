@@ -34,6 +34,7 @@ import { RecordsList } from '@/screens/RecordsList'
 import { SetUpDriverPurchaseAgreementForm } from '@/screens/SetUpDriverPurchaseAgreementForm'
 import { SprinterIncomeScreen } from '@/screens/SprinterIncomeScreen'
 import { TruckIncomeScreen } from '@/screens/TruckIncomeScreen'
+import { TripDetailScreen } from '@/screens/TripDetailScreen'
 import { VehicleList } from '@/screens/VehicleList'
 import { VehicleProfileScreen } from '@/screens/VehicleProfileScreen'
 
@@ -54,6 +55,7 @@ type DesktopView =
   | { name: 'accounting-home' }
   | { name: 'sprinter-income' }
   | { name: 'truck-income' }
+  | { name: 'trip-detail'; tripId: string }
   | { name: 'known-expenses' }
   | { name: 'approvals-list' }
   | { name: 'flagged-duplicates' }
@@ -103,6 +105,7 @@ function sectionForView(view: DesktopView): NavTarget {
     case 'accounting-home':
     case 'sprinter-income':
     case 'truck-income':
+    case 'trip-detail':
     case 'known-expenses':
     case 'approvals-list':
     case 'flagged-duplicates':
@@ -334,7 +337,16 @@ export function DesktopWorkspace({ user, onSignedOut }: DesktopWorkspaceProps) {
           />
         )}
 
-        {view.name === 'truck-income' && <TruckIncomeScreen onBack={() => setView({ name: 'accounting-home' })} />}
+        {view.name === 'truck-income' && (
+          <TruckIncomeScreen
+            onBack={() => setView({ name: 'accounting-home' })}
+            onOpenTrip={(tripId) => setView({ name: 'trip-detail', tripId })}
+          />
+        )}
+
+        {view.name === 'trip-detail' && (
+          <TripDetailScreen tripId={view.tripId} onBack={() => setView({ name: 'truck-income' })} />
+        )}
 
         {view.name === 'known-expenses' && <KnownExpensesScreen onBack={() => setView({ name: 'accounting-home' })} />}
 

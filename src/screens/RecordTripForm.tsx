@@ -37,6 +37,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
   const [loadWeightUnit, setLoadWeightUnit] = useState<WeightUnit>('KG')
   const [revenue, setRevenue] = useState('')
   const [checkpointCost, setCheckpointCost] = useState('')
+  const [fuelCost, setFuelCost] = useState('')
   const [driverPay, setDriverPay] = useState('')
   const [helperPay, setHelperPay] = useState('')
   const [notes, setNotes] = useState('')
@@ -83,10 +84,15 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
       return
     }
     const checkpointMinor = checkpointCost.trim() === '' ? null : parseMinorUnits(checkpointCost)
+    const fuelMinor = fuelCost.trim() === '' ? null : parseMinorUnits(fuelCost)
     const driverPayMinor = driverPay.trim() === '' ? null : parseMinorUnits(driverPay)
     const helperPayMinor = helperPay.trim() === '' ? null : parseMinorUnits(helperPay)
     if (checkpointCost.trim() !== '' && checkpointMinor === null) {
       setError('Enter a valid checkpoint/road cost.')
+      return
+    }
+    if (fuelCost.trim() !== '' && fuelMinor === null) {
+      setError('Enter a valid fuel cost.')
       return
     }
     if (driverPay.trim() !== '' && driverPayMinor === null) {
@@ -125,6 +131,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
         revenueMinor,
         expenses: [
           ...(checkpointMinor && checkpointMinor > 0 ? [{ category: 'ROAD_CHECKPOINT' as const, amountMinor: checkpointMinor }] : []),
+          ...(fuelMinor && fuelMinor > 0 ? [{ category: 'FUEL' as const, amountMinor: fuelMinor }] : []),
           ...(driverPayMinor && driverPayMinor > 0 ? [{ category: 'DRIVER_OR_HELPER_PAYMENT' as const, amountMinor: driverPayMinor, note: 'Driver pay' }] : []),
           ...(helperPayMinor && helperPayMinor > 0 ? [{ category: 'DRIVER_OR_HELPER_PAYMENT' as const, amountMinor: helperPayMinor, note: 'Helper pay' }] : []),
         ],
@@ -138,21 +145,21 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
   }
 
   return (
-    <div className="mx-auto max-w-sm p-4 sm:p-6">
+    <div className="mx-auto w-full min-w-0 max-w-sm p-4 sm:p-6">
       <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
         ← Back
       </button>
 
       <h1 className="mb-4 text-lg font-semibold text-slate-900">{fleetId} — Trip</h1>
 
-      <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-4">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Driver</span>
           <select
             value={driverId}
             onChange={(e) => setDriverId(e.target.value)}
             disabled={drivers === null}
-            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
+            className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
           >
             <option value="">Not set</option>
             {drivers?.map((d) => (
@@ -163,87 +170,87 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
           </select>
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Helper (optional)</span>
           <input
             type="text"
             value={helperName}
             onChange={(e) => setHelperName(e.target.value)}
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+            className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 
-        <div className="flex gap-2">
-          <label className="flex flex-1 flex-col gap-1">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Pickup</span>
             <input
               type="text"
               value={pickupLocation}
               onChange={(e) => setPickupLocation(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
-          <label className="flex flex-1 flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Destination</span>
             <input
               type="text"
               value={destinationLocation}
               onChange={(e) => setDestinationLocation(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
 
-        <div className="flex gap-2">
-          <label className="flex flex-1 flex-col gap-1">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Departed</span>
             <input
               type="date"
               required
               value={departedOn}
               onChange={(e) => setDepartedOn(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
-          <label className="flex flex-1 flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Returned (optional)</span>
             <input
               type="date"
               value={returnedOn}
               onChange={(e) => setReturnedOn(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
         </div>
         {durationDays !== null && <p className="text-xs text-slate-500">{durationDays} day(s)</p>}
 
-        <div className="flex gap-2">
-          <label className="flex flex-1 flex-col gap-1">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Load quantity</span>
             <input
               type="number"
               min={0}
               value={loadQuantity}
               onChange={(e) => setLoadQuantity(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
-          <label className="flex flex-1 flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Weight</span>
             <input
               type="text"
               inputMode="decimal"
               value={loadWeight}
               onChange={(e) => setLoadWeight(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Unit</span>
             <select
               value={loadWeightUnit}
               onChange={(e) => setLoadWeightUnit(e.target.value as WeightUnit)}
-              className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-base"
+              className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-base"
             >
               {WEIGHT_UNITS.map((u) => (
                 <option key={u} value={u}>
@@ -254,7 +261,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
           </label>
         </div>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Revenue received</span>
           <input
             type="text"
@@ -262,7 +269,7 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
             value={revenue}
             onChange={(e) => setRevenue(e.target.value)}
             placeholder="0.00"
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+            className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
           {revenue.trim() !== '' && parseMinorUnits(revenue) !== null && (
             <span className="text-xs text-slate-500">{formatMinorUnits(parseMinorUnits(revenue) as number)}</span>
@@ -272,46 +279,56 @@ export function RecordTripForm({ vehicleId, fleetId, onDone, onBack }: RecordTri
         <div>
           <p className="mb-2 text-sm font-medium text-slate-700">Costs for the trip (optional)</p>
           <div className="flex flex-col gap-2">
-            <label className="flex flex-col gap-1">
+            <label className="flex min-w-0 flex-col gap-1">
               <span className="text-xs text-slate-500">Checkpoint / road</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={checkpointCost}
                 onChange={(e) => setCheckpointCost(e.target.value)}
-                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+                className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-xs text-slate-500">Fuel</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={fuelCost}
+                onChange={(e) => setFuelCost(e.target.value)}
+                className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
+              />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
               <span className="text-xs text-slate-500">Driver pay</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={driverPay}
                 onChange={(e) => setDriverPay(e.target.value)}
-                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+                className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex min-w-0 flex-col gap-1">
               <span className="text-xs text-slate-500">Helper pay</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={helperPay}
                 onChange={(e) => setHelperPay(e.target.value)}
-                className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+                className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
               />
             </label>
           </div>
         </div>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">Note (optional)</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-base"
+            className="w-full min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-base"
           />
         </label>
 

@@ -37,10 +37,11 @@ module.exports = async function(db) {
   a=a.replace(re,`      ${name}: ${values.map(v=>JSON.stringify(v)).join(' | ')}\n`);
   b=b.replace(re,`      ${name}: [${values.map(v=>JSON.stringify(v)).join(', ')}],\n`);s=a+b;
  }
- for(const name of ['driver_purchase_progress','vehicle_purchase_payment_context','correct_purchase_payment'])if(!s.includes(`      ${name}: {`)) {
+ for(const name of ['driver_purchase_progress','vehicle_purchase_payment_context','correct_purchase_payment','add_trip_expense'])if(!s.includes(`      ${name}: {`)) {
   const row=(await db.query(`select proargnames from pg_proc where proname=$1`,[name])).rows[0];
-  const fn=`      ${name}: {\n        Args: { ${row.proargnames.map(n=>n+': '+(n==='p_amount_minor'?'number':'string')).join('; ')} }\n        Returns: ${name==='correct_purchase_payment'?'string':'Json'}\n      }\n`;
+  const fn=`      ${name}: {\n        Args: { ${row.proargnames.map(n=>n+': '+(n==='p_amount_minor'?'number':n==='p_category'?'Database["public"]["Enums"]["ledger_category"]':'string')).join('; ')} }\n        Returns: ${['correct_purchase_payment','add_trip_expense'].includes(name)?'string':'Json'}\n      }\n`;
   s=s.replace('    Functions: {\n','    Functions: {\n'+fn);
  }
+ s=s.replace(/(add_trip_expense: \{[\s\S]*?Returns:) Json/, '$1 string');
  fs.writeFileSync('src/types/database.ts',s);
 };

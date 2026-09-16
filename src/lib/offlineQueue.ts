@@ -3,7 +3,7 @@ import Dexie, { type EntityTable } from 'dexie'
 // The local write queue SPEC section 8 requires: "Local write queue on
 // the device, flushed when connectivity returns... The device shows
 // what is still pending sync." This file is the generic mechanism;
-// src/lib/offlineQueueReplay.ts wires it to the 9 actual mobile-write
+// src/lib/offlineQueueReplay.ts wires it to the actual offline-aware write
 // functions (kept separate so this file has no dependency on
 // src/data/*.ts and those files only depend on this one — a clean
 // one-directional import graph, no circularity).
@@ -20,6 +20,7 @@ export type QueuedWriteKind =
   | 'recordDailyPayment'
   | 'recordBundledPayment'
   | 'recordTrip'
+  | 'addTripExpense'
   | 'recordOtherPayment'
   | 'createMaintenanceOrder'
   | 'changeMaintenanceStatus'
@@ -93,7 +94,7 @@ function errorMessage(err: unknown): string {
 }
 
 /**
- * Wraps one of the 9 mobile-write data-layer functions. Offline: enqueue
+ * Wraps one of the offline-aware data-layer functions. Offline: enqueue
  * immediately. Online: attempt the real call; a network-class failure
  * falls back to the queue; any other error (validation, RLS, a business
  * rule) rethrows as before — queueing something that will fail

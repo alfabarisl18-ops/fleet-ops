@@ -1423,3 +1423,28 @@ request or main merge occurred. Exact SQL and staging target
 netxgjqeaakbkjqvtdhl are in trip-maintenance-rollout.md. Apply SQL before the new
 staging bundle, then use staging accounts for hosted role and write checks.
 Production still requires separate approval after staging acceptance.
+
+## [2026-09-16] rollout | Trip and maintenance expansion deployed to staging
+
+Sources: SRC-TRIP-MAINTENANCE-20260916-USER and
+SRC-TRIP-MAINTENANCE-20260916-REPO. Page: trip-maintenance-rollout.
+
+After the owner reviewed the exact SQL and approved hosted execution, applied
+the trip expense and maintenance issues migrations only to staging Supabase
+netxgjqeaakbkjqvtdhl. Supabase recorded versions 20260917003925 and
+20260917003944. Both RPCs exist; maintenance_issues has RLS and three policies.
+Staging had no historical maintenance orders, so the backfill affected zero rows.
+The security advisor reported only the previously documented project notices;
+the two new security-invoker functions introduced no new finding.
+
+Pushed codex/staging commit f61252cf31cccbcd2e0b7d3644303efd7287079a.
+Cloudflare deployment 05502c2d-8e1d-490c-8126-af49bdd9d13a succeeded. The
+staging project still deploys codex/staging and both environment scopes point to
+staging Supabase. The live project remains main-only at commit
+3778a01efdbd453ddb97f0b565e52c4ef3253f38 with automatic previews disabled.
+
+A deployed public browser smoke check found the staging Supabase host in the
+built asset, no production Supabase host, and working Owner/Admin, Collections &
+Finance, and Maintenance & Repairs entry screens at 375px. No authenticated
+hosted write was performed; TRK-02 still needs its SLE 3,250,000 Fuel entry
+through the new staging screen. Production SQL and release remain unapproved.

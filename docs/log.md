@@ -1448,3 +1448,27 @@ built asset, no production Supabase host, and working Owner/Admin, Collections &
 Finance, and Maintenance & Repairs entry screens at 375px. No authenticated
 hosted write was performed; TRK-02 still needs its SLE 3,250,000 Fuel entry
 through the new staging screen. Production SQL and release remain unapproved.
+
+## [2026-09-17] rollout | Assignment, purchase, Service, trip and maintenance release
+
+Sources: SRC-OPERATIONS-20260907-USER, SRC-OPERATIONS-20260907-REPO,
+SRC-TRIP-MAINTENANCE-20260916-USER and SRC-TRIP-MAINTENANCE-20260916-REPO.
+Pages: operations-rollout and trip-maintenance-rollout.
+
+After the owner accepted staging and approved the exact production SQL and release,
+applied all seven expansion migrations to production Supabase
+hjebavtcdduortshufku. Supabase recorded versions 20260917053232 through
+20260917053453. The existing maintenance order was backfilled to exactly one issue;
+existing money, trip, daily-record and purchase-agreement rows were preserved.
+
+Fast-forwarded main from 3778a01 to the staging-tested commit 68eb2c7. Cloudflare
+production deployment 80760b3e-ce45-4464-b939-15e80cf93c6e completed successfully.
+The project still deploys only main, automatic previews remain disabled, and both
+environment scopes point to production Supabase. A cache-busted live asset check
+contained the production project reference and no staging project reference.
+
+Release checks passed: npm run typecheck; npm run lint with the two existing
+IconChip Fast Refresh warnings; npm run test (37 tests); npm run build; node
+tools/test-database.cjs; node tools/browser-check.cjs; and git diff --check. No
+authenticated production write was performed during verification. The unrelated
+pre-existing docs/log.md and docs/qa-accounts.md working-tree edits were preserved.

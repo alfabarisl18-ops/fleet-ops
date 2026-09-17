@@ -1,6 +1,6 @@
 # Trip costs and multiple maintenance issues rollout
 
-**Status: deployed to staging on 16 September 2026; production remains unchanged.**
+**Status: deployed to staging on 16 September 2026 and production on 17 September 2026.**
 
 Staging migrations are recorded as `20260917003925` (trip expense) and
 `20260917003944` (maintenance issues). Cloudflare deployment
@@ -47,9 +47,15 @@ Supabase host and no production host, the three role entry screens load at 375px
 and only the staging Pages hostname was requested before sign-in. Authenticated
 staging writes and the TRK-02 Fuel correction still require a staging user session.
 
-Production requires a separate review of the same migrations and the full release
-diff after staging acceptance. Never copy staging data into production. The old
-production preview URLs remain unsafe for testing.
+After staging acceptance, the owner approved both migrations and the full release
+for production. Supabase `hjebavtcdduortshufku` recorded migration versions
+`20260917053420` and `20260917053453`; the maintenance backfill created one issue
+for the one existing order. Cloudflare production deployment
+`80760b3e-ce45-4464-b939-15e80cf93c6e` successfully built commit
+`68eb2c7e87d1749ba12ee69c868a01fd394bfb84` from `main`. A cache-busted live bundle
+check found the production Supabase host, no staging host, and the released Fuel,
+missing-cost and Service interface text. Never copy staging data into production.
+The old production preview URLs remain unsafe for testing.
 
 ## Sources
 

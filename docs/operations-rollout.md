@@ -1,6 +1,6 @@
 # Assignment, purchase schedule, and Service rollout
 
-**Status: deployed to staging on 16 September 2026; production remains unchanged.**
+**Status: deployed to staging on 16 September 2026 and production on 17 September 2026.**
 
 All five migrations below were applied only to staging Supabase
 `netxgjqeaakbkjqvtdhl`. Cloudflare deployed application commit
@@ -36,11 +36,16 @@ remains main-only with automatic previews disabled; staging uses `codex/staging`
 with staging database settings for both its primary deployment and previews. Old
 live-project previews remain unsafe.
 
-Production needs a separate SQL and release approval after staging passes. Its
-activation date will be its own Freetown migration date, not the staging date.
-Never copy staging data to production. The local `.env.local` now targets staging;
-type generation also defaults to staging. CLI SQL remains approval-gated regardless
-of branch or local environment.
+After staging acceptance, the owner approved the same five migrations for production
+Supabase `hjebavtcdduortshufku` and approved the application release. Supabase
+recorded versions `20260917053232`, `20260917053311`, `20260917053329`,
+`20260917053349`, and `20260917053406`. Cloudflare production deployment
+`80760b3e-ce45-4464-b939-15e80cf93c6e` successfully built commit
+`68eb2c7e87d1749ba12ee69c868a01fd394bfb84` from `main`. The live project remains
+main-only with automatic previews disabled, and its production and preview settings
+both point to production Supabase. Never copy staging data to production. The local
+`.env.local` targets staging; type generation also defaults to staging. CLI SQL
+remains approval-gated regardless of branch or local environment.
 
 ## Validation
 

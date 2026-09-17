@@ -46,6 +46,116 @@ const assert=require('node:assert/strict');
   await page.close();
  }
 
+
+ for(const width of [320,375,768,1024,1440]) {
+  const page=await browser.newPage({viewport:{width,height:1100}});
+  page.on('pageerror',e=>errors.push(e.message));
+  let submission=null;
+  await page.route('**/*',async route=>{
+   const url=new URL(route.request().url());
+   if(url.origin==='http://127.0.0.1:5179'){await route.continue();return;}
+   requests.push(url.hostname);assert.equal(url.hostname,'netxgjqeaakbkjqvtdhl.supabase.co');
+   const table=url.pathname.split('/').at(-1);let body=[];
+   const vehicle={id:'30000000-0000-0000-0000-000000000001',fleet_id:'TRK-02',plate:'TRK-02',type:'BOX_TRUCK',status:'ACTIVE',route_id:null,current_driver_id:'20000000-0000-0000-0000-000000000001',custom_type:null,custom_description:null,color:null,distinguishing_marks:null,vin:null,engine_number:null,cubic_capacity_cc:null,seat_count:null,registration_category:null,purchased_on:null,purchase_price_minor:null,entered_service_on:null,expected_daily_amount_minor:0,yearly_target_minor:0,expected_retirement_on:null};
+   if(table==='vehicles')body=url.searchParams.has('id')?vehicle:[vehicle];
+   if(table==='drivers')body=[{id:'20000000-0000-0000-0000-000000000001',full_name:'Trip Driver',status:'ACTIVE'}];
+   if(table==='record_trip'){submission=route.request().postDataJSON();body='40000000-0000-0000-0000-000000000001';}
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+  });
+  await page.goto('http://127.0.0.1:5179/tools/browser-check.html?scene=trip-entry');
+  await page.getByLabel('Fuel').waitFor();
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Trip entry has no horizontal overflow at '+width);
+  if(width===375){
+   await page.getByLabel('Departed').fill('2026-09-10');
+   await page.getByLabel('Revenue received').fill('10000000');
+   await page.getByLabel('Checkpoint / road').fill('250000');
+   await page.getByLabel('Fuel').fill('3250000');
+   await page.getByLabel('Driver pay').fill('250000');
+   await page.getByLabel('Helper pay').fill('250000');
+   await page.getByRole('button',{name:'Done',exact:true}).click();
+   await page.waitForFunction(()=>document.body.dataset.saved==='true');
+   assert(submission,'Trip submission was captured');
+   const costs=submission.p_expenses.reduce((sum,item)=>sum+item.amount_minor,0);
+   assert.equal(submission.p_revenue_minor-costs,600000000,'Trip payload calculates SLE 6,000,000 net');
+   assert.equal(submission.p_expenses.find(item=>item.category==='FUEL').amount_minor,325000000,'Fuel stored in minor units');
+  }
+  await page.close();
+ }
+ console.log('Trip entry passed Fuel payload and no-overflow checks at 320, 375, 768, 1024 and 1440px.');
+
+
+ {
+  const page=await browser.newPage({viewport:{width:375,height:1000}});
+  page.on('pageerror',e=>errors.push(e.message));
+  let fuelAdded=false;let addedPayload=null;
+  await page.route('**/*',async route=>{
+   const url=new URL(route.request().url());
+   if(url.origin==='http://127.0.0.1:5179'){await route.continue();return;}
+   requests.push(url.hostname);assert.equal(url.hostname,'netxgjqeaakbkjqvtdhl.supabase.co');
+   const table=url.pathname.split('/').at(-1);let body=[];
+   if(table==='trips')body={id:'40000000-0000-0000-0000-000000000001',vehicle_id:'30000000-0000-0000-0000-000000000001',driver_id:'20000000-0000-0000-0000-000000000001',helper_name:'Helper',pickup_location:'Freetown',destination_location:'Magburaka',departed_on:'2026-09-10',returned_on:'2026-09-11',load_quantity:100,load_weight:2000,load_weight_unit:'KG',status:'COMPLETED',notes:null,vehicles:{fleet_id:'TRK-02'}};
+   if(table==='ledger_entries'){
+    body=[
+     {id:'income',direction:'INCOME',amount_minor:1000000000,category:'TRIP_REVENUE',note:null},
+     {id:'road',direction:'EXPENSE',amount_minor:75000000,category:'ROAD_CHECKPOINT',note:null},
+     ...(fuelAdded?[{id:'fuel',direction:'EXPENSE',amount_minor:325000000,category:'FUEL',note:null}]:[])
+    ];
+   }
+   if(table==='add_trip_expense'){addedPayload=route.request().postDataJSON();fuelAdded=true;body='50000000-0000-0000-0000-000000000001';}
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+  });
+  await page.goto('http://127.0.0.1:5179/tools/browser-check.html?scene=trip-detail');
+  await page.getByText('SLE 9,250,000',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Add missing cost',exact:true}).click();
+  await page.getByLabel('Amount').fill('3250000');
+  await page.getByRole('button',{name:'Save cost',exact:true}).click();
+  await page.getByText('SLE 6,000,000',{exact:true}).waitFor();
+  assert.equal(addedPayload.p_category,'FUEL');
+  assert.equal(addedPayload.p_amount_minor,325000000);
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Trip detail has no horizontal overflow');
+  await page.close();
+ }
+ console.log('Trip detail itemized costs and append-only Fuel correction recalculate the net to SLE 6,000,000.');
+
+
+ {
+  const page=await browser.newPage({viewport:{width:375,height:1200}});
+  page.on('pageerror',e=>errors.push(e.message));
+  let submission=null;
+  await page.route('**/*',async route=>{
+   const url=new URL(route.request().url());
+   if(url.origin==='http://127.0.0.1:5179'){await route.continue();return;}
+   requests.push(url.hostname);assert.equal(url.hostname,'netxgjqeaakbkjqvtdhl.supabase.co');
+   const table=url.pathname.split('/').at(-1);let body=[];
+   if(table==='vehicles')body=[{id:'30000000-0000-0000-0000-000000000001',fleet_id:'SPR-08',plate:null,type:'LONG_SPRINTER',status:'ACTIVE',route_id:null}];
+   if(table==='create_maintenance_order'){submission=route.request().postDataJSON();body='60000000-0000-0000-0000-000000000001';}
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+  });
+  await page.goto('http://127.0.0.1:5179/tools/browser-check.html?scene=maintenance');
+  await page.getByRole('button',{name:'SPR-08',exact:true}).click();
+  await page.getByRole('button',{name:'Regular Service',exact:true}).click();
+  const areas=page.getByRole('combobox',{name:'Area'});
+  await areas.nth(0).selectOption('OIL_CHANGE');
+  await page.getByRole('button',{name:'+ Add another issue',exact:true}).click();
+  await areas.nth(1).selectOption('Other');
+  await page.getByLabel('Other area').fill('Battery terminal');
+  await page.getByLabel('Work done (optional)').fill('Cleaned and tightened');
+  await page.getByRole('button',{name:'+ Add another issue',exact:true}).click();
+  assert.equal(await areas.count(),3,'Three issue cards can coexist');
+  await page.getByRole('button',{name:'Remove',exact:true}).last().click();
+  assert.equal(await areas.count(),2,'An issue can be removed');
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Maintenance form has no horizontal overflow');
+  await page.getByRole('button',{name:'Save',exact:true}).click();
+  await page.getByText('Saved',{exact:true}).waitFor();
+  assert(submission,'Maintenance submission was captured');
+  assert.equal(submission.p_issues.length,2);
+  assert.equal(submission.p_issues[0].service_area,'OIL_CHANGE');
+  assert.equal(submission.p_issues[1].service_area,'Battery terminal');
+  assert.equal(submission.p_issues[1].work_action,'Cleaned and tightened');
+  await page.close();
+ }
+ console.log('Maintenance supports multiple ordered issues, Oil Change coexistence, custom areas, separate work details and removal.');
+
  for(const scene of ['vehicle','driver']) {
   const page=await browser.newPage({viewport:{width:1024,height:1000}});
   page.on('pageerror',e=>errors.push(e.message));
@@ -71,7 +181,10 @@ const assert=require('node:assert/strict');
    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body??null)});
   });
   await page.goto('http://127.0.0.1:5179/tools/browser-check.html?scene='+scene);
-  if(scene==='vehicle')await page.getByText('Adjusted completion',{exact:true}).waitFor();
+  if(scene==='vehicle'){
+   await page.getByText('Adjusted completion',{exact:true}).waitFor();
+   assert.equal(await page.getByRole('button',{name:'Edit vehicle details',exact:true}).count(),1,'Vehicle profile has one details edit control');
+  }
   await page.getByRole('button',{name:scene==='vehicle'?'Assign driver':'Assign to vehicle',exact:true}).click();
   const select=page.getByRole('combobox',{name:/Route \(optional\)/});
   await select.waitFor({timeout:10000}).catch(async e=>{console.error(scene,await page.locator('body').innerText(),errors);throw e});

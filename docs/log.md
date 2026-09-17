@@ -1390,3 +1390,36 @@ and staging deployment require approval, then genuine staging sign-in, writes,
 permissions and deployed-commit checks. Production release requires separate
 approval after staging. Preserved the unrelated pre-existing log and QA-account
 working-tree changes without committing them.
+
+## [2026-09-16] feature | Trip fuel, multiple maintenance issues and mobile cleanup
+
+Sources: SRC-TRIP-MAINTENANCE-20260916-USER and
+SRC-TRIP-MAINTENANCE-20260916-REPO. Pages: SPEC, schema,
+trip-maintenance-rollout, decisions 0028-0029, index.
+
+Implemented Fuel and append-only missing trip costs on codex/trip-costs
+(f9f66de), atomic multi-issue maintenance records on codex/maintenance-issues
+(c4cc09e), and the single vehicle-details edit control on codex/mobile-cleanup
+(a0784f5). Integrated only into the local codex/staging history. The truck entry
+form stacks safely at mobile widths. Trip detail shows itemized revenue, costs
+and net. Existing maintenance orders are expansion-backfilled as one issue while
+legacy singular fields temporarily mirror the first issue.
+
+Local checks passed: npm run typecheck; npm run lint (0 errors and the 2 existing
+IconChip Fast Refresh warnings); npm run test (37 tests); npm run build; node
+tools/test-database.cjs; node tools/browser-check.cjs; git diff --check. Database
+checks cover exact SLE 6,000,000 net, append-only/idempotent trip costs, role
+boundaries, maintenance backfill, atomic multi-issue retries and Oil Change /
+Problem Reported constraints. Browser checks cover 320/375/768/1024/1440px,
+Fuel entry and trip detail, custom/add/remove maintenance issues, Oil Change
+coexistence, one vehicle-details edit control, and staging-only mocked requests.
+
+Build main JS is 833.73 kB / 211.55 kB gzip, versus the previous recorded
+staging build 822.98 kB / 209.28 kB gzip (+10.75 kB raw / +2.27 kB gzip).
+No new dependency or recurring service. Existing chunk-size warning remains.
+
+No hosted SQL, remote push, staging deployment, TRK-02 data change, production
+request or main merge occurred. Exact SQL and staging target
+netxgjqeaakbkjqvtdhl are in trip-maintenance-rollout.md. Apply SQL before the new
+staging bundle, then use staging accounts for hosted role and write checks.
+Production still requires separate approval after staging acceptance.

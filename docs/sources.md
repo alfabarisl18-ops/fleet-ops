@@ -89,3 +89,25 @@ claim provenance coverage for older pages.
 - Linked/summarized only. Local test runtime installed outside the project;
   no production dependency or browser payload. Platform scaffolding is not a hosted Supabase test.
 - Used by: database validation documentation.
+
+
+## SRC-TRIP-MAINTENANCE-20260916-USER
+
+- Kind: user-approved implementation plan in this Codex task, 2026-09-16.
+- Author/permission: repository owner; repository implementation authorized.
+  Hosted SQL, remote push/deployment and production release require later approval.
+- Decisions: per-trip Fuel, append-only missing trip costs, multi-issue maintenance
+  records, one vehicle-details edit control and mobile-width cleanup.
+- Used by: SPEC.md, schema.md, trip-maintenance-rollout.md, decisions 0028 -0029,
+  log.md.
+
+## SRC-TRIP-MAINTENANCE-20260916-REPO
+
+- Kind: repository source; author: project contributors.
+- Snapshot: local feature commits f9f66de, c4cc09e and a0784f5 based on staging.
+- Locations: src/data/accounting.ts, src/data/maintenance.ts,
+  src/screens/RecordTripForm.tsx, src/screens/TripDetailScreen.tsx,
+  src/screens/AddMaintenanceOrderForm.tsx, src/screens/VehicleProfileScreen.tsx,
+  migrations 20260916120000 and 20260916130000.
+- Permission: user-owned private repository; no external source copied.
+- Used by: schema.md, trip-maintenance-rollout.md, decisions 0028 -0029, log.md.

@@ -12,6 +12,7 @@ specification; these pages record how it was built and why.
 | [open-questions.md](open-questions.md) | SPEC section 10, plus what Phase 1 assumed where SPEC was silent. Read before Phase 2. |
 | [qa-accounts.md](qa-accounts.md) | The three non-personal accounts reserved for agent/manual verification, and the rules for using them. Read before signing in to verify anything. |
 | [deployment.md](deployment.md) | Separate staging/main branches, database targets, preview controls, release checks and role-shortcut links. |
+| [trip-maintenance-rollout.md](trip-maintenance-rollout.md) | Exact staging SQL and rollout order for trip expenses and multiple maintenance issues. |
 | [sources.md](sources.md) | Provenance ledger, starting with the September 2026 staging separation. |
 
 ## Decisions
@@ -46,6 +47,10 @@ decided, what else was considered, and what would make us revisit it.
 | [0023](decisions/0023-vehicle-registration-fields.md) | `vehicles` gains VIN, engine number, cubic capacity, seat count, registration category (owner name/address excluded); a direct SQL insert into `vehicles` turned out to be impossible outside a real session, by design |
 | [0024](decisions/0024-separate-staging-branch.md) | Dedicated staging branch, staging-only feature previews, and explicit approval before production release. |
 | [0025](decisions/0025-assignment-route.md) | Atomic assignment route synchronization and safe retries. |
+| [0026](decisions/0026-purchase-schedule.md) | Forward-only purchase deferrals, principal allocation and correction audit. |
+| [0027](decisions/0027-service-days.md) | Zero-payment Service days with server validation and no monthly cap. |
+| [0028](decisions/0028-append-only-trip-expenses.md) | Trip fuel and idempotent append-only missing-cost entries. |
+| [0029](decisions/0029-maintenance-issues.md) | Atomic multi-issue maintenance orders with rollout compatibility. |
 
 ## Build order
 

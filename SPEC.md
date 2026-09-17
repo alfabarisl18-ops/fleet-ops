@@ -211,12 +211,17 @@ Payment → box truck selected):
 3. Departure date, return date — duration calculates itself.
 4. Load: quantity, weight, unit toggle (lb/kg).
 5. Revenue received for the trip.
-6. Costs for the trip: checkpoint/road, driver pay, helper pay — each optional,
+6. Costs for the trip: fuel, checkpoint/road, driver pay, helper pay — each optional,
    each becomes its own ledger expense entry tied to this trip.
 7. Note.
 
 The vehicle profile and Accounting's Truck Income card both show trips with
-their net, using the same computation, so the two never disagree.
+their net, using the same computation, so the two never disagree. Truck Income
+cards open a trip detail view with revenue, every linked cost, total costs and
+net. Owner/Admin and Fleet Manager may append a missing Fuel, Road/checkpoint,
+Driver pay or Helper pay cost. The server derives the trip vehicle, driver and
+dates, and a retry with the same client record ID returns the existing ledger
+row; it never updates or replaces an earlier money row.
 
 ### Maintenance
 
@@ -226,6 +231,14 @@ their net, using the same computation, so the two never disagree.
 `expected_inspection_on`, `expected_completion_on`, `estimated_grounded_days`,
 `handled_by` (`FAMILY_WORKSHOP | APPROVED_MECHANIC | PARK_MECHANIC | OTHER`),
 `old_parts_returned`, `opened_by`, `closed_at`, `verified_by`.
+
+**`maintenance_issues`** — `id`, `client_record_id`, `order_id`, `position`,
+`service_area`, `problem_descriptor`, `work_action`. One order contains one or
+more ordered issues. Each issue has its own area and problem/work details while
+handled-by, vehicle condition, notes, photos, status, parts and reminders stay
+on the order. The singular issue columns on `maintenance_orders` temporarily
+mirror the first issue so an older deployed client can coexist with the new
+schema during rollout.
 
 Statuses: Problem reported, Inspection pending, Repair authorized, Repair in
 progress, Still grounded, Active/returned to service, Additional problem found,
@@ -370,8 +383,12 @@ All cards, records and vehicle entries clickable.
 
 Record types, in this order: **Problem Reported, Regular Service, Repair**.
 
-- **Oil Change appears only under Regular Service.** Problem Reported and Repair
-  show the other areas without it.
+- A record starts with one issue. Authorized users may add and remove issues;
+  every issue has its own area, including a custom Other value, and its own
+  problem/work text.
+- **Oil Change appears only under Regular Service.** It is an issue and may
+  coexist with other Regular Service issues. Problem Reported and Repair show
+  the other areas without it.
 - Selecting Oil Change auto-sets the work action to Oil Change and offers a filter
   option: new filter installed / existing filter reused / filter not changed.
 - Parts: no part needed, new part, used part, existing part repaired.

@@ -49,6 +49,7 @@ Four things are true of every table in `public`, and the guards migration
 | ledger_entries | 20 | 11 | 7 | 4 | 6 | 5 |
 | maintenance_notes | 6 | 3 | 2 | 2 | 1 | 2 |
 | maintenance_orders | 22 | 7 | 3 | 2 | 8 | 3 |
+| maintenance_issues | 8 | 4 | 3 | 1 | 2 | 1 |
 | maintenance_parts | 11 | 4 | 3 | 2 | 3 | 3 |
 | maintenance_status_events | 8 | 3 | 2 | 3 | 0 | 2 |
 | outstanding_balances | 12 | 6 | 3 | 2 | 4 | 3 |
@@ -76,14 +77,15 @@ and returned zero rows because every row was filtered away.
 | Read the fleet list | yes | yes | yes | yes | **denied** |
 | Read drivers | yes | yes | yes | yes | denied |
 | Read driver ID / licence images | yes | yes | **denied** | **denied** | denied |
-| Read maintenance orders | yes | yes | **none** | yes | denied |
+| Read maintenance orders and issues | yes | yes | **none** | yes | denied |
 | Read purchase goals | yes | yes | **none** | **none** | denied |
 | Read the audit log | yes | **none** | **none** | **none** | denied |
 | Write the audit log | **denied** | **denied** | **denied** | **denied** | denied |
 | Record a daily payment | yes | yes | yes | **denied** | denied |
 | Record income | yes | yes | yes | **denied** | denied |
 | Record a parts expense | yes | yes | yes | yes | denied |
-| Open a maintenance order | yes | yes | **denied** | yes | denied |
+| Open a maintenance order with issues | yes | yes | **denied** | yes | denied |
+| Append a missing trip cost | yes | yes | **denied** | **denied** | denied |
 | Ground a vehicle | yes | yes | **denied** | yes | denied |
 | Change a payment target | yes | yes | **denied** | **denied** | denied |
 | Reserve business cash | yes | **denied** | **denied** | **denied** | denied |
@@ -290,3 +292,32 @@ See decisions 0025–0027. Hosted execution remains pending approval.
 Local verification: `node tools/test-database.cjs` uses an isolated PostgreSQL
 runtime. It includes an upgrade fixture and equality checks on historical records.
 It is not a substitute for Supabase staging/RLS and browser verification.
+
+## Trip expenses and multiple maintenance issues
+
+Sources: SRC-TRIP-MAINTENANCE-20260916-USER and
+SRC-TRIP-MAINTENANCE-20260916-REPO in sources.md. See decisions 0028 -0029.
+Hosted execution of these expansion migrations remains pending approval.
+
+- `add_trip_expense(uuid,uuid,text,bigint,text)` accepts Fuel,
+  Road/checkpoint, Driver pay and Helper pay from Owner/Admin or Fleet Manager.
+  It locks and reads the trip, derives vehicle, driver, applies-to date and the
+  Freetown receipt timestamp on the server, and appends one ledger expense.
+  Reusing the same client record ID returns the same row only when the request
+  matches; no ledger row is updated.
+- Trip revenue and costs remain separate ledger rows. The detail projection
+  sums linked expenses, so SLE 10,000,000 revenue less SLE 750,000 road/people
+  costs and SLE 3,250,000 fuel is exactly SLE 6,000,000 net.
+- `maintenance_issues` stores one or more ordered issues per maintenance order.
+  Each issue owns its area, descriptor and work action. A trigger enforces that
+  Problem Reported issues have a descriptor and that Oil Change belongs only to
+  Regular Service with the Oil Change action.
+- `create_maintenance_order(..., jsonb)` validates every issue and inserts the
+  order and all issues atomically. Parent and child client IDs make offline
+  retries idempotent; a mismatched retry is rejected. Collections & Finance
+  cannot read or create issues. Maintenance & Repairs and desktop roles retain
+  their existing maintenance access.
+- Existing orders are backfilled as one issue. During the compatibility window,
+  the first issue mirrors the legacy singular columns and a trigger supplies an
+  issue for inserts made by the older deployed client. Remove those columns and
+  compatibility trigger only in a later, separately reviewed cleanup migration.

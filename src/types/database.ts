@@ -1243,6 +1243,47 @@ export type Database = {
           },
         ]
       }
+      maintenance_issues: {
+        Row: {
+          client_record_id: string
+          created_at: string
+          id: string
+          order_id: string
+          position: number
+          problem_descriptor: Database["public"]["Enums"]["problem_descriptor"] | null
+          service_area: string
+          work_action: string | null
+        }
+        Insert: {
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          order_id: string
+          position: number
+          problem_descriptor?: Database["public"]["Enums"]["problem_descriptor"] | null
+          service_area: string
+          work_action?: string | null
+        }
+        Update: {
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          position?: number
+          problem_descriptor?: Database["public"]["Enums"]["problem_descriptor"] | null
+          service_area?: string
+          work_action?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_issues_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_notes: {
         Row: {
           body_text: string
@@ -2200,6 +2241,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_maintenance_order: {
+        Args: {
+          p_client_record_id: string
+          p_estimated_grounded_days: number
+          p_expected_completion_on: string
+          p_handled_by: Database["public"]["Enums"]["maintenance_handled_by"]
+          p_issues: Json
+          p_notes: string
+          p_record_type: Database["public"]["Enums"]["maintenance_record_type"]
+          p_safety_status: Database["public"]["Enums"]["roadworthiness"]
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
       add_trip_expense: {
         Args: { p_client_record_id: string; p_trip_id: string; p_category: Database["public"]["Enums"]["ledger_category"]; p_amount_minor: number; p_note: string }
         Returns: string
@@ -2235,7 +2290,7 @@ export type Database = {
           p_route_id: string
           p_vehicle_id: string
         }
-        Returns: string
+        Returns: Json
       }
       cancel_driver_purchase_agreement: {
         Args: { p_agreement_id: string; p_reason: string }

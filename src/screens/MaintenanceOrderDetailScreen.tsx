@@ -159,7 +159,7 @@ export function MaintenanceOrderDetailScreen({
               order.vehicleFleetId
             )}
             <span className="ml-2 font-normal text-slate-500">
-              {order.serviceArea === 'OIL_CHANGE' ? 'Oil Change' : order.serviceArea}
+              {order.issues.map((issue) => (issue.serviceArea === 'OIL_CHANGE' ? 'Oil Change' : issue.serviceArea)).join(', ')}
             </span>
           </h1>
           <p className="text-sm text-slate-500">Identified {order.identifiedOn}</p>
@@ -190,9 +190,30 @@ export function MaintenanceOrderDetailScreen({
         )}
       </Card>
 
+      <Card title="Issues" className="mb-4">
+        <div className="flex flex-col gap-3">
+          {order.issues.map((issue) => (
+            <section key={issue.id} className="rounded-xl border border-slate-200 p-3">
+              <h3 className="font-medium text-slate-900">
+                {issue.serviceArea === 'OIL_CHANGE' ? 'Oil Change' : issue.serviceArea}
+              </h3>
+              {issue.problemDescriptor && (
+                <p className="mt-1 text-sm text-slate-600">
+                  <span className="font-medium">What's wrong:</span> {PROBLEM_DESCRIPTOR_LABELS[issue.problemDescriptor]}
+                </p>
+              )}
+              {issue.workAction && issue.workAction !== 'OIL_CHANGE' && (
+                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">
+                  <span className="font-medium">{order.recordType === 'PROBLEM_REPORTED' ? 'Problem description:' : 'Work done:'}</span>{' '}
+                  {issue.workAction}
+                </p>
+              )}
+            </section>
+          ))}
+        </div>
+      </Card>
+
       <Card title="Details" className="mb-4">
-        <Field label="Work action" value={order.workAction === 'OIL_CHANGE' ? 'Oil Change' : order.workAction} />
-        <Field label="Problem" value={order.problemDescriptor ? PROBLEM_DESCRIPTOR_LABELS[order.problemDescriptor] : null} />
         <Field label="Handled by" value={order.handledBy ? MAINTENANCE_HANDLED_BY_LABELS[order.handledBy] : null} />
         <Field label="Vehicle condition" value={ROADWORTHINESS_LABELS[order.safetyStatus]} />
         <Field label="Grounded" value={order.isGrounded ? 'Yes' : 'No'} />

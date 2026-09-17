@@ -48,7 +48,7 @@ describe('migrations', () => {
     // test below ("enable row level security in the same file that creates
     // the table") already verifies that, position-independent, for every
     // table including this one.
-    const ALLOWED_TABLES_AFTER_GUARDS = ['flagged_duplicate_payments']
+    const ALLOWED_TABLES_AFTER_GUARDS = ['flagged_duplicate_payments', 'maintenance_issues']
 
     const files = migrationFiles()
     const guards = files.findIndex((f) => f.includes('guards'))

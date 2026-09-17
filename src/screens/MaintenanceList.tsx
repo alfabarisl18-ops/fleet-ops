@@ -85,7 +85,7 @@ export function MaintenanceList({ onOpenOrder, onAddOrder }: MaintenanceListProp
                 <span className="block font-medium text-slate-900">
                   {order.vehicleFleetId}
                   <span className="ml-2 font-normal text-slate-500">
-                    {order.serviceArea === 'OIL_CHANGE' ? 'Oil Change' : order.serviceArea}
+                    {order.serviceAreas.map((area) => (area === 'OIL_CHANGE' ? 'Oil Change' : area)).join(', ')}
                   </span>
                 </span>
                 <span className="block text-sm text-slate-500">

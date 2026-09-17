@@ -132,6 +132,18 @@ function VehiclePicker({ onChoose, onCancel }: { onChoose: (vehicleId: string, f
   )
 }
 
+interface IssueDraft {
+  key: string
+  area: string
+  customArea: string
+  problemDescriptor: ProblemDescriptor | null
+  details: string
+}
+
+function newIssue(): IssueDraft {
+  return { key: crypto.randomUUID(), area: '', customArea: '', problemDescriptor: null, details: '' }
+}
+
 function OrderDetailsForm({
   vehicleId,
   fleetId,
@@ -148,50 +160,48 @@ function OrderDetailsForm({
   onBack: () => void
 }) {
   const [recordType, setRecordType] = useState<MaintenanceRecordType | null>(null)
-  const [isOilChange, setIsOilChange] = useState(false)
-  const [serviceArea, setServiceArea] = useState('')
-  const [customArea, setCustomArea] = useState('')
-  const [workAction, setWorkAction] = useState('')
-  const [problemDescriptor, setProblemDescriptor] = useState<ProblemDescriptor | null>(null)
+  const [issues, setIssues] = useState<IssueDraft[]>(() => [newIssue()])
   const [handledBy, setHandledBy] = useState<MaintenanceHandledBy | ''>('')
   const [safetyStatus, setSafetyStatus] = useState<Roadworthiness>('UNKNOWN')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Set only once the order is actually created online — the id a
-  // problem photo attaches to. A queued (offline) write has no id yet,
-  // so it skips straight to onQueued() as before; there's nothing to
-  // attach a photo to until the write really lands.
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoAdded, setPhotoAdded] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
-  function choose(rt: MaintenanceRecordType) {
-    setRecordType(rt)
-    setIsOilChange(false)
-    setServiceArea('')
-    setCustomArea('')
-    setWorkAction('')
-    setProblemDescriptor(null)
+  function choose(nextType: MaintenanceRecordType) {
+    setRecordType(nextType)
+    setIssues([newIssue()])
     setError(null)
+  }
+
+  function updateIssue(key: string, change: Partial<IssueDraft>) {
+    setIssues((current) => current.map((issue) => (issue.key === key ? { ...issue, ...change } : issue)))
   }
 
   async function submit() {
     if (!recordType) return
     setError(null)
 
-    const finalServiceArea = isOilChange ? OIL_CHANGE_SERVICE_AREA : serviceArea === 'Other' ? customArea.trim() : serviceArea
-    const finalWorkAction = isOilChange ? OIL_CHANGE_SERVICE_AREA : workAction.trim()
+    const normalized = issues.map((issue) => ({
+      serviceArea: issue.area === 'Other' ? issue.customArea.trim() : issue.area,
+      workAction: issue.area === OIL_CHANGE_SERVICE_AREA ? OIL_CHANGE_SERVICE_AREA : issue.details.trim(),
+      problemDescriptor: issue.problemDescriptor,
+    }))
 
-    if (finalServiceArea === '') {
-      setError('Enter the area this record is about.')
+    const missingArea = normalized.findIndex((issue) => issue.serviceArea === '')
+    if (missingArea >= 0) {
+      setError(`Choose an area for issue ${missingArea + 1}.`)
       return
     }
-    if (recordType === 'PROBLEM_REPORTED' && problemDescriptor === null) {
-      setError('Choose what is wrong.')
+    const missingDescriptor = recordType === 'PROBLEM_REPORTED'
+      ? normalized.findIndex((issue) => issue.problemDescriptor === null)
+      : -1
+    if (missingDescriptor >= 0) {
+      setError(`Choose what is wrong for issue ${missingDescriptor + 1}.`)
       return
     }
 
@@ -200,19 +210,17 @@ function OrderDetailsForm({
       const outcome = await createMaintenanceOrder({
         vehicleId,
         recordType,
-        serviceArea: finalServiceArea,
-        ...(finalWorkAction !== '' ? { workAction: finalWorkAction } : {}),
-        ...(problemDescriptor ? { problemDescriptor } : {}),
+        issues: normalized.map((issue) => ({
+          serviceArea: issue.serviceArea,
+          ...(issue.workAction ? { workAction: issue.workAction } : {}),
+          ...(issue.problemDescriptor ? { problemDescriptor: issue.problemDescriptor } : {}),
+        })),
         ...(handledBy !== '' ? { handledBy } : {}),
         safetyStatus,
         ...(notes.trim() !== '' ? { notes: notes.trim() } : {}),
-        openedBy: currentUserId,
       })
-      if (outcome.status === 'queued') {
-        onQueued()
-      } else {
-        setCreatedOrderId(outcome.result)
-      }
+      if (outcome.status === 'queued') onQueued()
+      else setCreatedOrderId(outcome.result)
     } catch {
       setError('Something went wrong. Try again.')
     } finally {
@@ -220,9 +228,9 @@ function OrderDetailsForm({
     }
   }
 
-  async function handlePhotoChosen(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
+  async function handlePhotoChosen(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
     if (!file || !createdOrderId) return
 
     const validationError = validateDocumentFile(file)
@@ -254,58 +262,33 @@ function OrderDetailsForm({
       <div className="mx-auto flex max-w-sm flex-col items-center gap-4 p-6 text-center">
         <p className="text-lg font-semibold text-slate-900">Saved</p>
         <p className="text-sm text-slate-500">{fleetId}</p>
-
         {!photoAdded && (
           <>
             <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChosen} className="hidden" />
-            <button
-              type="button"
-              onClick={() => photoInputRef.current?.click()}
-              disabled={photoUploading}
-              className="rounded-2xl border border-slate-300 px-6 py-3 text-base font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
-            >
-              {photoUploading ? 'Uploading…' : '+ Add a photo of the problem'}
+            <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploading} className="rounded-2xl border border-slate-300 px-6 py-3 text-base font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50">
+              {photoUploading ? 'Uploading...' : '+ Add a photo of the problem'}
             </button>
-            {photoError && (
-              <p role="alert" className="text-sm text-red-600">
-                {photoError}
-              </p>
-            )}
+            {photoError && <p role="alert" className="text-sm text-red-600">{photoError}</p>}
           </>
         )}
         {photoAdded && <p className="text-sm text-emerald-600">Photo added.</p>}
-
-        <button
-          type="button"
-          onClick={() => onCreated(createdOrderId)}
-          className="mt-2 rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white"
-        >
-          Continue
-        </button>
+        <button type="button" onClick={() => onCreated(createdOrderId)} className="mt-2 rounded-2xl bg-primary-600 px-6 py-3 text-base font-medium text-white">Continue</button>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-sm p-4 sm:p-6">
-      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">
-        ← Back
-      </button>
-
+    <div className="mx-auto w-full min-w-0 max-w-sm p-4 sm:p-6">
+      <button type="button" onClick={onBack} className="mb-4 text-sm text-slate-500">&larr; Back</button>
       <h1 className="mb-1 text-lg font-semibold text-slate-900">{fleetId}</h1>
 
       {!recordType && (
         <>
           <p className="mb-3 mt-4 text-base font-medium text-slate-700">What kind of record is this?</p>
           <div className="flex flex-col gap-2">
-            {RECORD_TYPES.map((rt) => (
-              <button
-                key={rt}
-                type="button"
-                onClick={() => choose(rt)}
-                className="rounded-xl border border-slate-300 bg-white px-5 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50"
-              >
-                {MAINTENANCE_RECORD_TYPE_LABELS[rt]}
+            {RECORD_TYPES.map((item) => (
+              <button key={item} type="button" onClick={() => choose(item)} className="rounded-xl border border-slate-300 bg-white px-5 py-4 text-left text-base font-medium text-slate-900 shadow-sm active:bg-slate-50">
+                {MAINTENANCE_RECORD_TYPE_LABELS[item]}
               </button>
             ))}
           </div>
@@ -313,144 +296,84 @@ function OrderDetailsForm({
       )}
 
       {recordType && (
-        <div className="mt-4 flex flex-col gap-4">
+        <div className="mt-4 flex min-w-0 flex-col gap-4">
           <p className="text-base font-medium text-slate-700">{MAINTENANCE_RECORD_TYPE_LABELS[recordType]}</p>
 
-          {recordType === 'REGULAR_SERVICE' && (
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input
-                type="checkbox"
-                checked={isOilChange}
-                onChange={(e) => {
-                  setIsOilChange(e.target.checked)
-                  setServiceArea('')
-                  setWorkAction('')
-                }}
-                className="h-5 w-5"
-              />
-              Oil Change
-            </label>
-          )}
+          {issues.map((issue, index) => (
+            <section key={issue.key} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="font-semibold text-slate-900">Issue {index + 1}</h2>
+                {issues.length > 1 && (
+                  <button type="button" onClick={() => setIssues((current) => current.filter((item) => item.key !== issue.key))} className="min-h-11 px-2 text-sm font-medium text-red-600">Remove</button>
+                )}
+              </div>
 
-          {!isOilChange && (
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-slate-700">Area</span>
-              <select
-                autoFocus
-                value={serviceArea}
-                onChange={(e) => setServiceArea(e.target.value)}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
-              >
-                <option value="" disabled>
-                  Choose one
-                </option>
-                {MAINTENANCE_AREAS.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </select>
-              {serviceArea === 'Other' && (
-                <input
-                  type="text"
-                  autoFocus
-                  value={customArea}
-                  onChange={(e) => setCustomArea(e.target.value)}
-                  placeholder="Describe the area"
-                  className="mt-1 rounded-xl border border-slate-300 px-4 py-3 text-base"
-                />
+              <label className="flex min-w-0 flex-col gap-1">
+                <span className="text-sm font-medium text-slate-700">Area</span>
+                <select
+                  value={issue.area}
+                  onChange={(event) => updateIssue(issue.key, { area: event.target.value, customArea: '', details: event.target.value === OIL_CHANGE_SERVICE_AREA ? OIL_CHANGE_SERVICE_AREA : issue.details })}
+                  className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
+                >
+                  <option value="" disabled>Choose one</option>
+                  {recordType === 'REGULAR_SERVICE' && <option value={OIL_CHANGE_SERVICE_AREA}>Oil Change</option>}
+                  {MAINTENANCE_AREAS.map((area) => <option key={area} value={area}>{area}</option>)}
+                </select>
+              </label>
+
+              {issue.area === 'Other' && (
+                <label className="mt-3 flex min-w-0 flex-col gap-1">
+                  <span className="text-sm font-medium text-slate-700">Other area</span>
+                  <input value={issue.customArea} onChange={(event) => updateIssue(issue.key, { customArea: event.target.value })} placeholder="Describe the area" className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-base" />
+                </label>
               )}
-            </label>
-          )}
 
-          {recordType === 'PROBLEM_REPORTED' && (
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-slate-700">What's wrong</span>
-              <select
-                value={problemDescriptor ?? ''}
-                onChange={(e) => setProblemDescriptor(e.target.value as ProblemDescriptor)}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
-              >
-                <option value="" disabled>
-                  Choose one
-                </option>
-                {PROBLEM_DESCRIPTORS.map((d) => (
-                  <option key={d} value={d}>
-                    {PROBLEM_DESCRIPTOR_LABELS[d]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+              {recordType === 'PROBLEM_REPORTED' && (
+                <label className="mt-3 flex min-w-0 flex-col gap-1">
+                  <span className="text-sm font-medium text-slate-700">What's wrong</span>
+                  <select value={issue.problemDescriptor ?? ''} onChange={(event) => updateIssue(issue.key, { problemDescriptor: event.target.value as ProblemDescriptor })} className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
+                    <option value="" disabled>Choose one</option>
+                    {PROBLEM_DESCRIPTORS.map((descriptor) => <option key={descriptor} value={descriptor}>{PROBLEM_DESCRIPTOR_LABELS[descriptor]}</option>)}
+                  </select>
+                </label>
+              )}
 
-          {!isOilChange && (
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-slate-700">
-                {recordType === 'PROBLEM_REPORTED' ? 'Problem identified (optional)' : 'Work done (optional)'}
-              </span>
-              <textarea
-                value={workAction}
-                onChange={(e) => setWorkAction(e.target.value)}
-                rows={2}
-                className="rounded-xl border border-slate-300 px-4 py-3 text-base"
-              />
-            </label>
-          )}
+              {issue.area !== OIL_CHANGE_SERVICE_AREA && (
+                <label className="mt-3 flex min-w-0 flex-col gap-1">
+                  <span className="text-sm font-medium text-slate-700">
+                    {recordType === 'PROBLEM_REPORTED' ? 'Problem description (optional)' : 'Work done (optional)'}
+                  </span>
+                  <textarea value={issue.details} onChange={(event) => updateIssue(issue.key, { details: event.target.value })} rows={2} className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-base" />
+                </label>
+              )}
+            </section>
+          ))}
 
-          <label className="flex flex-col gap-1">
+          <button type="button" onClick={() => setIssues((current) => [...current, newIssue()])} className="min-h-11 rounded-xl border border-primary-300 px-4 py-3 font-medium text-primary-700">+ Add another issue</button>
+
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Handled by (optional)</span>
-            <select
-              value={handledBy}
-              onChange={(e) => setHandledBy(e.target.value as MaintenanceHandledBy | '')}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
-            >
+            <select value={handledBy} onChange={(event) => setHandledBy(event.target.value as MaintenanceHandledBy | '')} className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
               <option value="">Not set</option>
-              {HANDLED_BY_OPTIONS.map((h) => (
-                <option key={h} value={h}>
-                  {MAINTENANCE_HANDLED_BY_LABELS[h]}
-                </option>
-              ))}
+              {HANDLED_BY_OPTIONS.map((item) => <option key={item} value={item}>{MAINTENANCE_HANDLED_BY_LABELS[item]}</option>)}
             </select>
           </label>
 
-          <label className="flex flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Vehicle condition</span>
-            <select
-              value={safetyStatus}
-              onChange={(e) => setSafetyStatus(e.target.value as Roadworthiness)}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-base"
-            >
-              {SAFETY_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {ROADWORTHINESS_LABELS[s]}
-                </option>
-              ))}
+            <select value={safetyStatus} onChange={(event) => setSafetyStatus(event.target.value as Roadworthiness)} className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base">
+              {SAFETY_OPTIONS.map((item) => <option key={item} value={item}>{ROADWORTHINESS_LABELS[item]}</option>)}
             </select>
           </label>
 
-          <label className="flex flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">Notes (optional)</span>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="rounded-xl border border-slate-300 px-4 py-3 text-base"
-            />
+            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-base" />
           </label>
 
-          {error && (
-            <p role="alert" className="text-sm text-red-600">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={submit}
-            disabled={submitting}
-            className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50"
-          >
-            {submitting ? 'Saving…' : 'Save'}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          <button type="button" onClick={submit} disabled={submitting} className="rounded-xl bg-primary-600 px-6 py-3 text-base font-medium text-white disabled:opacity-50">
+            {submitting ? 'Saving...' : 'Save'}
           </button>
         </div>
       )}

@@ -37,11 +37,77 @@ module.exports = async function(db) {
   a=a.replace(re,`      ${name}: ${values.map(v=>JSON.stringify(v)).join(' | ')}\n`);
   b=b.replace(re,`      ${name}: [${values.map(v=>JSON.stringify(v)).join(', ')}],\n`);s=a+b;
  }
+ if(!s.includes('      maintenance_issues: {')) {
+  const table=`      maintenance_issues: {
+        Row: {
+          client_record_id: string
+          created_at: string
+          id: string
+          order_id: string
+          position: number
+          problem_descriptor: Database["public"]["Enums"]["problem_descriptor"] | null
+          service_area: string
+          work_action: string | null
+        }
+        Insert: {
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          order_id: string
+          position: number
+          problem_descriptor?: Database["public"]["Enums"]["problem_descriptor"] | null
+          service_area: string
+          work_action?: string | null
+        }
+        Update: {
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          position?: number
+          problem_descriptor?: Database["public"]["Enums"]["problem_descriptor"] | null
+          service_area?: string
+          work_action?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_issues_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+`;
+  s=s.replace('      maintenance_notes: {',table+'      maintenance_notes: {');
+ }
+ if(!s.includes('      create_maintenance_order: {')) {
+  const fn=`      create_maintenance_order: {
+        Args: {
+          p_client_record_id: string
+          p_estimated_grounded_days: number
+          p_expected_completion_on: string
+          p_handled_by: Database["public"]["Enums"]["maintenance_handled_by"]
+          p_issues: Json
+          p_notes: string
+          p_record_type: Database["public"]["Enums"]["maintenance_record_type"]
+          p_safety_status: Database["public"]["Enums"]["roadworthiness"]
+          p_vehicle_id: string
+        }
+        Returns: string
+      }
+`;
+  s=s.replace('    Functions: {\n','    Functions: {\n'+fn);
+ }
  for(const name of ['driver_purchase_progress','vehicle_purchase_payment_context','correct_purchase_payment','add_trip_expense'])if(!s.includes(`      ${name}: {`)) {
   const row=(await db.query(`select proargnames from pg_proc where proname=$1`,[name])).rows[0];
   const fn=`      ${name}: {\n        Args: { ${row.proargnames.map(n=>n+': '+(n==='p_amount_minor'?'number':n==='p_category'?'Database["public"]["Enums"]["ledger_category"]':'string')).join('; ')} }\n        Returns: ${['correct_purchase_payment','add_trip_expense'].includes(name)?'string':'Json'}\n      }\n`;
   s=s.replace('    Functions: {\n','    Functions: {\n'+fn);
  }
  s=s.replace(/(add_trip_expense: \{[\s\S]*?Returns:) Json/, '$1 string');
+ s=s.replace('      driver_purchase_progress: {\n        Args: { p_agreement_id: string }\n        Returns: string', '      driver_purchase_progress: {\n        Args: { p_agreement_id: string }\n        Returns: Json');
+ s=s.replace('      vehicle_purchase_payment_context: {\n        Args: { p_vehicle_id: string; p_service_date: string }\n        Returns: string', '      vehicle_purchase_payment_context: {\n        Args: { p_vehicle_id: string; p_service_date: string }\n        Returns: Json');
+ s=s.replace(/(flag_duplicate_payment: \{[\s\S]*?Returns:) Json/, '$1 string');
  fs.writeFileSync('src/types/database.ts',s);
 };

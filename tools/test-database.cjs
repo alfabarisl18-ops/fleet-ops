@@ -19,6 +19,15 @@ const { PGlite } = require(process.env.FLEET_PGLITE_MODULE || path.join(require(
  grant execute on all functions in schema auth to authenticated,anon;
  `);
  for (const file of fs.readdirSync('supabase/migrations').filter(n=>n.endsWith('.sql')).sort()) {
+   if(file==='20260916130000_maintenance_issues.sql') await db.exec(`
+     insert into auth.users(id) values ('e1000000-0000-0000-0000-000000000001');
+     insert into public.users(id,auth_user_id,display_name,role,email)
+     values ('e1000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','Backfill manager','FLEET_MANAGER','backfill@example.test');
+     insert into public.vehicles(id,client_record_id,fleet_id,type)
+     values ('e1000000-0000-0000-0000-000000000002',gen_random_uuid(),'BACKFILL','LONG_SPRINTER');
+     insert into public.maintenance_orders(id,client_record_id,vehicle_id,record_type,service_area,work_action,problem_descriptor,opened_by)
+     values ('e1000000-0000-0000-0000-000000000003',gen_random_uuid(),'e1000000-0000-0000-0000-000000000002','REPAIR','Suspension','Replaced spring',null,'e1000000-0000-0000-0000-000000000001');
+   `);
    if(file==='20260907172000_purchase_schedule.sql') await db.exec(fs.readFileSync('tools/database-before-policy.sql','utf8'));
    let sql=fs.readFileSync(path.join('supabase/migrations',file),'utf8');
    sql=sql.replace(/create extension if not exists pg_cron[^;]*;/gi,'');

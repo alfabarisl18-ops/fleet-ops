@@ -268,3 +268,113 @@ do $$ declare t uuid; begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+
+
+-- Maintenance issue expansion: historical backfill, atomic multi-issue writes,
+-- retry safety, cross-issue rules, and role boundaries.
+do $$ begin
+  assert (select count(*)=1 from public.maintenance_issues where order_id='e1000000-0000-0000-0000-000000000003'), 'Legacy order backfilled to one issue';
+  assert (select service_area='Suspension' and work_action='Replaced spring' from public.maintenance_issues where order_id='e1000000-0000-0000-0000-000000000003'), 'Backfill preserves legacy issue details';
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+set role authenticated;
+do $$ begin assert app.current_app_role()='FLEET_MANAGER', 'Manager role resolves'; end $$;
+insert into public.vehicles(id,client_record_id,fleet_id,type)
+values ('e2000000-0000-0000-0000-000000000002',gen_random_uuid(),'MULTI-ISSUE','LONG_SPRINTER');
+insert into public.maintenance_orders
+  (client_record_id,vehicle_id,record_type,service_area,work_action,opened_by)
+values
+  ('e2000000-0000-0000-0000-000000000014','e2000000-0000-0000-0000-000000000002','REPAIR','Electrical','Repaired wiring','00000000-0000-0000-0000-000000000001');
+do $$ begin
+  assert (select count(*)=1 from public.maintenance_issues i join public.maintenance_orders o on o.id=i.order_id where o.client_record_id='e2000000-0000-0000-0000-000000000014'), 'Legacy client inserts receive one compatibility issue';
+end $$;
+do $$ declare o uuid; begin
+  o:=public.create_maintenance_order(
+    'e2000000-0000-0000-0000-000000000003',
+    'e2000000-0000-0000-0000-000000000002',
+    'REPAIR',
+    '[{"client_record_id":"e2000000-0000-0000-0000-000000000004","service_area":"Suspension","work_action":"Replaced spring"},
+      {"client_record_id":"e2000000-0000-0000-0000-000000000005","service_area":"Battery","work_action":"Replaced battery"}]'::jsonb,
+    null,'UNKNOWN',null,null,'Two repairs'
+  );
+  assert o=public.create_maintenance_order(
+    'e2000000-0000-0000-0000-000000000003',
+    'e2000000-0000-0000-0000-000000000002',
+    'REPAIR',
+    '[{"client_record_id":"e2000000-0000-0000-0000-000000000004","service_area":"Suspension","work_action":"Replaced spring"},
+      {"client_record_id":"e2000000-0000-0000-0000-000000000005","service_area":"Battery","work_action":"Replaced battery"}]'::jsonb,
+    null,'UNKNOWN',null,null,'Two repairs'
+  ), 'Maintenance retry returns original order';
+  assert (select count(*)=2 from public.maintenance_issues where order_id=o), 'Two issues save exactly once';
+  begin
+    perform public.create_maintenance_order(
+      'e2000000-0000-0000-0000-000000000003',
+      'e2000000-0000-0000-0000-000000000002',
+      'REPAIR',
+      '[{"client_record_id":"e2000000-0000-0000-0000-000000000004","service_area":"Suspension","work_action":"Different"}]'::jsonb,
+      null,'UNKNOWN',null,null,null
+    );
+    raise exception 'Mismatched maintenance retry accepted';
+  exception when unique_violation then null; end;
+  assert (select service_area='Suspension' from public.maintenance_orders where id=o), 'First issue mirrors legacy columns';
+
+  begin
+    perform public.create_maintenance_order(
+      'e2000000-0000-0000-0000-000000000006',
+      'e2000000-0000-0000-0000-000000000002',
+      'PROBLEM_REPORTED',
+      '[{"client_record_id":"e2000000-0000-0000-0000-000000000007","service_area":"Engine","problem_descriptor":"MAKING_NOISE"},
+        {"client_record_id":"e2000000-0000-0000-0000-000000000008","service_area":"Battery"}]'::jsonb,
+      null,'UNKNOWN',null,null,null
+    );
+    raise exception 'Invalid second problem issue accepted';
+  exception when check_violation then null; end;
+  assert not exists(select 1 from public.maintenance_orders where client_record_id='e2000000-0000-0000-0000-000000000006'), 'Invalid issue rolls back the whole order';
+
+  begin
+    perform public.create_maintenance_order(
+      gen_random_uuid(),'e2000000-0000-0000-0000-000000000002','REPAIR',
+      jsonb_build_array(jsonb_build_object('client_record_id',gen_random_uuid(),'service_area','OIL_CHANGE','work_action','OIL_CHANGE')),
+      null,'UNKNOWN',null,null,null
+    );
+    raise exception 'Oil Change accepted outside Regular Service';
+  exception when check_violation then null; end;
+
+  perform public.create_maintenance_order(
+    'e2000000-0000-0000-0000-000000000009',
+    'e2000000-0000-0000-0000-000000000002',
+    'REGULAR_SERVICE',
+    '[{"client_record_id":"e2000000-0000-0000-0000-000000000010","service_area":"Engine","work_action":"Inspection"},
+      {"client_record_id":"e2000000-0000-0000-0000-000000000011","service_area":"OIL_CHANGE","work_action":"OIL_CHANGE"}]'::jsonb,
+    null,'ROADWORTHY',null,null,null
+  );
+  assert (select count(*)=1 from public.maintenance_issues where client_record_id='e2000000-0000-0000-0000-000000000011'), 'Oil Change coexists with another service issue';
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+do $$ begin
+  assert (select count(*)=0 from public.maintenance_issues), 'Collections cannot read maintenance issues';
+  begin
+    perform public.create_maintenance_order(
+      gen_random_uuid(),'e2000000-0000-0000-0000-000000000002','REPAIR',
+      jsonb_build_array(jsonb_build_object('client_record_id',gen_random_uuid(),'service_area','Brakes')),
+      null,'UNKNOWN',null,null,null
+    );
+    raise exception 'Collections created a maintenance order';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+update public.users set role='MAINTENANCE_REPAIRS' where id='00000000-0000-0000-0000-000000000002';
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+set role authenticated;
+do $$ begin assert app.current_app_role()='MAINTENANCE_REPAIRS', 'Maintenance role resolves'; end $$;
+do $$ declare o uuid; begin
+  o:=public.create_maintenance_order(
+    'e2000000-0000-0000-0000-000000000012',
+    'e2000000-0000-0000-0000-000000000002',
+    'PROBLEM_REPORTED',
+    '[{"client_record_id":"e2000000-0000-0000-0000-000000000013","service_area":"Brakes","problem_descriptor":"WORN","work_action":"Pads are thin"}]'::jsonb,
+    'PARK_MECHANIC','LIMITED_USE',null,null,null
+  );
+  assert (select count(*)=1 from public.maintenance_issues where order_id=o), 'Maintenance role can create issue records';
+end $$;
+reset role;

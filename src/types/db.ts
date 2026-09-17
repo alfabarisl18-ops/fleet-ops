@@ -54,6 +54,7 @@ export const SERVER_STAMPED_COLUMNS = {
   daily_payment_records: ['entered_at', 'purchase_agreement_id', 'defer_installment', 'under_active_agreement'],
   documents: ['uploaded_at'],
   ledger_entries: ['entered_at', 'purchase_agreement_id', 'purchase_applied_minor'],
+  maintenance_issues: ['created_at'],
   maintenance_notes: ['entered_at'],
   maintenance_orders: ['opened_at'],
   maintenance_parts: ['entered_at'],
@@ -97,6 +98,7 @@ export type Insertable<T extends keyof PublicSchema['Tables']> = Omit<
  */
 export const NULLABLE_RPC_ARGS = {
   add_trip_expense: ['p_note'],
+  create_maintenance_order: ['p_handled_by', 'p_expected_completion_on', 'p_estimated_grounded_days', 'p_notes'],
   assign_driver_to_vehicle: ['p_route_id'],
   record_trip: [
     'p_driver_id',

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { WriteOutcome } from '@/lib/offlineQueue'
 import { withOfflineQueue } from '@/lib/offlineQueue'
 import type { Enums } from '@/types/db'
+import { rpcArgs } from '@/types/db'
 
 // Screens never call Supabase directly — same convention as src/data/vehicles.ts.
 // camelCase in and out; snake_case stays inside this file.
@@ -53,12 +54,20 @@ export const MAINTENANCE_AREAS = [
   'Other',
 ] as const
 
+export interface MaintenanceIssue {
+  id: string
+  position: number
+  serviceArea: string
+  workAction: string | null
+  problemDescriptor: ProblemDescriptor | null
+}
+
 export interface MaintenanceOrderListItem {
   id: string
   vehicleId: string
   vehicleFleetId: string
   recordType: MaintenanceRecordType
-  serviceArea: string
+  serviceAreas: string[]
   status: MaintenanceStatus
   isGrounded: boolean
   identifiedOn: string
@@ -70,9 +79,7 @@ export interface MaintenanceOrderDetail {
   vehicleId: string
   vehicleFleetId: string
   recordType: MaintenanceRecordType
-  serviceArea: string
-  workAction: string | null
-  problemDescriptor: ProblemDescriptor | null
+  issues: MaintenanceIssue[]
   status: MaintenanceStatus
   isGrounded: boolean
   safetyStatus: Roadworthiness
@@ -91,30 +98,53 @@ export interface MaintenanceOrderDetail {
 }
 
 const ORDER_COLUMNS =
-  'id, vehicle_id, record_type, service_area, work_action, problem_descriptor, status, is_grounded, safety_status, identified_on, expected_inspection_on, expected_completion_on, estimated_grounded_days, handled_by, old_parts_returned, reminder_date, notes, opened_by, opened_at, closed_at, verified_by'
+  'id, vehicle_id, record_type, status, is_grounded, safety_status, identified_on, expected_inspection_on, expected_completion_on, estimated_grounded_days, handled_by, old_parts_returned, reminder_date, notes, opened_by, opened_at, closed_at, verified_by'
 
-/** Every order, most recent first — the desktop Maintenance list. Pass
- *  `openOnly` for the mobile "Open orders" entry point, matching the
- *  partial index the table already carries for that filter. */
+function mapIssue(row: {
+  id: string
+  position: number
+  service_area: string
+  work_action: string | null
+  problem_descriptor: ProblemDescriptor | null
+}): MaintenanceIssue {
+  return {
+    id: row.id,
+    position: row.position,
+    serviceArea: row.service_area,
+    workAction: row.work_action,
+    problemDescriptor: row.problem_descriptor,
+  }
+}
+
+/** Every order, most recent first. Issue areas are loaded from the normalized
+ * child table and kept in their recorded order. */
 export async function fetchMaintenanceOrders(options?: { openOnly?: boolean }): Promise<MaintenanceOrderListItem[]> {
   let query = supabase
     .from('maintenance_orders')
-    .select(`id, vehicle_id, record_type, service_area, status, is_grounded, identified_on, closed_at, vehicles!inner(fleet_id)`)
+    .select('id, vehicle_id, record_type, status, is_grounded, identified_on, closed_at, vehicles!inner(fleet_id)')
     .order('identified_on', { ascending: false })
     .limit(200)
 
-  if (options?.openOnly) {
-    query = query.is('closed_at', null)
-  }
+  if (options?.openOnly) query = query.is('closed_at', null)
 
   const { data, error } = await query
   if (error) throw error
+  const orderIds = (data ?? []).map((row) => row.id)
+  const issueResult = orderIds.length === 0
+    ? { data: [], error: null }
+    : await supabase
+        .from('maintenance_issues')
+        .select('order_id, position, service_area')
+        .in('order_id', orderIds)
+        .order('position', { ascending: true })
+  if (issueResult.error) throw issueResult.error
+
   return (data ?? []).map((row) => ({
     id: row.id,
     vehicleId: row.vehicle_id,
     vehicleFleetId: (row.vehicles as unknown as { fleet_id: string }).fleet_id,
     recordType: row.record_type,
-    serviceArea: row.service_area,
+    serviceAreas: (issueResult.data ?? []).filter((issue) => issue.order_id === row.id).map((issue) => issue.service_area),
     status: row.status,
     isGrounded: row.is_grounded,
     identifiedOn: row.identified_on,
@@ -123,8 +153,16 @@ export async function fetchMaintenanceOrders(options?: { openOnly?: boolean }): 
 }
 
 export async function fetchMaintenanceOrder(id: string): Promise<MaintenanceOrderDetail | null> {
-  const { data, error } = await supabase.from('maintenance_orders').select(ORDER_COLUMNS).eq('id', id).maybeSingle()
+  const [{ data, error }, { data: issues, error: issueError }] = await Promise.all([
+    supabase.from('maintenance_orders').select(ORDER_COLUMNS).eq('id', id).maybeSingle(),
+    supabase
+      .from('maintenance_issues')
+      .select('id, position, service_area, work_action, problem_descriptor')
+      .eq('order_id', id)
+      .order('position', { ascending: true }),
+  ])
   if (error) throw error
+  if (issueError) throw issueError
   if (!data) return null
 
   const { data: vehicle } = await supabase.from('vehicles').select('fleet_id').eq('id', data.vehicle_id).maybeSingle()
@@ -134,9 +172,7 @@ export async function fetchMaintenanceOrder(id: string): Promise<MaintenanceOrde
     vehicleId: data.vehicle_id,
     vehicleFleetId: vehicle?.fleet_id ?? '(unknown)',
     recordType: data.record_type,
-    serviceArea: data.service_area,
-    workAction: data.work_action,
-    problemDescriptor: data.problem_descriptor,
+    issues: (issues ?? []).map(mapIssue),
     status: data.status,
     isGrounded: data.is_grounded,
     safetyStatus: data.safety_status,
@@ -155,55 +191,61 @@ export async function fetchMaintenanceOrder(id: string): Promise<MaintenanceOrde
   }
 }
 
-export interface CreateMaintenanceOrderInput {
-  vehicleId: string
-  recordType: MaintenanceRecordType
+export interface CreateMaintenanceIssueInput {
   serviceArea: string
   workAction?: string
   problemDescriptor?: ProblemDescriptor
+}
+
+export interface CreateMaintenanceOrderInput {
+  vehicleId: string
+  recordType: MaintenanceRecordType
+  issues: CreateMaintenanceIssueInput[]
   handledBy?: MaintenanceHandledBy
   safetyStatus?: Roadworthiness
   expectedCompletionOn?: string
   estimatedGroundedDays?: number
   notes?: string
-  openedBy: string
 }
 
-/** identified_on is deliberately not sent — it defaults server-side to
- *  app.freetown_today(), same rule as every other business date.
- *  Offline-queue-aware (Phase 9). */
-type CreateMaintenanceOrderPayload = CreateMaintenanceOrderInput & { clientRecordId: string }
+type CreateMaintenanceOrderPayload = Omit<CreateMaintenanceOrderInput, 'issues'> & {
+  clientRecordId: string
+  issues: (CreateMaintenanceIssueInput & { clientRecordId: string })[]
+}
 
 async function createMaintenanceOrderLive(payload: CreateMaintenanceOrderPayload): Promise<string> {
-  const { data, error } = await supabase
-    .from('maintenance_orders')
-    .insert({
-      client_record_id: payload.clientRecordId,
-      vehicle_id: payload.vehicleId,
-      record_type: payload.recordType,
-      service_area: payload.serviceArea,
-      work_action: payload.workAction ?? null,
-      problem_descriptor: payload.problemDescriptor ?? null,
-      handled_by: payload.handledBy ?? null,
-      safety_status: payload.safetyStatus ?? 'UNKNOWN',
-      expected_completion_on: payload.expectedCompletionOn ?? null,
-      estimated_grounded_days: payload.estimatedGroundedDays ?? null,
-      notes: payload.notes ?? null,
-      opened_by: payload.openedBy,
-    })
-    .select('id')
-    .single()
-
+  const { data, error } = await supabase.rpc(
+    'create_maintenance_order',
+    rpcArgs<'create_maintenance_order'>({
+      p_client_record_id: payload.clientRecordId,
+      p_vehicle_id: payload.vehicleId,
+      p_record_type: payload.recordType,
+      p_issues: payload.issues.map((issue) => ({
+        client_record_id: issue.clientRecordId,
+        service_area: issue.serviceArea,
+        work_action: issue.workAction ?? null,
+        problem_descriptor: issue.problemDescriptor ?? null,
+      })),
+      p_handled_by: payload.handledBy ?? null,
+      p_safety_status: payload.safetyStatus ?? 'UNKNOWN',
+      p_expected_completion_on: payload.expectedCompletionOn ?? null,
+      p_estimated_grounded_days: payload.estimatedGroundedDays ?? null,
+      p_notes: payload.notes ?? null,
+    }),
+  )
   if (error) throw error
-  return data.id
+  return data
 }
 
 export async function createMaintenanceOrder(input: CreateMaintenanceOrderInput): Promise<WriteOutcome<string>> {
-  const payload: CreateMaintenanceOrderPayload = { ...input, clientRecordId: crypto.randomUUID() }
+  const payload: CreateMaintenanceOrderPayload = {
+    ...input,
+    clientRecordId: crypto.randomUUID(),
+    issues: input.issues.map((issue) => ({ ...issue, clientRecordId: crypto.randomUUID() })),
+  }
   return withOfflineQueue('createMaintenanceOrder', payload.clientRecordId, payload, () => createMaintenanceOrderLive(payload))
 }
 
-/** For the offline-queue replay handler only — src/lib/offlineQueueReplay.ts. */
 export async function replayCreateMaintenanceOrder(payload: unknown): Promise<string> {
   return createMaintenanceOrderLive(payload as CreateMaintenanceOrderPayload)
 }

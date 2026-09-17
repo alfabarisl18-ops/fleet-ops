@@ -24,6 +24,7 @@ interface CorrectionPanelProps {
    *  isn't enough for (e.g. money in minor units, an id that needs
    *  resolving to a name). */
   formatFieldValue?: (key: string, value: string | number | null) => string
+  actionLabel?: string
 }
 
 type JsonRecord = Record<string, string | number | null>
@@ -74,6 +75,7 @@ export function CorrectionPanel({
   renderRequestForm,
   fieldLabels,
   formatFieldValue,
+  actionLabel,
 }: CorrectionPanelProps) {
   const isOwner = currentUserRole === 'OWNER_ADMIN'
   const [requesting, setRequesting] = useState(false)
@@ -182,7 +184,7 @@ export function CorrectionPanel({
         onClick={() => setRequesting(true)}
         className="mt-3 text-sm font-medium text-slate-600 underline decoration-slate-300"
       >
-        {isOwner ? 'Edit' : 'Request a correction'}
+        {actionLabel ?? (isOwner ? 'Edit' : 'Request a correction')}
       </button>
     )
   }

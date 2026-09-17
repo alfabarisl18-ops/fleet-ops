@@ -193,6 +193,7 @@ export function VehicleProfileScreen({
         <Field label="Route" value={vehicle.routeName} />
         <CorrectionPanel
           currentUserRole={currentUserRole}
+          actionLabel="Edit vehicle details"
           pending={pendingCorrection}
           onChanged={() => setReloadKey((k) => k + 1)}
           fieldLabels={CORRECTION_FIELD_LABELS}
@@ -243,16 +244,6 @@ export function VehicleProfileScreen({
         />
         <Field label="Entered service on" value={vehicle.enteredServiceOn} />
         <Field label="Expected retirement" value={vehicle.expectedRetirementOn} />
-        <CorrectionPanel
-          currentUserRole={currentUserRole}
-          pending={pendingCorrection}
-          onChanged={() => setReloadKey((k) => k + 1)}
-          fieldLabels={CORRECTION_FIELD_LABELS}
-          formatFieldValue={formatCorrectionValue}
-          renderRequestForm={(onDone) => (
-            <RequestVehicleCorrectionForm vehicle={vehicle} currentUserId={currentUserId} onRequested={onDone} />
-          )}
-        />
         {isDesktopRole(currentUserRole) ? (
           <TargetPanel vehicleId={vehicle.id} yearlyTargetMinor={vehicle.yearlyTargetMinor} onSaved={() => setReloadKey((k) => k + 1)} />
         ) : (
